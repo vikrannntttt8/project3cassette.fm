@@ -27,7 +27,9 @@ const STORAGE_KEYS = {
 function load(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : fallback;
   } catch {
     return fallback;
   }
@@ -56,7 +58,7 @@ export function useLibrary() {
 
   const [liked, setLiked] = useState(() => {
     const stored = load(STORAGE_KEYS.liked, null);
-    if (stored !== null && Array.isArray(stored)) return stored;
+    if (stored !== null && Array.isArray(stored) && stored.length > 0) return stored;
     return load(STORAGE_KEYS.legacyLiked, []);
   });
 
@@ -74,7 +76,7 @@ export function useLibrary() {
     }
 
     let isMounted = true;
-    console.log('[useLibrary] Authenticated session active, running cloud pull sync...');
+    console.log('[useLibrary] Authenticated user active, fetching library from Supabase...');
 
     Promise.allSettled([
       fetchLikedSongs(),
@@ -87,16 +89,21 @@ export function useLibrary() {
         const cloudLiked = Array.isArray(likedRes.value) ? likedRes.value : [];
         setLiked((prev) => {
           const map = new Map();
-          cloudLiked.forEach((s) => map.set(String(s.id || s.videoId), s));
-          prev.forEach((s) => map.set(String(s.id || s.videoId), s));
+          cloudLiked.forEach((s) => {
+            const k = String(s.id || s.videoId || '');
+            if (k) map.set(k, s);
+          });
+          prev.forEach((s) => {
+            const k = String(s.id || s.videoId || '');
+            if (k) map.set(k, s);
+          });
           const merged = Array.from(map.values());
           save(STORAGE_KEYS.liked, merged);
           save(STORAGE_KEYS.legacyLiked, merged);
-          // If local had items not in cloud, push to cloud
           if (merged.length > cloudLiked.length && user?.id) {
             syncLikedSongs(merged).catch(() => {});
           }
-          return merged;
+          return [...merged];
         });
       }
 
@@ -104,14 +111,18 @@ export function useLibrary() {
         const cloudPlaylists = Array.isArray(playlistsRes.value) ? playlistsRes.value : [];
         setPlaylists((prev) => {
           const map = new Map();
-          cloudPlaylists.forEach((p) => map.set(String(p.id), p));
-          prev.forEach((p) => map.set(String(p.id), p));
+          cloudPlaylists.forEach((p) => {
+            if (p.id) map.set(String(p.id), p);
+          });
+          prev.forEach((p) => {
+            if (p.id) map.set(String(p.id), p);
+          });
           const merged = Array.from(map.values());
           save(STORAGE_KEYS.playlists, merged);
           if (merged.length > cloudPlaylists.length && user?.id) {
             syncPlaylists(merged).catch(() => {});
           }
-          return merged;
+          return [...merged];
         });
       }
 
@@ -119,11 +130,17 @@ export function useLibrary() {
         const cloudHistory = Array.isArray(historyRes.value) ? historyRes.value : [];
         setHistory((prev) => {
           const map = new Map();
-          cloudHistory.forEach((h) => map.set(String(h.id || h.videoId), h));
-          prev.forEach((h) => map.set(String(h.id || h.videoId), h));
+          cloudHistory.forEach((h) => {
+            const k = String(h.id || h.videoId || '');
+            if (k) map.set(k, h);
+          });
+          prev.forEach((h) => {
+            const k = String(h.id || h.videoId || '');
+            if (k) map.set(k, h);
+          });
           const merged = Array.from(map.values()).slice(0, 50);
           save(STORAGE_KEYS.history, merged);
-          return merged;
+          return [...merged];
         });
       }
 
@@ -167,25 +184,30 @@ export function useLibrary() {
       throw new Error('Please sign in with Google first to synchronize with Supabase Cloud.');
     }
 
+    // Read fresh current local state
+    const currentLiked = load(STORAGE_KEYS.liked, liked);
+    const currentPlaylists = load(STORAGE_KEYS.playlists, playlists);
+    const currentHistory = load(STORAGE_KEYS.history, history);
+
     const localData = {
-      liked,
-      playlists,
-      history,
+      liked: currentLiked,
+      playlists: currentPlaylists,
+      history: currentHistory,
     };
 
     const result = await performFullSync(localData);
 
-    if (result && result.liked) {
-      setLiked(result.liked);
+    if (result && Array.isArray(result.liked)) {
+      setLiked([...result.liked]);
       save(STORAGE_KEYS.liked, result.liked);
       save(STORAGE_KEYS.legacyLiked, result.liked);
     }
-    if (result && result.playlists) {
-      setPlaylists(result.playlists);
+    if (result && Array.isArray(result.playlists)) {
+      setPlaylists([...result.playlists]);
       save(STORAGE_KEYS.playlists, result.playlists);
     }
-    if (result && result.history) {
-      setHistory(result.history);
+    if (result && Array.isArray(result.history)) {
+      setHistory([...result.history]);
       save(STORAGE_KEYS.history, result.history);
     }
 
@@ -193,18 +215,46 @@ export function useLibrary() {
   }, [user?.id, liked, playlists, history, performFullSync]);
 
   // ── 4. Liked tracks ──────────────────────────────────────────────────
-  const isLiked = useCallback((id) =>
-    liked.some((s) => String(s.id || s.videoId) === String(id)), [liked]);
+  const isLiked = useCallback((target) => {
+    if (!target) return false;
+    const targetId = String(typeof target === 'object' ? (target.id || target.videoId || target.browseId) : target);
+    return liked.some((s) => {
+      const sId = String(s.id || s.videoId || s.browseId || '');
+      return sId === targetId || String(s.id) === targetId || String(s.videoId) === targetId;
+    });
+  }, [liked]);
 
   const toggleLike = useCallback((song) => {
     if (!song) return;
-    const songId = String(song.id || song.videoId);
+    const songId = String(song.id || song.videoId || song.browseId || '');
+    if (!songId) return;
+
     setLiked((prev) => {
-      const exists = prev.some((s) => String(s.id || s.videoId) === songId);
+      const exists = prev.some((s) => {
+        const id = String(s.id || s.videoId || s.browseId || '');
+        return id === songId;
+      });
+      let next;
       if (exists) {
-        return prev.filter((s) => String(s.id || s.videoId) !== songId);
+        next = prev.filter((s) => {
+          const id = String(s.id || s.videoId || s.browseId || '');
+          return id !== songId;
+        });
+      } else {
+        const cleanItem = {
+          ...song,
+          id: song.id || song.videoId || songId,
+          videoId: song.videoId || song.id || songId,
+          title: song.title || 'Untitled Track',
+          artist: song.artist || 'Unknown Artist',
+          thumbnail: song.thumbnail || song.thumbnails?.[0]?.url || '',
+          likedAt: new Date().toISOString(),
+        };
+        next = [cleanItem, ...prev];
       }
-      return [{ ...song, likedAt: new Date().toISOString() }, ...prev];
+      save(STORAGE_KEYS.liked, next);
+      save(STORAGE_KEYS.legacyLiked, next);
+      return [...next];
     });
   }, []);
 
@@ -221,29 +271,39 @@ export function useLibrary() {
       thumbnail:   '',
       type:        'playlist',
     };
-    setPlaylists((prev) => [playlist, ...prev]);
+    setPlaylists((prev) => {
+      const next = [playlist, ...prev];
+      save(STORAGE_KEYS.playlists, next);
+      return next;
+    });
     return playlist.id;
   }, []);
 
   const deletePlaylist = useCallback((playlistId) => {
-    setPlaylists((prev) => prev.filter((p) => p.id !== playlistId));
+    setPlaylists((prev) => {
+      const next = prev.filter((p) => String(p.id) !== String(playlistId));
+      save(STORAGE_KEYS.playlists, next);
+      return next;
+    });
   }, []);
 
   const renamePlaylist = useCallback((playlistId, newTitle) => {
-    setPlaylists((prev) =>
-      prev.map((p) =>
-        p.id === playlistId
+    setPlaylists((prev) => {
+      const next = prev.map((p) =>
+        String(p.id) === String(playlistId)
           ? { ...p, title: newTitle.trim() || p.title, name: newTitle.trim() || p.title, updatedAt: Date.now() }
           : p
-      )
-    );
+      );
+      save(STORAGE_KEYS.playlists, next);
+      return next;
+    });
   }, []);
 
   const addToPlaylist = useCallback((playlistId, song) => {
     if (!song) return;
-    setPlaylists((prev) =>
-      prev.map((p) => {
-        if (p.id !== playlistId) return p;
+    setPlaylists((prev) => {
+      const next = prev.map((p) => {
+        if (String(p.id) !== String(playlistId)) return p;
         if (p.songs.some((s) => String(s.id || s.videoId) === String(song.id || song.videoId))) return p;
         const thumbnail = p.thumbnail || song.thumbnail;
         return {
@@ -252,14 +312,16 @@ export function useLibrary() {
           thumbnail,
           updatedAt: Date.now(),
         };
-      })
-    );
+      });
+      save(STORAGE_KEYS.playlists, next);
+      return next;
+    });
   }, []);
 
   const removeFromPlaylist = useCallback((playlistId, songId) => {
-    setPlaylists((prev) =>
-      prev.map((p) => {
-        if (p.id !== playlistId) return p;
+    setPlaylists((prev) => {
+      const next = prev.map((p) => {
+        if (String(p.id) !== String(playlistId)) return p;
         const updated = p.songs.filter((s) => String(s.id || s.videoId) !== String(songId));
         return {
           ...p,
@@ -267,12 +329,14 @@ export function useLibrary() {
           thumbnail: updated[0]?.thumbnail || '',
           updatedAt: Date.now(),
         };
-      })
-    );
+      });
+      save(STORAGE_KEYS.playlists, next);
+      return next;
+    });
   }, []);
 
   const getPlaylist = useCallback((id) =>
-    playlists.find((p) => p.id === id) || null, [playlists]);
+    playlists.find((p) => String(p.id) === String(id)) || null, [playlists]);
 
   // ── 6. Custom Albums ─────────────────────────────────────────────────
   const createAlbum = useCallback((title, artist = 'Various Artists', description = '') => {
@@ -287,61 +351,75 @@ export function useLibrary() {
       thumbnail:   '',
       type:        'album',
     };
-    setCustomAlbums((prev) => [album, ...prev]);
+    setCustomAlbums((prev) => {
+      const next = [album, ...prev];
+      save(STORAGE_KEYS.albums, next);
+      return next;
+    });
     return album.id;
   }, []);
 
   const deleteAlbum = useCallback((albumId) => {
-    setCustomAlbums((prev) => prev.filter((a) => a.id !== albumId));
+    setCustomAlbums((prev) => {
+      const next = prev.filter((a) => String(a.id) !== String(albumId));
+      save(STORAGE_KEYS.albums, next);
+      return next;
+    });
   }, []);
 
   const renameAlbum = useCallback((albumId, newTitle, newArtist) => {
-    setCustomAlbums((prev) =>
-      prev.map((a) =>
-        a.id === albumId
+    setCustomAlbums((prev) => {
+      const next = prev.map((a) =>
+        String(a.id) === String(albumId)
           ? { ...a, title: newTitle.trim() || a.title, artist: newArtist ? newArtist.trim() : a.artist }
           : a
-      )
-    );
+      );
+      save(STORAGE_KEYS.albums, next);
+      return next;
+    });
   }, []);
 
   const addToAlbum = useCallback((albumId, song) => {
     if (!song) return;
-    setCustomAlbums((prev) =>
-      prev.map((a) => {
-        if (a.id !== albumId) return a;
+    setCustomAlbums((prev) => {
+      const next = prev.map((a) => {
+        if (String(a.id) !== String(albumId)) return a;
         if (a.songs.some((s) => String(s.id || s.videoId) === String(song.id || song.videoId))) return a;
         const thumbnail = a.thumbnail || song.thumbnail;
         return { ...a, songs: [...a.songs, { ...song }], thumbnail };
-      })
-    );
+      });
+      save(STORAGE_KEYS.albums, next);
+      return next;
+    });
   }, []);
 
   const removeFromAlbum = useCallback((albumId, songId) => {
-    setCustomAlbums((prev) =>
-      prev.map((a) => {
-        if (a.id !== albumId) return a;
+    setCustomAlbums((prev) => {
+      const next = prev.map((a) => {
+        if (String(a.id) !== String(albumId)) return a;
         const updated = a.songs.filter((s) => String(s.id || s.videoId) !== String(songId));
         return {
           ...a,
           songs: updated,
           thumbnail: updated[0]?.thumbnail || '',
         };
-      })
-    );
+      });
+      save(STORAGE_KEYS.albums, next);
+      return next;
+    });
   }, []);
 
   // ── 7. Playback History ──────────────────────────────────────────────
   const recordPlayback = useCallback((song) => {
     if (!song) return;
     const historyItem = { ...song, playedAt: new Date().toISOString() };
-    const songId = String(song.id || song.videoId);
+    const songId = String(song.id || song.videoId || song.browseId || '');
 
     setHistory((prev) => {
-      const filtered = prev.filter((s) => String(s.id || s.videoId) !== songId);
+      const filtered = prev.filter((s) => String(s.id || s.videoId || s.browseId || '') !== songId);
       const updated = [historyItem, ...filtered].slice(0, 50);
       save(STORAGE_KEYS.history, updated);
-      return updated;
+      return [...updated];
     });
 
     if (user?.id) {

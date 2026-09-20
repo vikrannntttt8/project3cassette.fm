@@ -252,17 +252,21 @@ export default function LibraryView({ initialSection = 'playlists' }) {
               </div>
             ) : (
               <div className="flex flex-col gap-1">
-                {liked.map((song, i) => (
-                  <SongRow
-                    key={song.id}
-                    song={song}
-                    index={i}
-                    isActive={currentSong?.id === song.id}
-                    isPlaying={currentSong?.id === song.id && isPlaying}
-                    onPlay={() => loadSong(song, liked, i)}
-                    onAddToPlaylist={() => setAddMenuSong(song)}
-                  />
-                ))}
+                {liked.map((song, i) => {
+                  const sId = song.id || song.videoId;
+                  const curId = currentSong?.id || currentSong?.videoId;
+                  return (
+                    <SongRow
+                      key={sId || i}
+                      song={song}
+                      index={i}
+                      isActive={Boolean(sId && curId && sId === curId)}
+                      isPlaying={Boolean(sId && curId && sId === curId && isPlaying)}
+                      onPlay={() => loadSong(song, liked, i)}
+                      onAddToPlaylist={() => setAddMenuSong(song)}
+                    />
+                  );
+                })}
               </div>
             )}
           </div>

@@ -3,12 +3,29 @@ import { createClient } from '@supabase/supabase-js';
 const STORAGE_URL_KEY = 'pulse_supabase_url';
 const STORAGE_KEY_KEY = 'pulse_supabase_anon_key';
 
+const DEFAULT_SUPABASE_URL = 'https://djeizqnmzqigsxxkooxn.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqZWl6cW5tenFpZ3N4eGtvb3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk5MTAxOTMsImV4cCI6MjEwNTQ4NjE5M30.eSww-IDREla-_bq3ePYReaIaent-zmNXHSEdUUT0Kj4';
+
 let supabaseClient = null;
 
 export function getSupabaseCredentials() {
-  const url = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem(STORAGE_URL_KEY) || '';
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || localStorage.getItem(STORAGE_KEY_KEY) || '';
-  return { url: url.trim(), anonKey: anonKey.trim() };
+  const envUrl =
+    (typeof import.meta !== 'undefined' && import.meta.env?.NEXT_PUBLIC_SUPABASE_URL) ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) ||
+    (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SUPABASE_URL) ||
+    (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) ||
+    localStorage.getItem(STORAGE_URL_KEY) ||
+    DEFAULT_SUPABASE_URL;
+
+  const envKey =
+    (typeof import.meta !== 'undefined' && import.meta.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY) ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
+    (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY) ||
+    (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY) ||
+    localStorage.getItem(STORAGE_KEY_KEY) ||
+    DEFAULT_SUPABASE_ANON_KEY;
+
+  return { url: envUrl.trim(), anonKey: envKey.trim() };
 }
 
 export function isSupabaseConfigured() {
@@ -37,6 +54,8 @@ export function getSupabaseClient() {
   return null;
 }
 
+export const supabase = getSupabaseClient();
+
 export function saveSupabaseCredentials(url, anonKey) {
   if (url) localStorage.setItem(STORAGE_URL_KEY, url.trim());
   else localStorage.removeItem(STORAGE_URL_KEY);
@@ -55,7 +74,7 @@ export function saveSupabaseCredentials(url, anonKey) {
 export async function signInWithGoogle() {
   const client = getSupabaseClient();
   if (!client) {
-    throw new Error('Supabase is not configured. Please set your Supabase Project URL and Anon Key in Settings.');
+    throw new Error('Supabase client is not available.');
   }
 
   const { data, error } = await client.auth.signInWithOAuth({
@@ -89,7 +108,7 @@ export async function syncLikedSongsCloud(userId, likedSongs) {
   try {
     const rows = likedSongs.map((song) => ({
       user_id: userId,
-      song_id: song.id,
+      song_id: String(song.id),
       song_data: song,
     }));
 
@@ -138,9 +157,9 @@ export async function syncPlaylistsCloud(userId, playlists) {
       const { error } = await client
         .from('user_playlists')
         .upsert({
-          id: pl.id.length >= 30 ? pl.id : undefined,
+          id: pl.id && pl.id.length >= 30 ? pl.id : undefined,
           user_id: userId,
-          name: pl.name,
+          name: pl.title || pl.name || 'Untitled Playlist',
           songs: pl.songs || [],
           updated_at: new Date().toISOString(),
         });
@@ -168,8 +187,12 @@ export async function fetchPlaylistsCloud(userId) {
     }
     return (data || []).map((row) => ({
       id: row.id,
-      name: row.name,
+      title: row.name || 'Untitled Playlist',
+      name: row.name || 'Untitled Playlist',
       songs: row.songs || [],
+      thumbnail: row.songs?.[0]?.thumbnail || '',
+      type: 'playlist',
+      createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
     }));
   } catch (e) {
     console.warn('[Supabase] fetchPlaylists failed:', e.message);

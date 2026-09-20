@@ -175,7 +175,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   )}
                   <div>
                     <p className="text-label-md font-bold text-white">
-                      {user.user_metadata?.full_name || user.user_metadata?.name || 'Pulse Listener'}
+                      {user.user_metadata?.full_name || user.user_metadata?.name || 'cassette.fm Listener'}
                     </p>
                     <p className="text-body-xs font-mono text-[#888888]">{user.email}</p>
                   </div>
@@ -355,7 +355,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
         {/* Modal Footer */}
         <div className="px-6 py-3.5 border-t border-[#1a1a1a] flex items-center justify-between text-body-xs text-[#666666]">
-          <span>Pulse Studio · YouTube Music Engine + Supabase Cloud</span>
+          <span>cassette.fm · YouTube Music Engine + Supabase Cloud</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-full bg-white text-black text-label-sm font-semibold hover:bg-neutral-200 transition-colors cursor-pointer"

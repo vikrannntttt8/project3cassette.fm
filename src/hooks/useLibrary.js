@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const STORAGE_KEYS = {
   liked:     'likedSongs',
@@ -30,6 +31,8 @@ function save(key, value) {
 }
 
 export function useLibrary() {
+  const { user, syncLikedSongs, fetchLikedSongs, syncPlaylists, fetchPlaylists } = useAuth();
+
   const [liked, setLiked] = useState(() => {
     // Check 'likedSongs' first, then legacy 'pulse_liked_songs'
     const stored = load(STORAGE_KEYS.liked, null);
@@ -40,15 +43,57 @@ export function useLibrary() {
   const [playlists, setPlaylists] = useState(() => load(STORAGE_KEYS.playlists, []));
   const [customAlbums, setCustomAlbums] = useState(() => load(STORAGE_KEYS.albums, []));
 
-  // Sync to localStorage on change
+  // ── Automatic Cloud Sync with Supabase on Login ───────────────────
+  useEffect(() => {
+    if (!user?.id) return;
+    let isMounted = true;
+    Promise.all([fetchLikedSongs(), fetchPlaylists()]).then(([cloudLiked, cloudPlaylists]) => {
+      if (!isMounted) return;
+      if (Array.isArray(cloudLiked) && cloudLiked.length > 0) {
+        setLiked((prev) => {
+          const ids = new Set(prev.map((s) => String(s.id)));
+          const newItems = cloudLiked.filter((s) => !ids.has(String(s.id)));
+          const merged = [...prev, ...newItems];
+          if (prev.length > 0) syncLikedSongs(merged);
+          return merged;
+        });
+      } else if (liked.length > 0) {
+        syncLikedSongs(liked);
+      }
+
+      if (Array.isArray(cloudPlaylists) && cloudPlaylists.length > 0) {
+        setPlaylists((prev) => {
+          const ids = new Set(prev.map((p) => String(p.id)));
+          const newItems = cloudPlaylists.filter((p) => !ids.has(String(p.id)));
+          const merged = [...prev, ...newItems];
+          if (prev.length > 0) syncPlaylists(merged);
+          return merged;
+        });
+      } else if (playlists.length > 0) {
+        syncPlaylists(playlists);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
+
+  // Sync to localStorage and Supabase on change
   useEffect(() => {
     save(STORAGE_KEYS.liked, liked);
     save(STORAGE_KEYS.legacyLiked, liked);
-  }, [liked]);
+    if (user?.id) {
+      syncLikedSongs(liked);
+    }
+  }, [liked, user?.id]);
 
   useEffect(() => {
     save(STORAGE_KEYS.playlists, playlists);
-  }, [playlists]);
+    if (user?.id) {
+      syncPlaylists(playlists);
+    }
+  }, [playlists, user?.id]);
 
   useEffect(() => {
     save(STORAGE_KEYS.albums, customAlbums);

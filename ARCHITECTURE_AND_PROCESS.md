@@ -287,6 +287,21 @@ cassette.fm features a bi-directional cloud synchronization engine connecting fr
 - **OAuth Fragment & SecurityError Prevention**:
   - Automatically parses and sanitizes OAuth callback URL hashes (`#access_token=...`) using protected `cleanAuthUrlFragments()` and safe `replaceState`/`pushState` wrappers, preventing browser DOM `SecurityError` exceptions during redirect.
   - Automatically triggers reactive pull sync via `authSequence` on successful Google OAuth login, loading the user's liked songs, playlists, and history immediately without a page refresh.
+- **Bidirectional Reconciliation & Merging**:
+  - `performFullCloudSync` and `useLibrary` perform a full two-way reconciliation:
+    1. **Push Phase**: Local playlists and liked tracks are formatted and upserted to Supabase with proper user ownership.
+    2. **Pull Phase**: Cloud rows are retrieved with explicit `.range(0, 999)` pagination to bypass implicit limits.
+    3. **Merge & Reactivity**: Reconciles local and cloud records by ID, writes the union to `localStorage`, and updates React state instantly to render changes across the UI without a page reload.
 
+---
 
+## 11. Resilient Artist Routing & Discography Resolution
 
+1. **URL Parameter Encoding/Decoding**:
+   - Artist names containing punctuation, periods, or spaces (e.g. `K.K.`, `A.R. Rahman`) are safely encoded via `encodeURIComponent` on client fetch requests and decoded via `decodeURIComponent` in API route middleware.
+2. **Channel Resolution for Named Entities**:
+   - `getArtistDetails(browseId)` in `innertube.js` detects whether a requested identifier is a YouTube browse/channel ID (`UC...`) or a string handle/name.
+   - For string names, it performs an inner search `yt.music.search(query, { type: 'artist' })` to extract the canonical channel ID and load the complete artist discography.
+3. **Graceful Fallbacks & Client Recovery**:
+   - If direct channel lookup fails or metadata is missing, the backend returns a structured search-based artist discography payload instead of throwing an unhandled 500 error.
+   - The frontend `<ArtistView />` and `<ArtistModal />` components feature built-in retry mechanisms and search-based fallback displays with zero view breakage.

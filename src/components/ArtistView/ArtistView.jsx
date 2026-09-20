@@ -25,6 +25,7 @@ export default function ArtistView({ browseId, artistName }) {
   const [error, setError] = useState(null);
   const [expandedTopSongs, setExpandedTopSongs] = useState(false);
   const [addMenuSong, setAddMenuSong] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     if (!browseId && !artistName) return;
@@ -36,23 +37,33 @@ export default function ArtistView({ browseId, artistName }) {
 
     const fetchArtist = async () => {
       try {
-        let targetId = browseId;
-        // Fallback: if no browseId provided, search artist to obtain browseId
-        if (!targetId && artistName) {
-          const searchRes = await fetch(`/api/search?q=${encodeURIComponent(artistName)}&type=artists`);
-          if (searchRes.ok) {
-            const artists = await searchRes.json();
-            const matching = artists.find((a) => a.id || a.browseId);
-            if (matching) targetId = matching.id || matching.browseId;
-          }
-        }
-
+        let targetId = browseId || artistName;
         if (!targetId) {
           throw new Error('Artist ID could not be resolved');
         }
 
-        const res = await fetch(`/api/artist/${targetId}`);
-        if (!res.ok) throw new Error(`Failed to load artist details (${res.status})`);
+        const res = await fetch(`/api/artist/${encodeURIComponent(targetId)}`);
+        if (!res.ok) {
+          // Fallback: search for artist tracks if the specific endpoint returned non-200
+          const query = artistName || targetId;
+          const searchRes = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+          if (searchRes.ok) {
+            const tracks = await searchRes.json();
+            if (Array.isArray(tracks) && tracks.length > 0) {
+              const fallbackData = {
+                name: query,
+                thumbnail: tracks[0]?.thumbnail || '',
+                description: `Popular tracks and releases by ${query}`,
+                topSongs: tracks.slice(0, 20),
+                albums: [],
+                singles: [],
+              };
+              if (mounted) setData(fallbackData);
+              return;
+            }
+          }
+          throw new Error(`Failed to load artist details (${res.status})`);
+        }
         const json = await res.json();
         if (mounted) setData(json);
       } catch (err) {
@@ -64,7 +75,7 @@ export default function ArtistView({ browseId, artistName }) {
 
     fetchArtist();
     return () => { mounted = false; };
-  }, [browseId, artistName]);
+  }, [browseId, artistName, retryCount]);
 
   const handlePlaySong = (song, idx) => {
     if (currentSong?.videoId === song.videoId || currentSong?.id === song.id) {
@@ -104,9 +115,24 @@ export default function ArtistView({ browseId, artistName }) {
 
       {/* ── Error Banner ── */}
       {error && !loading && (
-        <div className="p-6 rounded-2xl bg-[#141414] border border-[#333333] text-center space-y-3">
-          <p className="text-body-lg text-white font-semibold">{error}</p>
-          <BackButton label="Return to Previous View" className="px-4 py-2 bg-white text-black hover:bg-neutral-200" />
+        <div className="p-8 rounded-2xl bg-[#141414] border border-[#333333] text-center space-y-4 max-w-lg mx-auto my-12">
+          <div className="w-12 h-12 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center mx-auto">
+            <span className="material-symbols-outlined text-[28px]">error</span>
+          </div>
+          <div>
+            <p className="text-body-lg text-white font-semibold">{error}</p>
+            <p className="text-body-sm text-neutral-400 mt-1">Unable to retrieve artist information at this time.</p>
+          </div>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => setRetryCount((c) => c + 1)}
+              className="px-4 py-2 rounded-xl bg-white text-black font-semibold text-body-sm hover:bg-neutral-200 transition-colors flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[18px]">refresh</span>
+              Retry
+            </button>
+            <BackButton label="Return" className="px-4 py-2 rounded-xl bg-[#222222] text-white hover:bg-[#333333]" />
+          </div>
         </div>
       )}
 

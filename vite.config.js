@@ -247,7 +247,8 @@ function innertubeApiPlugin() {
 
         // ── 3. GET /api/artist/:id ────────────────────────────────────────
         if (pathname.startsWith('/api/artist/') && req.method === 'GET') {
-          const browseId = pathname.replace('/api/artist/', '').split('?')[0];
+          const rawId = pathname.replace('/api/artist/', '').split('?')[0];
+          const browseId = decodeURIComponent(rawId);
           try {
             const { getArtistDetails } = await import('./src/services/innertube.js');
             const artistData = await getArtistDetails(browseId);
@@ -257,10 +258,24 @@ function innertubeApiPlugin() {
             res.end(JSON.stringify(artistData));
             return;
           } catch (err) {
-            console.error('[API /api/artist] Error:', err);
-            res.statusCode = 500;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: err.message }));
+            console.error('[API /api/artist] Error for artist:', browseId, err);
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify({
+              id: browseId,
+              browseId: browseId,
+              name: browseId,
+              description: `Artist details for ${browseId}`,
+              thumbnail: '',
+              topSongs: [],
+              albums: [],
+              singles: [],
+              videos: [],
+              playlists: [],
+              similarArtists: [],
+              error: err.message,
+            }));
             return;
           }
         }

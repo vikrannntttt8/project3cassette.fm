@@ -19,23 +19,32 @@ export default function ArtistModal({ artistId, artistName, onClose, onSelectTra
 
     const fetchArtist = async () => {
       try {
-        let browseId = artistId;
-        // If no browseId provided, search for the artist to get their browseId
-        if (!browseId && artistName) {
-          const searchRes = await fetch(`/api/search?q=${encodeURIComponent(artistName)}`);
-          if (searchRes.ok) {
-            const tracks = await searchRes.json();
-            const matching = tracks.find((t) => t.artistId);
-            if (matching) browseId = matching.artistId;
-          }
-        }
-
-        if (!browseId) {
+        let targetId = artistId || artistName;
+        if (!targetId) {
           throw new Error('Artist ID not found');
         }
 
-        const res = await fetch(`/api/artist/${browseId}`);
-        if (!res.ok) throw new Error(`Failed to load artist (${res.status})`);
+        const res = await fetch(`/api/artist/${encodeURIComponent(targetId)}`);
+        if (!res.ok) {
+          const query = artistName || targetId;
+          const searchRes = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+          if (searchRes.ok) {
+            const tracks = await searchRes.json();
+            if (Array.isArray(tracks) && tracks.length > 0) {
+              const fallbackData = {
+                name: query,
+                thumbnail: tracks[0]?.thumbnail || '',
+                description: `Songs by ${query}`,
+                topSongs: tracks.slice(0, 15),
+                albums: [],
+                singles: [],
+              };
+              if (mounted) setData(fallbackData);
+              return;
+            }
+          }
+          throw new Error(`Failed to load artist (${res.status})`);
+        }
         const json = await res.json();
         if (mounted) setData(json);
       } catch (err) {

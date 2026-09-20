@@ -32,55 +32,165 @@
 }
 
 @layer utilities {
-  /* Active lyric glow — neon pink text shadow */
+  /* ── Neo-Brutalist Cards & Boxes ──────────────────────────────────── */
+  .neo-card {
+    background-color: #131419;
+    border: 2px solid #000000;
+    box-shadow: 4px 4px 0px 0px #000000;
+    border-radius: 14px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .neo-card:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 6px 6px 0px 0px #000000;
+  }
+
+  .neo-card-flat {
+    background-color: #131419;
+    border: 2px solid #000000;
+    box-shadow: 4px 4px 0px 0px #000000;
+    border-radius: 14px;
+  }
+
+  .neo-card-subtle {
+    background-color: #1a1b22;
+    border: 2px solid #27272a;
+    box-shadow: 3px 3px 0px 0px #000000;
+    border-radius: 12px;
+  }
+
+  /* ── Tactile Neo Buttons ──────────────────────────────────────────── */
+  .neo-btn {
+    border: 2px solid #000000;
+    box-shadow: 3px 3px 0px 0px #000000;
+    transition: all 0.1s ease;
+    user-select: none;
+  }
+  .neo-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px 0px #000000;
+  }
+  .neo-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px 0px #000000;
+  }
+
+  .neo-btn-lime {
+    background-color: #CCFF00;
+    color: #000000;
+    font-weight: 800;
+    border: 2px solid #000000;
+    box-shadow: 3px 3px 0px 0px #000000;
+    transition: all 0.1s ease;
+  }
+  .neo-btn-lime:hover {
+    background-color: #d6ff33;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px 0px #000000;
+  }
+  .neo-btn-lime:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px 0px #000000;
+  }
+
+  .neo-btn-pink {
+    background-color: #FF2E93;
+    color: #ffffff;
+    font-weight: 800;
+    border: 2px solid #000000;
+    box-shadow: 3px 3px 0px 0px #000000;
+    transition: all 0.1s ease;
+  }
+  .neo-btn-pink:hover {
+    background-color: #ff47a2;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px 0px #000000;
+  }
+  .neo-btn-pink:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px 0px #000000;
+  }
+
+  .neo-btn-cyan {
+    background-color: #00F0FF;
+    color: #000000;
+    font-weight: 800;
+    border: 2px solid #000000;
+    box-shadow: 3px 3px 0px 0px #000000;
+    transition: all 0.1s ease;
+  }
+  .neo-btn-cyan:hover {
+    background-color: #33f3ff;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px 0px #000000;
+  }
+  .neo-btn-cyan:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px 0px #000000;
+  }
+
+  /* ── Sticker Badges ───────────────────────────────────────────────── */
+  .neo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    font-weight: 800;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border: 1.5px solid #000000;
+    box-shadow: 2px 2px 0px 0px #000000;
+    border-radius: 6px;
+  }
+
+  /* ── Background Grid Pattern ──────────────────────────────────────── */
+  .bg-neo-grid {
+    background-color: #0a0b0e;
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  /* ── Brutalist Dock ───────────────────────────────────────────────── */
+  .neo-dock {
+    background-color: #121318;
+    border: 2.5px solid #000000;
+    box-shadow: 6px 6px 0px 0px #000000;
+  }
+
+  /* Active lyric glow — neon yellow/pink */
   .lyric-active-glow {
-    text-shadow: 0 0 35px rgba(236, 72, 153, 0.45),
-                 0 0 15px rgba(255, 255, 255, 0.25);
+    text-shadow: 0 0 24px rgba(204, 255, 0, 0.5),
+                 0 0 10px rgba(255, 255, 255, 0.4);
   }
 
-  /* Glass dock elevation — Stitch Level 3 */
+  /* Glass fallback compatibility */
   .glass-dock {
-    background: rgba(18, 18, 21, 0.65);
-    backdrop-filter: blur(40px) saturate(1.8);
-    -webkit-backdrop-filter: blur(40px) saturate(1.8);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow:
-      0 12px 32px rgba(0, 0, 0, 0.6),
-      0 0 48px -12px rgba(139, 92, 246, 0.2);
+    background-color: #121318;
+    border: 2.5px solid #000000;
+    box-shadow: 6px 6px 0px 0px #000000;
   }
-
-  /* Glass card — Stitch Level 1 */
   .glass-card {
-    background: rgba(18, 18, 21, 0.40);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background-color: #131419;
+    border: 2px solid #000000;
+    box-shadow: 4px 4px 0px 0px #000000;
+    border-radius: 14px;
   }
-
-  /* Glass panel — Stitch Level 2 */
   .glass-panel {
-    background: rgba(24, 24, 28, 0.70);
-    backdrop-filter: blur(32px);
-    -webkit-backdrop-filter: blur(32px);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+    background-color: #101116;
+    border: 2px solid #000000;
+    box-shadow: 4px 4px 0px 0px #000000;
   }
 
-  /* Gradient text clip for active lyrics */
-  .gradient-text-active {
-    background: linear-gradient(90deg, #ffffff 0%, #ffb0cd 50%, #d0bcff 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  /* Seek bar gradient fill */
+  /* Seek bar neon fill */
   .seek-fill {
-    background: linear-gradient(90deg, #8B5CF6, #EC4899);
+    background: linear-gradient(90deg, #CCFF00, #00F0FF);
   }
 }
 
-/* Custom range input styling */
+/* Custom range input styling for Neo-Brutalism */
 input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
@@ -89,75 +199,74 @@ input[type='range'] {
 }
 
 input[type='range']::-webkit-slider-runnable-track {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 9999px;
+  height: 6px;
+  background: #22232a;
+  border: 1.5px solid #000000;
+  border-radius: 4px;
 }
 
 input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #ffffff;
-  margin-top: -4.5px;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
-  transition: transform 0.15s ease;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: #CCFF00;
+  border: 2px solid #000000;
+  box-shadow: 2px 2px 0px 0px #000000;
+  margin-top: -6px;
+  transition: transform 0.1s ease;
 }
 
 input[type='range']:hover::-webkit-slider-thumb {
-  transform: scale(1.3);
+  transform: scale(1.15);
+  background: #ffffff;
 }
 
 input[type='range'].volume-slider::-webkit-slider-runnable-track {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 9999px;
+  height: 5px;
+  background: #22232a;
+  border: 1px solid #000000;
+  border-radius: 4px;
 }
 
 input[type='range'].volume-slider::-webkit-slider-thumb {
-  width: 10px;
-  height: 10px;
-  margin-top: -3.5px;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: #00F0FF;
+  border: 1.5px solid #000000;
+  box-shadow: 1px 1px 0px 0px #000000;
+  margin-top: -4px;
 }
 
 /* Visualizer bars animation */
 @keyframes bar1 {
-  0%, 100% { height: 30%; }
-  50% { height: 100%; }
+  0%, 100% { height: 25%; }
+  50% { height: 95%; }
 }
 @keyframes bar2 {
-  0%, 100% { height: 80%; }
-  50% { height: 20%; }
+  0%, 100% { height: 85%; }
+  50% { height: 30%; }
 }
 @keyframes bar3 {
-  0%, 100% { height: 50%; }
-  50% { height: 90%; }
+  0%, 100% { height: 45%; }
+  50% { height: 100%; }
 }
 
-.visualizer-bar:nth-child(1) { animation: bar1 0.7s ease-in-out infinite; }
-.visualizer-bar:nth-child(2) { animation: bar2 0.5s ease-in-out infinite; }
-.visualizer-bar:nth-child(3) { animation: bar3 0.9s ease-in-out infinite; }
-
-/* Ambient glow pulse */
-@keyframes glow-pulse {
-  0%, 100% { opacity: 0.15; transform: scale(1); }
-  50% { opacity: 0.3; transform: scale(1.05); }
-}
-.ambient-glow {
-  animation: glow-pulse 6s ease-in-out infinite;
-}
+.visualizer-bar:nth-child(1) { animation: bar1 0.6s ease-in-out infinite; }
+.visualizer-bar:nth-child(2) { animation: bar2 0.45s ease-in-out infinite; }
+.visualizer-bar:nth-child(3) { animation: bar3 0.8s ease-in-out infinite; }
 
 /* View transition */
 .view-enter {
   opacity: 0;
-  transform: translateY(12px);
+  transform: translateY(8px);
 }
 .view-enter-active {
   opacity: 1;
   transform: translateY(0);
-  transition: opacity 400ms ease, transform 400ms ease;
+  transition: opacity 250ms ease, transform 250ms ease;
 }
 .view-exit {
   opacity: 1;
@@ -165,29 +274,22 @@ input[type='range'].volume-slider::-webkit-slider-thumb {
 }
 .view-exit-active {
   opacity: 0;
-  transform: translateY(-8px);
-  transition: opacity 300ms ease, transform 300ms ease;
+  transform: translateY(-6px);
+  transition: opacity 200ms ease, transform 200ms ease;
 }
 
-/* ── Visualizer bars (SongRow active state) ───────────────────────── */
+/* Visualizer bars (SongRow active state) */
 @keyframes visualizer {
   0%, 100% { height: 4px; }
   50%       { height: 14px; }
 }
 
 .visualizer-bar {
-  animation: visualizer 0.8s ease-in-out infinite;
+  animation: visualizer 0.7s ease-in-out infinite;
   transform-origin: bottom;
 }
-.visualizer-bar:nth-child(1) { animation-delay: 0s;    }
-.visualizer-bar:nth-child(2) { animation-delay: 0.15s; }
-.visualizer-bar:nth-child(3) { animation-delay: 0.3s;  }
+.visualizer-bar:nth-child(1) { animation-delay: 0s; }
+.visualizer-bar:nth-child(2) { animation-delay: 0.12s; }
+.visualizer-bar:nth-child(3) { animation-delay: 0.24s; }
 
-/* ── glass-card utility (if not already present) ────────────────── */
-.glass-card {
-  background: rgba(18, 18, 21, 0.40);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
 

@@ -2,44 +2,48 @@ export default function AlbumCard({ item, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col gap-2 rounded-xl p-3 bg-white/3 hover:bg-white/8 border border-white/5 hover:border-brand-violet/20 transition-all duration-300 text-left w-full"
+      className="group flex flex-col gap-2 rounded-xl p-2.5 bg-[#14151b] hover:bg-[#1a1b24] border-2 border-black shadow-neo-sm hover:shadow-neo hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-150 text-left w-full relative"
     >
-      {/* Art */}
-      <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-white/5">
+      {/* Art Frame */}
+      <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-zinc-900 border-2 border-black">
         {item.thumbnail ? (
           <img
             src={item.thumbnail}
             alt={item.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="material-symbols-outlined text-white/15 text-[40px]">
+          <div className="w-full h-full flex items-center justify-center bg-zinc-800">
+            <span className="material-symbols-outlined text-white/20 text-[40px]">
               {item.type === 'playlist' ? 'queue_music' : 'album'}
             </span>
           </div>
         )}
-        {/* Play overlay */}
-        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg">
-            <span className="material-symbols-outlined text-black text-[22px]" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
-          </div>
-        </div>
-        {/* Song count badge */}
+
+        {/* Floating track count sticker */}
         {item.songCount > 0 && (
-          <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-label-sm text-white/70">
-            {item.songCount} tracks
+          <div className="absolute top-2 left-2 neo-badge bg-black text-[#00F0FF] text-[9px] py-0.5 px-1.5 border border-black font-mono shadow-sm">
+            {item.songCount} TRKS
           </div>
         )}
+
+        {/* Play overlay button */}
+        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <div className="w-11 h-11 rounded-full bg-[#CCFF00] border-2 border-black flex items-center justify-center shadow-neo-sm transform group-hover:scale-105 transition-transform">
+            <span className="material-symbols-outlined text-black text-[24px]" style={{fontVariationSettings:"'FILL' 1"}}>
+              play_arrow
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Info */}
-      <div className="flex flex-col min-w-0">
-        <span className="text-label-lg font-semibold text-white truncate group-hover:text-[#d0bcff] transition-colors">
+      <div className="flex flex-col min-w-0 px-0.5">
+        <span className="text-xs font-black uppercase tracking-tight text-white truncate group-hover:text-[#CCFF00] transition-colors">
           {item.title}
         </span>
-        <span className="text-body-sm text-on-surface-variant truncate">
-          {item.artist || item.year || ''}
+        <span className="text-[10px] font-mono text-zinc-400 truncate mt-0.5">
+          {item.artist || item.year || (item.type === 'playlist' ? 'PLAYLIST' : 'ALBUM')}
         </span>
       </div>
     </button>

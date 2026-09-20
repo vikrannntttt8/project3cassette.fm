@@ -41,38 +41,48 @@ export default function AddToPlaylistMenu({ song, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 backdrop-blur-md"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm select-none"
       onClick={onClose}
     >
       <div
-        className="glass-panel rounded-2xl p-6 w-full max-w-sm mx-4 flex flex-col gap-4 border border-white/10"
+        className="neo-card p-5 w-full max-w-sm mx-4 flex flex-col gap-4 bg-[#14151c] border-2 border-black shadow-neo-lg"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between pb-2 border-b-2 border-black">
           <div className="flex flex-col min-w-0">
-            <h3 className="text-headline-sm font-semibold text-white">Save Song</h3>
-            <p className="text-body-sm text-on-surface-variant truncate">{song.title}</p>
+            <span className="neo-badge bg-[#CCFF00] text-black text-[9px] font-black self-start mb-0.5">
+              SAVE TO COLLECTION
+            </span>
+            <h3 className="text-sm font-black uppercase text-white truncate">{song.title}</h3>
+            <p className="text-[10px] font-mono text-zinc-400 truncate">{song.artist}</p>
           </div>
-          <button onClick={onClose} className="text-on-surface-variant hover:text-white transition-colors p-1">
-            <span className="material-symbols-outlined text-[22px]">close</span>
+          <button
+            onClick={onClose}
+            className="neo-btn p-1 rounded-lg bg-zinc-800 text-zinc-400 hover:text-white border border-black flex-shrink-0"
+          >
+            <span className="material-symbols-outlined text-[18px] block">close</span>
           </button>
         </div>
 
         {/* Tab switch */}
-        <div className="flex items-center bg-white/5 p-1 rounded-xl">
+        <div className="flex items-center gap-2 p-1 bg-zinc-900/80 rounded-xl border border-zinc-800">
           <button
             onClick={() => { setTab('playlist'); setCreating(false); }}
-            className={`flex-1 py-1.5 rounded-lg text-label-md font-medium transition-all ${
-              tab === 'playlist' ? 'bg-brand-violet text-white font-semibold' : 'text-on-surface-variant hover:text-white'
+            className={`flex-1 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+              tab === 'playlist'
+                ? 'bg-[#CCFF00] text-black border border-black shadow-neo-sm'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
             Playlists ({playlists.length})
           </button>
           <button
             onClick={() => { setTab('album'); setCreating(false); }}
-            className={`flex-1 py-1.5 rounded-lg text-label-md font-medium transition-all ${
-              tab === 'album' ? 'bg-brand-cyan text-black font-semibold' : 'text-on-surface-variant hover:text-white'
+            className={`flex-1 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+              tab === 'album'
+                ? 'bg-[#00F0FF] text-black border border-black shadow-neo-sm'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
             Albums ({customAlbums.length})
@@ -87,38 +97,43 @@ export default function AddToPlaylistMenu({ song, onClose }) {
               value={newTitle}
               onChange={e => setNewTitle(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleCreate()}
-              placeholder={tab === 'playlist' ? "Playlist name…" : "Album name…"}
-              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-body-md outline-none focus:border-brand-violet/60"
+              placeholder={tab === 'playlist' ? "Playlist Name..." : "Album Name..."}
+              className="flex-1 bg-zinc-900 border-2 border-black rounded-lg px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wider outline-none focus:border-[#CCFF00]"
             />
             <button
               onClick={handleCreate}
-              className={`px-3 py-2 rounded-lg text-label-md font-semibold transition-colors ${
-                tab === 'playlist' ? 'bg-brand-violet text-white hover:bg-brand-violet/80' : 'bg-brand-cyan text-black hover:bg-brand-cyan/80'
+              className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${
+                tab === 'playlist' ? 'neo-btn-lime' : 'neo-btn-cyan'
               }`}
             >
-              Create
+              Add
             </button>
-            <button onClick={() => setCreating(false)} className="text-on-surface-variant hover:text-white transition-colors">
-              <span className="material-symbols-outlined text-[20px]">close</span>
+            <button
+              onClick={() => setCreating(false)}
+              className="neo-btn p-1 rounded-lg bg-zinc-800 text-zinc-400 hover:text-white border border-black"
+            >
+              <span className="material-symbols-outlined text-[16px] block">close</span>
             </button>
           </div>
         ) : (
           <button
             onClick={() => setCreating(true)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/8 border border-dashed border-white/15 hover:border-brand-violet/40 transition-all"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 border-2 border-dashed border-zinc-700 hover:border-[#CCFF00] transition-all text-left group shadow-neo-sm"
           >
-            <span className={`material-symbols-outlined text-[20px] ${tab === 'playlist' ? 'text-brand-violet' : 'text-brand-cyan'}`}>add</span>
-            <span className="text-label-lg text-on-surface-variant hover:text-white">
-              {tab === 'playlist' ? 'New Playlist' : 'New Custom Album'}
+            <div className={`w-6 h-6 rounded-md border border-black flex items-center justify-center font-black text-black text-xs ${tab === 'playlist' ? 'bg-[#CCFF00]' : 'bg-[#00F0FF]'}`}>
+              +
+            </div>
+            <span className="text-xs font-black uppercase tracking-wider text-zinc-300 group-hover:text-white">
+              {tab === 'playlist' ? 'NEW PLAYLIST' : 'NEW CUSTOM ALBUM'}
             </span>
           </button>
         )}
 
         {/* List */}
-        <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+        <div className="flex flex-col gap-1.5 max-h-60 overflow-y-auto pr-0.5">
           {currentList.length === 0 && (
-            <p className="text-body-sm text-outline text-center py-4">
-              {tab === 'playlist' ? 'No playlists yet — create one above' : 'No albums yet — create one above'}
+            <p className="text-xs font-mono text-zinc-500 text-center py-4 uppercase">
+              {tab === 'playlist' ? 'No playlists yet' : 'No albums yet'}
             </p>
           )}
           {currentList.map(item => {
@@ -127,29 +142,31 @@ export default function AddToPlaylistMenu({ song, onClose }) {
               <button
                 key={item.id}
                 onClick={() => !added && (tab === 'playlist' ? handleAddPlaylist(item.id) : handleAddAlbum(item.id))}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
+                className={`flex items-center gap-2.5 p-2 rounded-xl transition-all ${
                   added
-                    ? 'bg-brand-violet/10 border border-brand-violet/20 cursor-default'
-                    : 'hover:bg-white/5 border border-transparent hover:border-white/10'
+                    ? 'bg-[#CCFF00]/15 border-2 border-[#CCFF00] cursor-default'
+                    : 'bg-zinc-900/40 hover:bg-zinc-800/90 border-2 border-transparent hover:border-black hover:shadow-neo-sm'
                 }`}
               >
-                <div className="w-9 h-9 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden">
+                <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-black flex-shrink-0 overflow-hidden flex items-center justify-center">
                   {item.thumbnail ? (
                     <img src={item.thumbnail} className="w-full h-full object-cover" alt="" />
                   ) : (
-                    <span className="material-symbols-outlined text-white/20 text-[18px] block mx-auto mt-2">
+                    <span className="material-symbols-outlined text-zinc-500 text-[16px]">
                       {tab === 'playlist' ? 'queue_music' : 'album'}
                     </span>
                   )}
                 </div>
                 <div className="flex flex-col min-w-0 text-left">
-                  <span className={`text-label-lg font-semibold truncate ${added ? 'text-brand-violet' : 'text-white'}`}>
+                  <span className={`text-xs font-black uppercase tracking-tight truncate ${added ? 'text-[#CCFF00]' : 'text-white'}`}>
                     {item.title}
                   </span>
-                  <span className="text-body-sm text-on-surface-variant">{item.songs.length} tracks</span>
+                  <span className="text-[10px] font-mono text-zinc-400">{item.songs.length} TRACKS</span>
                 </div>
                 {added && (
-                  <span className="material-symbols-outlined text-brand-violet text-[20px] ml-auto flex-shrink-0">check_circle</span>
+                  <span className="neo-badge bg-[#CCFF00] text-black text-[8px] py-0 px-1 border border-black ml-auto font-black flex-shrink-0">
+                    ADDED ✓
+                  </span>
                 )}
               </button>
             );

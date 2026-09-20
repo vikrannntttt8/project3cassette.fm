@@ -6,58 +6,53 @@ export default function LyricsView() {
   const { toggleView } = usePlayer();
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden">
-      {/* ── Minimal header ──────────────────────────────────────── */}
-      <header className="flex-shrink-0 flex items-center justify-between px-10 py-5 h-14">
+    <div className="h-full w-full flex flex-col overflow-hidden bg-neo-grid select-none">
+      {/* ── Neo-Brutalist Header ─────────────────────────────────── */}
+      <header className="flex-shrink-0 flex items-center justify-between px-6 sm:px-10 py-3.5 h-16 border-b-2 border-black bg-[#0d0e13]/90 shadow-[0_2px_0px_0px_#000]">
         {/* Back to home */}
         <button
           onClick={toggleView}
-          className="flex items-center gap-2 text-on-surface-variant hover:text-white transition-colors group focus:outline-none"
+          className="neo-btn bg-[#181920] hover:bg-black text-white px-3.5 py-1.5 rounded-xl flex items-center gap-2 text-xs font-black uppercase tracking-wider transition-all"
         >
-          <svg className="w-5 h-5 transition-transform group-hover:-translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-          </svg>
-          <span className="text-label-lg font-semibold tracking-wider text-on-surface-variant group-hover:text-white uppercase">
-            Pulse
-          </span>
+          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          <span>EXIT STUDIO</span>
         </button>
 
-        {/* Audio quality pill */}
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-white/4 border border-white/6">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#4cd7f6] animate-pulse" />
-          <span className="text-[11px] font-medium tracking-wide text-on-surface-variant uppercase">
-            Lossless · 24-bit/192kHz Spatial
+        {/* Audio quality sticker pill */}
+        <div className="hidden sm:flex items-center gap-2">
+          <span className="neo-badge bg-[#CCFF00] text-black text-[10px] font-black border border-black shadow-neo-sm">
+            LOSSLESS 24-BIT // 192KHZ
+          </span>
+          <span className="neo-badge bg-[#00F0FF] text-black text-[10px] font-black border border-black shadow-neo-sm">
+            DOLBY ATMOS SPATIAL
           </span>
         </div>
 
         {/* Right controls */}
-        <div className="flex items-center gap-5 text-on-surface-variant">
-          <button className="hover:text-white transition-colors" title="AirPlay">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24">
-              <path d="M5 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1" />
-              <polygon points="12 15 17 21 7 21 12 15" />
-            </svg>
-          </button>
-          <button onClick={toggleView} className="text-white hover:text-brand-violet transition-colors" title="Lyrics Active">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path d="M7 8h10M7 12h6m-6 4h10M4 4h16v16H4V4z" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleView}
+            className="neo-btn-pink px-3 py-1 rounded-xl text-xs font-black uppercase flex items-center gap-1.5 shadow-neo-sm"
+            title="Lyrics Active"
+          >
+            <span className="material-symbols-outlined text-[16px]">lyrics</span>
+            <span>LYRICS SYNC</span>
           </button>
         </div>
       </header>
 
       {/* ── 2-Column content ────────────────────────────────────── */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center min-h-0 py-2 px-10 lg:px-16 max-w-7xl mx-auto w-full">
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center min-h-0 py-4 px-6 sm:px-10 lg:px-14 max-w-7xl mx-auto w-full overflow-hidden">
         <AlbumArtPanel />
         <LyricsPanel />
       </main>
 
       {/* ── Footer ──────────────────────────────────────────────── */}
-      <footer className="flex-shrink-0 flex items-center justify-between text-label-sm text-outline px-10 py-3">
-        <span className="tracking-wide">Dolby Atmos · Mastered for Pulse</span>
-        <div className="flex items-center gap-4">
-          <button className="hover:text-on-surface-variant transition-colors">Credits</button>
-          <button className="hover:text-on-surface-variant transition-colors">Show Notes</button>
+      <footer className="flex-shrink-0 flex items-center justify-between font-mono text-[10px] text-zinc-400 px-6 sm:px-10 py-2.5 border-t-2 border-black bg-[#0d0e13]">
+        <span className="text-[#CCFF00] font-bold">● MASTERED FOR PULSE // SPATIAL MATRIX</span>
+        <div className="flex items-center gap-4 uppercase font-bold">
+          <span className="text-zinc-500">LRCLIB SYNC ENGINE</span>
+          <span className="text-[#00F0FF]">STEREO 320 KBPS</span>
         </div>
       </footer>
     </div>

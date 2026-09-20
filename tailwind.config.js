@@ -79,6 +79,33 @@ export default {
           pink:   '#EC4899',
           cyan:   '#06B6D4',
         },
+
+        // Neo-Brutalism Theme Palette
+        neo: {
+          bg:        '#0a0b0e',
+          card:      '#131419',
+          'card-alt':'#1b1c24',
+          'card-high':'#242632',
+          lime:      '#CCFF00',
+          pink:      '#FF2E93',
+          cyan:      '#00F0FF',
+          yellow:    '#FFE600',
+          orange:    '#FF6B00',
+          violet:    '#A855F7',
+          border:    '#27272a',
+          white:     '#FFFFFF',
+        },
+      },
+      boxShadow: {
+        'neo-sm':   '2px 2px 0px 0px #000000',
+        'neo':      '3px 3px 0px 0px #000000',
+        'neo-md':   '4px 4px 0px 0px #000000',
+        'neo-lg':   '6px 6px 0px 0px #000000',
+        'neo-xl':   '8px 8px 0px 0px #000000',
+        'neo-lime': '4px 4px 0px 0px #CCFF00',
+        'neo-pink': '4px 4px 0px 0px #FF2E93',
+        'neo-cyan': '4px 4px 0px 0px #00F0FF',
+        'neo-white':'4px 4px 0px 0px #ffffff',
       },
       borderRadius: {
         sm:      '4px',
@@ -125,18 +152,23 @@ export default {
         'pulse-slow': 'pulse 6s ease-in-out infinite',
         'bounce-slow': 'bounce 2s ease-in-out infinite',
         'spin-slow': 'spin 20s linear infinite',
-        'fade-in': 'fadeIn 0.4s ease forwards',
-        'slide-up': 'slideUp 0.4s ease forwards',
+        'fade-in': 'fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'slide-up': 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'glow': 'glow-pulse 6s ease-in-out infinite',
+        'marquee': 'marquee 18s linear infinite',
       },
       keyframes: {
         fadeIn: {
-          from: { opacity: '0', transform: 'translateY(8px)' },
+          from: { opacity: '0', transform: 'translateY(6px)' },
           to:   { opacity: '1', transform: 'translateY(0)' },
         },
         slideUp: {
-          from: { opacity: '0', transform: 'translateY(16px)' },
+          from: { opacity: '0', transform: 'translateY(12px)' },
           to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        marquee: {
+          '0%':   { transform: 'translateX(0%)' },
+          '100%': { transform: 'translateX(-50%)' },
         },
         'glow-pulse': {
           '0%, 100%': { opacity: '0.15', transform: 'scale(1)' },

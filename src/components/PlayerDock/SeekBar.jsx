@@ -4,22 +4,22 @@ export default function SeekBar({ currentTime, duration, onSeek }) {
   const progress = duration ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="w-full flex items-center gap-space-sm">
-      <span className="text-label-sm text-on-surface-variant w-8 text-right tabular-nums font-mono">
+    <div className="w-full flex items-center gap-3">
+      <span className="text-xs text-zinc-400 w-10 text-right tabular-nums font-mono font-bold">
         {formatTime(currentTime)}
       </span>
 
       {/* Track bar */}
-      <div className="relative flex-1 h-1 group cursor-pointer">
-        {/* Background track */}
-        <div className="absolute inset-0 bg-white/15 rounded-full overflow-hidden">
+      <div className="relative flex-1 h-2 group cursor-pointer">
+        {/* Background track with border */}
+        <div className="absolute inset-0 bg-zinc-800 border border-black rounded-sm overflow-hidden">
           {/* Fill gradient */}
           <div
-            className="h-full seek-fill rounded-full transition-all duration-150"
+            className="h-full bg-gradient-to-r from-[#CCFF00] via-[#FFE600] to-[#00F0FF] rounded-none transition-all duration-100"
             style={{ width: `${progress}%` }}
           />
         </div>
-        {/* Range input overlay (invisible, handles interaction) */}
+        {/* Range input overlay */}
         <input
           type="range"
           min={0}
@@ -31,12 +31,12 @@ export default function SeekBar({ currentTime, duration, onSeek }) {
         />
         {/* Thumb indicator */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-          style={{ left: `calc(${progress}% - 6px)` }}
+          className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 bg-white border-2 border-black rounded-sm shadow-neo-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+          style={{ left: `calc(${progress}% - 7px)` }}
         />
       </div>
 
-      <span className="text-label-sm text-on-surface-variant w-8 tabular-nums font-mono">
+      <span className="text-xs text-zinc-400 w-10 tabular-nums font-mono font-bold">
         {formatTime(duration)}
       </span>
     </div>

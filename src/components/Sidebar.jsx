@@ -7,63 +7,82 @@ const NAV_ITEMS = [
 ];
 
 export default function Sidebar() {
-  const { view, setView, playlists, liked, currentSong, playCollection, loadSong, customAlbums = [] } = usePlayer();
+  const { view, setView, playlists, liked, currentSong, playCollection, customAlbums = [] } = usePlayer();
 
   return (
-    <aside className="h-full w-60 glass-panel flex flex-col justify-between py-4 px-3 border-r border-white/5 select-none overflow-hidden">
+    <aside className="h-full w-64 bg-[#0e0f14] flex flex-col justify-between p-3.5 border-r-2 border-black select-none overflow-hidden shadow-[2px_0px_0px_0px_#000]">
       <div className="flex flex-col gap-4 min-h-0">
-        {/* Logo */}
-        <div className="flex items-center gap-2 px-1 py-1 flex-shrink-0">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-violet to-brand-pink flex items-center justify-center">
-            <span className="text-white font-bold text-sm">P</span>
+        {/* Neo-Brutalist Logo */}
+        <div className="flex items-center gap-2.5 p-2 bg-[#CCFF00] border-2 border-black shadow-neo-sm rounded-xl text-black">
+          <div className="w-8 h-8 rounded-lg bg-black text-[#CCFF00] flex items-center justify-center font-black text-base border-2 border-black shadow-sm">
+            ⚡
           </div>
-          <span className="text-headline-sm font-semibold text-white tracking-tight">Pulse</span>
+          <div className="flex flex-col">
+            <span className="font-black text-lg tracking-tight uppercase leading-none text-black">PULSE</span>
+            <span className="text-[9px] font-mono font-extrabold tracking-widest uppercase opacity-75">BENTO STUDIO</span>
+          </div>
+          <div className="ml-auto">
+            <span className="neo-badge bg-black text-[#CCFF00] text-[9px] py-0.5 px-1.5">v2.0</span>
+          </div>
         </div>
 
-        {/* Nav */}
-        <nav className="flex flex-col gap-0.5 flex-shrink-0">
-          {NAV_ITEMS.map(item => (
-            <button
-              key={item.view}
-              onClick={() => setView(item.view)}
-              className={`flex items-center gap-2 px-2 py-2 rounded-lg transition-all duration-200 w-full text-left ${
-                view === item.view
-                  ? 'bg-white/10 text-white font-semibold'
-                  : 'text-on-surface-variant hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              <span className={`material-symbols-outlined text-[20px] ${item.view === 'liked' && view === 'liked' ? 'text-brand-pink' : ''}`}
-                style={{ fontVariationSettings: item.view === 'liked' && liked.length > 0 ? "'FILL' 1" : undefined }}>
-                {item.icon}
-              </span>
-              <span className="text-body-md font-medium">{item.label}</span>
-              {item.view === 'liked' && liked.length > 0 && (
-                <span className="ml-auto text-label-sm text-brand-pink bg-brand-pink/10 font-bold px-2 py-0.5 rounded-full">
-                  {liked.length}
+        {/* Navigation */}
+        <nav className="flex flex-col gap-1.5 flex-shrink-0">
+          {NAV_ITEMS.map(item => {
+            const isActive = view === item.view;
+            return (
+              <button
+                key={item.view}
+                onClick={() => setView(item.view)}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-150 w-full text-left font-bold text-sm ${
+                  isActive
+                    ? 'bg-white text-black font-black border-2 border-black shadow-neo translate-x-0.5'
+                    : 'text-zinc-400 hover:text-white bg-zinc-900/60 hover:bg-zinc-800 border-2 border-zinc-800 hover:border-black'
+                }`}
+              >
+                <span
+                  className={`material-symbols-outlined text-[20px] ${
+                    item.view === 'liked' && isActive
+                      ? 'text-[#FF2E93]'
+                      : isActive
+                      ? 'text-black'
+                      : 'text-zinc-400'
+                  }`}
+                  style={{ fontVariationSettings: item.view === 'liked' && (liked.length > 0 || isActive) ? "'FILL' 1" : undefined }}
+                >
+                  {item.icon}
                 </span>
-              )}
-            </button>
-          ))}
+                <span className="tracking-tight uppercase text-xs">{item.label}</span>
+                {item.view === 'liked' && liked.length > 0 && (
+                  <span className={`ml-auto neo-badge ${isActive ? 'bg-[#FF2E93] text-white' : 'bg-[#FF2E93]/20 text-[#FF2E93] border-none'}`}>
+                    {liked.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </nav>
 
         {/* Divider */}
-        <div className="h-px bg-white/8 flex-shrink-0" />
+        <div className="border-b-2 border-black/80 my-0.5" />
 
-        {/* Playlists & Custom Albums */}
-        <div className="flex flex-col gap-0.5 min-h-0 flex-1 overflow-hidden">
+        {/* Playlists & Custom Albums Section */}
+        <div className="flex flex-col gap-1 min-h-0 flex-1 overflow-hidden">
           <div className="flex items-center justify-between px-1 mb-1 flex-shrink-0">
-            <span className="text-label-sm uppercase tracking-widest text-outline">Playlists & Albums</span>
+            <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400">Library Bento</span>
             <button
               onClick={() => setView('library')}
-              className="text-outline hover:text-white transition-colors"
-              title="Manage playlists & albums"
+              className="neo-btn bg-[#CCFF00] text-black w-6 h-6 rounded-md flex items-center justify-center font-black"
+              title="New playlist or album"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
             </button>
           </div>
-          <div className="flex flex-col gap-0.5 overflow-y-auto flex-1">
+          <div className="flex flex-col gap-1.5 overflow-y-auto flex-1 pr-0.5">
             {playlists.length === 0 && customAlbums.length === 0 && (
-              <p className="text-body-sm text-outline px-1 py-2">No playlists yet</p>
+              <div className="p-3 bg-zinc-900/40 rounded-xl border-2 border-dashed border-zinc-800 text-center">
+                <p className="text-xs font-mono text-zinc-500 uppercase">NO PLAYLISTS YET</p>
+              </div>
             )}
             {playlists.map(pl => (
               <button
@@ -71,19 +90,19 @@ export default function Sidebar() {
                 onClick={() => {
                   if (pl.songs.length) playCollection(pl.songs, 0);
                 }}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-on-surface-variant hover:bg-white/5 hover:text-white transition-colors text-left w-full group"
+                className="flex items-center gap-2.5 p-2 rounded-xl border-2 border-transparent hover:border-black bg-zinc-900/40 hover:bg-zinc-800/90 transition-all text-left w-full group hover:shadow-neo-sm"
               >
-                <div className="w-7 h-7 rounded-md bg-gradient-to-br from-brand-violet/40 to-brand-pink/30 flex-shrink-0 overflow-hidden">
+                <div className="w-8 h-8 rounded-lg bg-[#FF2E93]/20 border border-black flex-shrink-0 overflow-hidden flex items-center justify-center">
                   {pl.thumbnail
                     ? <img src={pl.thumbnail} className="w-full h-full object-cover" alt="" />
-                    : <span className="material-symbols-outlined text-[14px] text-white/40 m-auto block mt-1">queue_music</span>
+                    : <span className="material-symbols-outlined text-[16px] text-[#FF2E93]">queue_music</span>
                   }
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-body-sm font-medium truncate group-hover:text-white transition-colors">
+                  <span className="text-xs font-bold text-zinc-200 truncate group-hover:text-white">
                     {pl.title}
                   </span>
-                  <span className="text-label-sm text-outline">{pl.songs.length} tracks</span>
+                  <span className="text-[10px] font-mono text-zinc-400">{pl.songs.length} TRACKS</span>
                 </div>
               </button>
             ))}
@@ -94,19 +113,19 @@ export default function Sidebar() {
                 onClick={() => {
                   if (album.songs.length) playCollection(album.songs, 0);
                 }}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-on-surface-variant hover:bg-white/5 hover:text-white transition-colors text-left w-full group"
+                className="flex items-center gap-2.5 p-2 rounded-xl border-2 border-transparent hover:border-black bg-zinc-900/40 hover:bg-zinc-800/90 transition-all text-left w-full group hover:shadow-neo-sm"
               >
-                <div className="w-7 h-7 rounded-md bg-gradient-to-br from-brand-cyan/40 to-brand-violet/30 flex-shrink-0 overflow-hidden">
+                <div className="w-8 h-8 rounded-lg bg-[#00F0FF]/20 border border-black flex-shrink-0 overflow-hidden flex items-center justify-center">
                   {album.thumbnail
                     ? <img src={album.thumbnail} className="w-full h-full object-cover" alt="" />
-                    : <span className="material-symbols-outlined text-[14px] text-brand-cyan m-auto block mt-1">album</span>
+                    : <span className="material-symbols-outlined text-[16px] text-[#00F0FF]">album</span>
                   }
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-body-sm font-medium truncate group-hover:text-white transition-colors">
+                  <span className="text-xs font-bold text-zinc-200 truncate group-hover:text-white">
                     {album.title}
                   </span>
-                  <span className="text-label-sm text-outline">{album.songs.length} tracks · Album</span>
+                  <span className="text-[10px] font-mono text-zinc-400">{album.songs.length} TRACKS // ALBUM</span>
                 </div>
               </button>
             ))}
@@ -114,20 +133,37 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Now playing mini */}
-      {currentSong && (
-        <div className="flex-shrink-0 p-2 bg-white/5 rounded-xl flex items-center gap-2 mt-2">
-          <div className="w-8 h-8 rounded-md overflow-hidden flex-shrink-0 bg-white/10">
-            {currentSong.thumbnail && (
-              <img src={currentSong.thumbnail} className="w-full h-full object-cover" alt="" />
-            )}
-          </div>
+      {/* Audio Engine Live Badge */}
+      <div className="flex-shrink-0 pt-2 flex flex-col gap-2">
+        <div className="p-2.5 rounded-xl border-2 border-black bg-zinc-900/90 shadow-neo-sm flex items-center gap-2.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-[#CCFF00] animate-pulse border border-black flex-shrink-0" />
           <div className="flex flex-col min-w-0">
-            <span className="text-label-sm font-semibold text-white truncate">{currentSong.title}</span>
-            <span className="text-label-sm text-on-surface-variant truncate">{currentSong.artist}</span>
+            <span className="text-[10px] font-black uppercase text-[#CCFF00] tracking-wider leading-none">
+              SAAVN AUDIO ENGINE
+            </span>
+            <span className="text-[9px] font-mono text-zinc-400 leading-tight mt-0.5">
+              320KBPS · HIGH FIDELITY
+            </span>
           </div>
         </div>
-      )}
+
+        {/* Now playing mini if available */}
+        {currentSong && (
+          <div className="p-2 bg-[#181920] rounded-xl border-2 border-black shadow-neo-sm flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 border border-black bg-zinc-800">
+              {currentSong.thumbnail ? (
+                <img src={currentSong.thumbnail} className="w-full h-full object-cover" alt="" />
+              ) : (
+                <span className="material-symbols-outlined text-xs text-white/30 m-auto">music_note</span>
+              )}
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-black text-white truncate">{currentSong.title}</span>
+              <span className="text-[10px] font-mono text-zinc-400 truncate">{currentSong.artist}</span>
+            </div>
+          </div>
+        )}
+      </div>
     </aside>
   );
 }

@@ -5,34 +5,38 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
   const { isLiked, toggleLike } = usePlayer();
   const liked = isLiked(song.id);
 
+  const formattedIndex = String(index + 1).padStart(2, '0');
+
   return (
     <div
-      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
-        isActive ? 'bg-brand-violet/10 border border-brand-violet/20' : 'hover:bg-white/5'
+      className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-150 cursor-pointer ${
+        isActive
+          ? 'bg-[#1b1c24] border-2 border-black shadow-neo-sm'
+          : 'bg-[#121318]/50 hover:bg-[#171821] border-2 border-transparent hover:border-black hover:shadow-neo-sm'
       }`}
       onClick={onPlay}
     >
       {/* Index / Play indicator */}
       <div className="w-8 flex-shrink-0 flex items-center justify-center">
         {isActive && isPlaying ? (
-          <div className="flex items-end gap-[2px] h-4 w-4">
-            {[...Array(3)].map((_, i) => (
-              <span key={i} className={`visualizer-bar w-[3px] bg-brand-violet rounded-full`} />
-            ))}
+          <div className="flex items-end gap-[3px] h-4 w-4">
+            <span className="visualizer-bar w-[3px] bg-[#CCFF00] rounded-sm" />
+            <span className="visualizer-bar w-[3px] bg-[#00F0FF] rounded-sm" />
+            <span className="visualizer-bar w-[3px] bg-[#FF2E93] rounded-sm" />
           </div>
         ) : (
           <>
-            <span className={`text-label-md font-mono group-hover:hidden ${isActive ? 'text-brand-violet' : 'text-outline'}`}>
-              {index + 1}
+            <span className={`text-xs font-mono font-bold group-hover:hidden ${isActive ? 'text-[#CCFF00]' : 'text-zinc-500'}`}>
+              {formattedIndex}
             </span>
-            <span className="material-symbols-outlined text-[18px] text-white hidden group-hover:block"
+            <span className="material-symbols-outlined text-[20px] text-white hidden group-hover:block transition-transform group-hover:scale-110"
               style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
           </>
         )}
       </div>
 
       {/* Thumbnail */}
-      <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-white/5">
+      <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-zinc-800 border-2 border-black shadow-sm">
         {song.thumbnail
           ? <img src={song.thumbnail} alt={song.title} className="w-full h-full object-cover" />
           : <span className="material-symbols-outlined text-white/20 text-[20px] m-auto block mt-2.5">music_note</span>
@@ -41,46 +45,50 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
 
       {/* Title & artist */}
       <div className="flex flex-col min-w-0 flex-1">
-        <span className={`text-label-lg font-semibold truncate ${isActive ? 'text-brand-violet' : 'text-white group-hover:text-[#d0bcff]'} transition-colors`}>
-          {song.title}
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className={`text-xs font-black uppercase tracking-tight truncate ${isActive ? 'text-[#CCFF00]' : 'text-white group-hover:text-[#CCFF00]'} transition-colors`}>
+            {song.title}
+          </span>
           {song.explicit && (
-            <span className="ml-1 text-label-sm bg-white/10 text-on-surface-variant px-1 rounded align-middle">E</span>
+            <span className="neo-badge bg-[#FFE600] text-black text-[8px] py-0 px-1 border border-black font-black">
+              E
+            </span>
           )}
-        </span>
-        <span className="text-body-sm text-on-surface-variant truncate">{song.artist}</span>
+        </div>
+        <span className="text-[11px] font-mono text-zinc-400 truncate">{song.artist}</span>
       </div>
 
-      {/* Album (hidden on small) */}
-      <span className="hidden lg:block text-body-sm text-on-surface-variant truncate max-w-[160px]">
+      {/* Album */}
+      <span className="hidden lg:block text-xs font-mono text-zinc-400 truncate max-w-[170px] uppercase opacity-75">
         {song.album}
       </span>
 
       {/* Actions */}
-      <div className={`flex items-center gap-2 flex-shrink-0 transition-opacity ${
+      <div className={`flex items-center gap-1.5 flex-shrink-0 transition-opacity ${
         liked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
       }`}>
         <button
           onClick={e => { e.stopPropagation(); toggleLike(song); }}
-          className={`p-1.5 rounded-full transition-transform active:scale-90 ${
-            liked ? 'text-brand-pink' : 'text-on-surface-variant hover:text-brand-pink'
+          className={`neo-btn p-1 rounded-md border-2 border-black transition-all ${
+            liked ? 'bg-[#FF2E93] text-white' : 'bg-zinc-800 text-zinc-400 hover:text-white'
           }`}
           title={liked ? 'Unlike' : 'Like'}
         >
-          <span className="material-symbols-outlined text-[20px]" style={{fontVariationSettings:`'FILL' ${liked ? 1 : 0}`}}>
+          <span className="material-symbols-outlined text-[16px] block" style={{fontVariationSettings:`'FILL' ${liked ? 1 : 0}`}}>
             favorite
           </span>
         </button>
         <button
           onClick={e => { e.stopPropagation(); onAddToPlaylist?.(); }}
-          className="p-1.5 rounded-full text-on-surface-variant hover:text-white transition-colors"
+          className="neo-btn p-1 rounded-md border-2 border-black bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
           title="Add to playlist"
         >
-          <span className="material-symbols-outlined text-[20px]">playlist_add</span>
+          <span className="material-symbols-outlined text-[16px] block">playlist_add</span>
         </button>
       </div>
 
       {/* Duration */}
-      <span className="text-label-sm text-outline font-mono w-10 text-right flex-shrink-0">
+      <span className="text-xs text-zinc-400 font-mono font-bold w-12 text-right flex-shrink-0">
         {formatTime(song.duration)}
       </span>
     </div>

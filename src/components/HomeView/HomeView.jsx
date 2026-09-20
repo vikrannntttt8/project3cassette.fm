@@ -8,6 +8,7 @@ import AlbumCard from './AlbumCard.jsx';
 import ArtistCard from './ArtistCard.jsx';
 import TopResultHero from './TopResultHero.jsx';
 import TrackContextMenu from '../shared/TrackContextMenu.jsx';
+import ArtistLinks from '../shared/ArtistLinks.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ArtistModal from '../ArtistView/ArtistModal.jsx';
 
@@ -246,12 +247,9 @@ export default function HomeView() {
       {/* ── Header ──────────────────────────────────────────────── */}
       <header className="sticky top-0 z-20 px-4 sm:px-6 md:px-8 py-4 bg-[#000000]/90 backdrop-blur-xl border-b border-[#1a1a1a] pl-14 md:pl-8">
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex flex-col">
-            <p className="text-label-sm uppercase tracking-widest text-[#888888] text-[11px] sm:text-[12px]">
-              {showSearch ? `Results for "${query}"` : 'cassette.fm · Studio'}
-            </p>
+          <div className="flex flex-col justify-center">
             <h1 className="text-headline-md sm:text-headline-lg font-bold text-white tracking-tight">
-              {showSearch ? 'Search Results' : `${getGreeting()}, Vikrant`}
+              {showSearch ? `Results for "${query}"` : `${getGreeting()}, Vikrant`}
             </h1>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-initial justify-end">
@@ -478,16 +476,12 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
             </span>
           )}
         </span>
-        <span
-          onClick={(e) => {
-            e.stopPropagation();
-            routeToArtistEntity(song.artist, song.artistId);
-          }}
-          className="text-xs text-neutral-400 truncate hover:text-white hover:underline cursor-pointer transition-colors mt-0.5"
-          title={song.artist}
-        >
-          {song.artist}
-        </span>
+        <ArtistLinks
+          artists={song.artists}
+          artist={song.artist}
+          artistId={song.artistId}
+          className="text-xs text-neutral-400 truncate mt-0.5"
+        />
       </div>
 
       {/* Duration / Options: Display track length (e.g. 3:22) and hover options cleanly aligned to right */}

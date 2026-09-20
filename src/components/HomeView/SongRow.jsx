@@ -1,6 +1,7 @@
 import { formatTime } from '../../utils/timeFormat.js';
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import TrackContextMenu from '../shared/TrackContextMenu.jsx';
+import ArtistLinks from '../shared/ArtistLinks.jsx';
 
 export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAddToPlaylist }) {
   const { isLiked, toggleLike, routeToSongEntity, routeToArtistEntity } = usePlayer();
@@ -57,16 +58,12 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
             <span className="ml-1 text-label-sm bg-white/10 text-[#888888] px-1 rounded align-middle">E</span>
           )}
         </span>
-        <span
-          onClick={(e) => {
-            e.stopPropagation();
-            routeToArtistEntity(song.artist, song.artistId);
-          }}
-          className="text-body-sm text-[#888888] hover:text-white hover:underline truncate inline-block cursor-pointer transition-colors"
-          title={`View ${song.artist}'s profile`}
-        >
-          {song.artist}
-        </span>
+        <ArtistLinks
+          artists={song.artists}
+          artist={song.artist}
+          artistId={song.artistId}
+          className="text-body-sm text-[#888888] truncate inline-block"
+        />
       </div>
 
       {/* Album (hidden on small) */}

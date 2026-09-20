@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import { formatTime, formatRemaining } from '../../utils/timeFormat.js';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
+import ArtistLinks from '../shared/ArtistLinks.jsx';
 
 export default function AlbumArtPanel() {
   const {
@@ -53,18 +54,21 @@ export default function AlbumArtPanel() {
               {currentSong?.title || 'No Track Loaded'}
             </h1>
             <div className="flex items-center gap-2 mt-0.5">
-              <span 
-                onClick={() => {
-                  if (currentSong?.artist) {
+              {currentSong ? (
+                <ArtistLinks
+                  artists={currentSong.artists}
+                  artist={currentSong.artist}
+                  artistId={currentSong.artistId}
+                  className="text-body-sm font-medium text-neutral-400 truncate"
+                  linkClassName="hover:text-white hover:underline cursor-pointer"
+                  onClickArtist={(name, id) => {
                     toggleView();
-                    routeToArtistEntity(currentSong.artist, currentSong.artistId);
-                  }
-                }}
-                className="text-body-sm font-medium text-neutral-400 hover:text-white hover:underline cursor-pointer truncate transition-colors"
-                title={`View ${currentSong?.artist}'s profile`}
-              >
-                {currentSong?.artist || '—'}
-              </span>
+                    routeToArtistEntity(name, id);
+                  }}
+                />
+              ) : (
+                <span className="text-body-sm font-medium text-neutral-400">—</span>
+              )}
 
               {/* Live Bitrate / Format Indicator */}
               {currentSong && (

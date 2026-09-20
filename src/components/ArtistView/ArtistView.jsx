@@ -4,6 +4,7 @@ import { formatDuration } from '../../utils/timeFormat.js';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ImageWithFallback from '../shared/ImageWithFallback.jsx';
 import BackButton from '../shared/BackButton.jsx';
+import ArtistLinks from '../shared/ArtistLinks.jsx';
 
 export default function ArtistView({ browseId, artistName }) {
   const {
@@ -216,15 +217,13 @@ export default function ArtistView({ browseId, artistName }) {
                             {track.title}
                           </p>
                           <p className="text-label-sm text-[#888888] truncate">
-                            <span
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                routeToArtistEntity(track.artist || data.name, track.artistId || data.browseId);
-                              }}
-                              className="hover:text-white hover:underline cursor-pointer"
-                            >
-                              {track.artist}
-                            </span>
+                            <ArtistLinks
+                              artists={track.artists}
+                              artist={track.artist || data.name}
+                              artistId={track.artistId || data.browseId}
+                              className="hover:text-white"
+                              linkClassName="hover:text-white hover:underline cursor-pointer"
+                            />
                             {track.album && (
                               <>
                                 {' • '}

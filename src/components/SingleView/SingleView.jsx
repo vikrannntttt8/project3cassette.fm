@@ -4,6 +4,7 @@ import { formatDuration } from '../../utils/timeFormat.js';
 import BackButton from '../shared/BackButton.jsx';
 import ImageWithFallback from '../shared/ImageWithFallback.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
+import ArtistLinks from '../shared/ArtistLinks.jsx';
 
 /**
  * SingleView — Dedicated view for Standalone Singles, Music Videos, and Remixes
@@ -159,13 +160,13 @@ export default function SingleView({ videoId, track: initialTrack }) {
                 </h1>
 
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-body-md text-[#888888]">
-                  <button
-                    type="button"
-                    onClick={() => routeToArtistEntity(track.artist, track.artistId)}
-                    className="font-semibold text-white hover:underline transition-colors"
-                  >
-                    {track.artist}
-                  </button>
+                  <ArtistLinks
+                    artists={track.artists}
+                    artist={track.artist}
+                    artistId={track.artistId}
+                    className="font-semibold text-white inline-block"
+                    linkClassName="hover:underline cursor-pointer"
+                  />
 
                   {track.year && <span>• {track.year}</span>}
                   {track.duration > 0 && <span>• {formatDuration(track.duration)}</span>}

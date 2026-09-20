@@ -238,9 +238,24 @@ PULSE MUSIC/
 │       │   └── LibraryView.jsx      # User playlists, liked songs collection, and custom album curator
 │       │
 │       └── shared/
+│           ├── ArtistLinks.jsx      # Multi-artist link router with comma separation & click isolation
 │           ├── TrackContextMenu.jsx # Floating dropdown for tracks: Play Next, Add to Queue, Entity Navigation
 │           ├── ImageWithFallback.jsx# High-res image wrapper with graceful placeholder fallback
 │           ├── AddToPlaylistMenu.jsx# Modal to append tracks into custom playlists
 │           ├── BackButton.jsx       # Navigation history back button
 │           └── SettingsModal.jsx    # Google OAuth 1-click login, Supabase sync status, and audio fidelity settings
 ```
+
+---
+
+## 9. Recent UI & Interaction Fixes
+
+1. **Header Cleanup**:
+   - Removed redundant eyebrow text (`CASSETTE.FM • STUDIO`) above the primary greeting headline (`Good evening, Vikrant`), maintaining a clean, distraction-free search and greeting presentation.
+2. **Individual Multi-Artist Routing**:
+   - Songs featuring collaborations or multiple artists (e.g., `"Bappi Lahiri, K.K., Anush..."`) are parsed into distinct, comma-separated clickable elements via `<ArtistLinks />`.
+   - Each artist span routes to their respective `/artist/[id]` profile while using `e.stopPropagation()` so clicking an artist name does not accidentally start track playback or trigger parent container handlers.
+3. **Bottom Player Expansion on Blank Space Click**:
+   - Clicking any neutral space, background, or album art in the persistent bottom playback dock expands the Fullscreen Now Playing / Lyrics Overlay (`toggleView()`).
+   - All interactive playback controls (Play/Pause, Prev/Next, Shuffle, Repeat, Seek bar, Volume slider, Like button, Playlist button, Bitrate badge, and Artist links) have event propagation stopped (`e.stopPropagation()`), allowing control interaction without unintentionally triggering fullscreen expansion.
+

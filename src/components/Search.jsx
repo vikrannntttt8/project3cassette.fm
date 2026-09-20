@@ -5,6 +5,7 @@ import { formatDuration } from '../utils/timeFormat.js';
 import AddToPlaylistMenu from './shared/AddToPlaylistMenu.jsx';
 import ImageWithFallback from './shared/ImageWithFallback.jsx';
 import TrackContextMenu from './shared/TrackContextMenu.jsx';
+import ArtistLinks from './shared/ArtistLinks.jsx';
 
 const TABS = [
   { id: 'all',     label: 'All',     icon: 'explore' },
@@ -321,17 +322,13 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                       </div>
 
                       <div className="flex items-center gap-1 text-body-sm text-[#888888] truncate mt-0.5">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleArtistNavigation(track.artist, track.artistId);
-                          }}
-                          className="hover:text-white hover:underline focus:outline-none transition-colors text-left truncate"
-                          title={`View ${track.artist}'s profile`}
-                        >
-                          {track.artist}
-                        </button>
+                        <ArtistLinks
+                          artists={track.artists}
+                          artist={track.artist}
+                          artistId={track.artistId}
+                          onClickArtist={handleArtistNavigation}
+                          className="truncate"
+                        />
                         {track.album && (
                           <>
                             <span>•</span>

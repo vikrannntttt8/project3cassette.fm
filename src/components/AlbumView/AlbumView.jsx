@@ -4,6 +4,7 @@ import { formatDuration } from '../../utils/timeFormat.js';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ImageWithFallback from '../shared/ImageWithFallback.jsx';
 import BackButton from '../shared/BackButton.jsx';
+import ArtistLinks from '../shared/ArtistLinks.jsx';
 
 export default function AlbumView({ browseId, initialData }) {
   const {
@@ -119,15 +120,13 @@ export default function AlbumView({ browseId, initialData }) {
                 </h1>
 
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-body-md text-white/80">
-                  {data.artist && (
-                    <button
-                      type="button"
-                      onClick={() => routeToArtistEntity(data.artist, data.artistId)}
-                      className="font-semibold text-white hover:underline transition-colors"
-                    >
-                      {data.artist}
-                    </button>
-                  )}
+                  <ArtistLinks
+                    artists={data.artists}
+                    artist={data.artist}
+                    artistId={data.artistId}
+                    className="font-semibold text-white inline-block"
+                    linkClassName="hover:underline cursor-pointer"
+                  />
                   {data.year && (
                     <>
                       <span className="text-[#666666]">•</span>
@@ -216,16 +215,13 @@ export default function AlbumView({ browseId, initialData }) {
                           >
                             {track.title}
                           </p>
-                          <p
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              routeToArtistEntity(track.artist || data.artist, track.artistId || data.artistId);
-                            }}
-                            className="text-label-sm text-[#888888] truncate hover:text-white hover:underline cursor-pointer"
-                            title={`View artist "${track.artist || data.artist}"`}
-                          >
-                            {track.artist || data.artist}
-                          </p>
+                          <ArtistLinks
+                            artists={track.artists}
+                            artist={track.artist || data.artist}
+                            artistId={track.artistId || data.artistId}
+                            className="text-label-sm text-[#888888] truncate block"
+                            linkClassName="hover:text-white hover:underline cursor-pointer"
+                          />
                         </div>
                       </div>
 

@@ -18,21 +18,28 @@ import { useAuth } from '../context/AuthContext.jsx';
 
 const STORAGE_KEYS = {
   liked:         'likedSongs',
+  pulseLike:     'pulse_like',
   legacyLiked:   'pulse_liked_songs',
   playlists:     'pulse_playlists',
+  pulseCus:      'pulse_cus',
   albums:        'pulse_custom_albums',
   history:       'pulse_playback_history',
 };
 
-function load(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : fallback;
-  } catch {
-    return fallback;
+function load(keys, fallback) {
+  const keyList = Array.isArray(keys) ? keys : [keys];
+  for (const key of keyList) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // Continue next key
+    }
   }
+  return fallback;
 }
 
 function save(key, value) {
@@ -40,6 +47,27 @@ function save(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (err) {
     console.warn('[LocalStorage] Save failed for key:', key, err);
+  }
+}
+
+function savePlaylists(value) {
+  try {
+    const str = JSON.stringify(value);
+    localStorage.setItem(STORAGE_KEYS.pulseCus, str);
+    localStorage.setItem(STORAGE_KEYS.playlists, str);
+  } catch (err) {
+    console.warn('[LocalStorage] savePlaylists failed:', err);
+  }
+}
+
+function saveLiked(value) {
+  try {
+    const str = JSON.stringify(value);
+    localStorage.setItem(STORAGE_KEYS.liked, str);
+    localStorage.setItem(STORAGE_KEYS.pulseLike, str);
+    localStorage.setItem(STORAGE_KEYS.legacyLiked, str);
+  } catch (err) {
+    console.warn('[LocalStorage] saveLiked failed:', err);
   }
 }
 
@@ -57,12 +85,12 @@ export function useLibrary() {
   } = useAuth();
 
   const [liked, setLiked] = useState(() => {
-    const stored = load(STORAGE_KEYS.liked, null);
-    if (stored !== null && Array.isArray(stored) && stored.length > 0) return stored;
-    return load(STORAGE_KEYS.legacyLiked, []);
+    return load([STORAGE_KEYS.pulseLike, STORAGE_KEYS.liked, STORAGE_KEYS.legacyLiked], []);
   });
 
-  const [playlists, setPlaylists] = useState(() => load(STORAGE_KEYS.playlists, []));
+  const [playlists, setPlaylists] = useState(() => {
+    return load([STORAGE_KEYS.pulseCus, STORAGE_KEYS.playlists], []);
+  });
   const [customAlbums, setCustomAlbums] = useState(() => load(STORAGE_KEYS.albums, []));
   const [history, setHistory] = useState(() => load(STORAGE_KEYS.history, []));
 
@@ -98,8 +126,7 @@ export function useLibrary() {
             if (k) map.set(k, s);
           });
           const merged = Array.from(map.values());
-          save(STORAGE_KEYS.liked, merged);
-          save(STORAGE_KEYS.legacyLiked, merged);
+          saveLiked(merged);
           if (merged.length > cloudLiked.length && user?.id) {
             syncLikedSongs(merged).catch(() => {});
           }
@@ -115,10 +142,15 @@ export function useLibrary() {
             if (p.id) map.set(String(p.id), p);
           });
           prev.forEach((p) => {
-            if (p.id) map.set(String(p.id), p);
+            if (p.id) {
+              const existing = map.get(String(p.id));
+              if (!existing || ((p.songs?.length || 0) >= (existing.songs?.length || 0))) {
+                map.set(String(p.id), p);
+              }
+            }
           });
           const merged = Array.from(map.values());
-          save(STORAGE_KEYS.playlists, merged);
+          savePlaylists(merged);
           if (merged.length > cloudPlaylists.length && user?.id) {
             syncPlaylists(merged).catch(() => {});
           }
@@ -156,15 +188,14 @@ export function useLibrary() {
 
   // ── 2. Real-time Incremental Sync on Local State Mutations ──────────
   useEffect(() => {
-    save(STORAGE_KEYS.liked, liked);
-    save(STORAGE_KEYS.legacyLiked, liked);
+    saveLiked(liked);
     if (user?.id && isInitialSyncRef.current) {
       syncLikedSongs(liked).catch((e) => console.error('[useLibrary] Auto-sync liked songs failed:', e));
     }
   }, [liked, user?.id, syncLikedSongs]);
 
   useEffect(() => {
-    save(STORAGE_KEYS.playlists, playlists);
+    savePlaylists(playlists);
     if (user?.id && isInitialSyncRef.current) {
       syncPlaylists(playlists).catch((e) => console.error('[useLibrary] Auto-sync playlists failed:', e));
     }
@@ -184,9 +215,9 @@ export function useLibrary() {
       throw new Error('Please sign in with Google first to synchronize with Supabase Cloud.');
     }
 
-    // Read fresh current local state
-    const currentLiked = load(STORAGE_KEYS.liked, liked);
-    const currentPlaylists = load(STORAGE_KEYS.playlists, playlists);
+    // Read fresh current local state from storage schemas
+    const currentLiked = load([STORAGE_KEYS.pulseLike, STORAGE_KEYS.liked, STORAGE_KEYS.legacyLiked], liked);
+    const currentPlaylists = load([STORAGE_KEYS.pulseCus, STORAGE_KEYS.playlists], playlists);
     const currentHistory = load(STORAGE_KEYS.history, history);
 
     const localData = {
@@ -199,12 +230,11 @@ export function useLibrary() {
 
     if (result && Array.isArray(result.liked)) {
       setLiked([...result.liked]);
-      save(STORAGE_KEYS.liked, result.liked);
-      save(STORAGE_KEYS.legacyLiked, result.liked);
+      saveLiked(result.liked);
     }
     if (result && Array.isArray(result.playlists)) {
       setPlaylists([...result.playlists]);
-      save(STORAGE_KEYS.playlists, result.playlists);
+      savePlaylists(result.playlists);
     }
     if (result && Array.isArray(result.history)) {
       setHistory([...result.history]);
@@ -252,8 +282,7 @@ export function useLibrary() {
         };
         next = [cleanItem, ...prev];
       }
-      save(STORAGE_KEYS.liked, next);
-      save(STORAGE_KEYS.legacyLiked, next);
+      saveLiked(next);
       return [...next];
     });
   }, []);
@@ -273,7 +302,7 @@ export function useLibrary() {
     };
     setPlaylists((prev) => {
       const next = [playlist, ...prev];
-      save(STORAGE_KEYS.playlists, next);
+      savePlaylists(next);
       return next;
     });
     return playlist.id;
@@ -282,7 +311,7 @@ export function useLibrary() {
   const deletePlaylist = useCallback((playlistId) => {
     setPlaylists((prev) => {
       const next = prev.filter((p) => String(p.id) !== String(playlistId));
-      save(STORAGE_KEYS.playlists, next);
+      savePlaylists(next);
       return next;
     });
   }, []);
@@ -294,7 +323,7 @@ export function useLibrary() {
           ? { ...p, title: newTitle.trim() || p.title, name: newTitle.trim() || p.title, updatedAt: Date.now() }
           : p
       );
-      save(STORAGE_KEYS.playlists, next);
+      savePlaylists(next);
       return next;
     });
   }, []);
@@ -313,7 +342,7 @@ export function useLibrary() {
           updatedAt: Date.now(),
         };
       });
-      save(STORAGE_KEYS.playlists, next);
+      savePlaylists(next);
       return next;
     });
   }, []);
@@ -330,7 +359,7 @@ export function useLibrary() {
           updatedAt: Date.now(),
         };
       });
-      save(STORAGE_KEYS.playlists, next);
+      savePlaylists(next);
       return next;
     });
   }, []);

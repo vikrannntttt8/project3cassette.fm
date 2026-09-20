@@ -184,28 +184,49 @@ export async function syncPlaylistsCloud(userId, playlists) {
   if (!Array.isArray(playlists)) return [];
 
   const validPlaylists = playlists.filter((p) => p && (p.id || p.title || p.name));
+  if (validPlaylists.length === 0) return [];
 
-  for (const pl of validPlaylists) {
+  const rows = validPlaylists.map((pl) => {
     const playlistId = String(pl.id || `pl_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`);
-    const row = {
+    const playlistTitle = pl.title || pl.name || 'Untitled Playlist';
+    return {
       id: playlistId,
       user_id: userId,
-      name: pl.title || pl.name || 'Untitled Playlist',
+      title: playlistTitle,
+      name: playlistTitle,
       description: pl.description || '',
       songs: Array.isArray(pl.songs) ? pl.songs : [],
       thumbnail: pl.thumbnail || (Array.isArray(pl.songs) && pl.songs[0]?.thumbnail) || '',
-      updated_at: new Date().toISOString(),
+      created_at: pl.createdAt ? new Date(pl.createdAt).toISOString() : new Date().toISOString(),
+      updated_at: pl.updatedAt ? new Date(pl.updatedAt).toISOString() : new Date().toISOString(),
     };
+  });
 
-    const { error } = await client
+  for (const row of rows) {
+    let { error } = await client
       .from('user_playlists')
       .upsert(row, { onConflict: 'id' });
 
+    // In case column 'name' or 'title' does not exist in user's Supabase schema
     if (error) {
-      console.error('[Supabase] syncPlaylistsCloud error on playlist:', pl.title, error);
-      throw new Error(`Playlist "${pl.title || 'Untitled'}" sync failed: ${error.message || error.details || 'Database error'}`);
+      if (error.message?.includes("'name' does not exist") || error.details?.includes('column "name"')) {
+        const { name, ...rowWithoutName } = row;
+        const res = await client.from('user_playlists').upsert(rowWithoutName, { onConflict: 'id' });
+        error = res.error;
+      } else if (error.message?.includes("'title' does not exist") || error.details?.includes('column "title"')) {
+        const { title, ...rowWithoutTitle } = row;
+        const res = await client.from('user_playlists').upsert(rowWithoutTitle, { onConflict: 'id' });
+        error = res.error;
+      }
+    }
+
+    if (error) {
+      console.error('[Supabase] syncPlaylistsCloud error on playlist:', row.title || row.id, error);
+      throw new Error(`Playlist "${row.title || 'Untitled'}" sync failed: ${error.message || error.details || 'Database error'}`);
     }
   }
+
+  return rows;
 }
 
 export async function fetchPlaylistsCloud(userId) {
@@ -234,10 +255,11 @@ export async function fetchPlaylistsCloud(userId) {
         songs = [];
       }
     }
+    const plTitle = row.title || row.name || 'Untitled Playlist';
     return {
       id: String(row.id),
-      title: row.name || 'Untitled Playlist',
-      name: row.name || 'Untitled Playlist',
+      title: plTitle,
+      name: plTitle,
       description: row.description || '',
       songs: Array.isArray(songs) ? songs : [],
       thumbnail: row.thumbnail || (Array.isArray(songs) && songs[0]?.thumbnail) || '',
@@ -336,89 +358,178 @@ export async function fetchHistoryCloud(userId) {
 }
 
 /**
- * 6. Master Full Sync Helper (Push local + Pull cloud + Merge)
+ * Helper to safely read and parse arrays from multiple localStorage keys
  */
-export async function performFullCloudSync(userId, { liked = [], playlists = [], history = [] }) {
+function readLocalArray(keys = []) {
+  if (typeof window === 'undefined' || !window.localStorage) return [];
+  for (const key of keys) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // Continue searching next key
+    }
+  }
+  return [];
+}
+
+/**
+ * 6. Master Full Sync Helper (Bidirectional Push + Pull + Merge + Persist)
+ */
+export async function performFullCloudSync(userId, { liked = [], playlists = [], history = [] } = {}) {
   if (!userId) throw new Error('You must be signed in with Google to sync your library.');
   const client = getSupabaseClient();
   if (!client) throw new Error('Supabase client is not available.');
 
-  console.log(`[Supabase Sync] Starting full push & pull sync for user: ${userId}...`);
+  console.log(`[Supabase Sync] Starting full bidirectional sync for user: ${userId}...`);
 
-  // Step 1: Push initial local data to Cloud
-  if (Array.isArray(liked) && liked.length > 0) {
-    await syncLikedSongsCloud(userId, liked);
+  // ── PHASE 1: PUSH PHASE ──────────────────────────────────────────────
+  // Read current local/custom playlists from pulse_cus, pulse_playlists, and state
+  const rawLocalPlaylists = [
+    ...readLocalArray(['pulse_cus', 'pulse_playlists']),
+    ...(Array.isArray(playlists) ? playlists : []),
+  ];
+
+  // Read current local liked songs from likedSongs, pulse_like, pulse_liked_songs, and state
+  const rawLocalLiked = [
+    ...readLocalArray(['likedSongs', 'pulse_like', 'pulse_liked_songs']),
+    ...(Array.isArray(liked) ? liked : []),
+  ];
+
+  const rawLocalHistory = [
+    ...readLocalArray(['pulse_playback_history']),
+    ...(Array.isArray(history) ? history : []),
+  ];
+
+  // Deduplicate before push
+  const localPlaylistMap = new Map();
+  rawLocalPlaylists.forEach((p) => {
+    if (p && (p.id || p.title || p.name)) {
+      const k = String(p.id || p.title || p.name);
+      localPlaylistMap.set(k, p);
+    }
+  });
+  const dedupedLocalPlaylists = Array.from(localPlaylistMap.values());
+
+  const localLikedMap = new Map();
+  rawLocalLiked.forEach((s) => {
+    const k = String(s?.id || s?.videoId || s?.browseId || '');
+    if (k && k !== 'undefined' && k !== 'null') {
+      localLikedMap.set(k, s);
+    }
+  });
+  const dedupedLocalLiked = Array.from(localLikedMap.values());
+
+  let pushedPlaylistsCount = 0;
+  let pushedLikedCount = 0;
+
+  if (dedupedLocalPlaylists.length > 0) {
+    await syncPlaylistsCloud(userId, dedupedLocalPlaylists);
+    pushedPlaylistsCount = dedupedLocalPlaylists.length;
   }
-  if (Array.isArray(playlists) && playlists.length > 0) {
-    await syncPlaylistsCloud(userId, playlists);
+  if (dedupedLocalLiked.length > 0) {
+    await syncLikedSongsCloud(userId, dedupedLocalLiked);
+    pushedLikedCount = dedupedLocalLiked.length;
   }
 
-  // Step 2: Pull latest state from Cloud without limits
+  console.log(`[Supabase Sync] PUSH PHASE: Pushed ${pushedPlaylistsCount} custom playlists and ${pushedLikedCount} liked songs to Supabase Cloud for user ${userId}.`);
+
+  // ── PHASE 2: PULL PHASE ──────────────────────────────────────────────
   const [cloudLiked, cloudPlaylists, cloudHistory] = await Promise.all([
     fetchLikedSongsCloud(userId),
     fetchPlaylistsCloud(userId),
     fetchHistoryCloud(userId),
   ]);
 
-  console.log(`[Supabase Sync] Fetched from cloud: ${cloudLiked.length} liked, ${cloudPlaylists.length} playlists, ${cloudHistory.length} history.`);
+  console.log(`[Supabase Sync] PULL PHASE: Pulled ${cloudPlaylists.length} custom playlists and ${cloudLiked.length} liked songs from Supabase Cloud.`);
 
-  // Step 3: Merge cloud items with local items cleanly
-  const likedMap = new Map();
-  // Cloud items
+  // ── PHASE 3: RECONCILE / MERGE PHASE ─────────────────────────────────
+  const mergedLikedMap = new Map();
   cloudLiked.forEach((s) => {
     const key = String(s.id || s.videoId || '');
     if (key && key !== 'undefined' && key !== 'null') {
-      likedMap.set(key, s);
+      mergedLikedMap.set(key, s);
     }
   });
-  // Local items
-  liked.forEach((s) => {
+  dedupedLocalLiked.forEach((s) => {
     const key = String(s.id || s.videoId || '');
     if (key && key !== 'undefined' && key !== 'null') {
-      likedMap.set(key, s);
+      mergedLikedMap.set(key, s);
     }
   });
-  const mergedLiked = Array.from(likedMap.values());
+  const mergedLiked = Array.from(mergedLikedMap.values());
 
-  const playlistMap = new Map();
+  const mergedPlaylistMap = new Map();
   cloudPlaylists.forEach((p) => {
-    if (p.id) playlistMap.set(String(p.id), p);
+    if (p.id) mergedPlaylistMap.set(String(p.id), p);
   });
-  playlists.forEach((p) => {
-    if (p.id) playlistMap.set(String(p.id), p);
+  dedupedLocalPlaylists.forEach((p) => {
+    if (p.id) {
+      const existing = mergedPlaylistMap.get(String(p.id));
+      if (!existing || ((p.songs?.length || 0) >= (existing.songs?.length || 0))) {
+        mergedPlaylistMap.set(String(p.id), p);
+      }
+    }
   });
-  const mergedPlaylists = Array.from(playlistMap.values());
+  const mergedPlaylists = Array.from(mergedPlaylistMap.values());
 
-  const historyMap = new Map();
+  const mergedHistoryMap = new Map();
   cloudHistory.forEach((h) => {
     const key = String(h.id || h.videoId || '');
     if (key && key !== 'undefined' && key !== 'null') {
-      historyMap.set(key, h);
+      mergedHistoryMap.set(key, h);
     }
   });
-  history.forEach((h) => {
+  rawLocalHistory.forEach((h) => {
     const key = String(h.id || h.videoId || '');
     if (key && key !== 'undefined' && key !== 'null') {
-      historyMap.set(key, h);
+      mergedHistoryMap.set(key, h);
     }
   });
-  const mergedHistory = Array.from(historyMap.values()).slice(0, 50);
+  const mergedHistory = Array.from(mergedHistoryMap.values()).slice(0, 50);
 
-  // Step 4: If merged set has items, push final merged state
-  if (mergedLiked.length > 0) {
+  // If merged union has new records, update cloud
+  if (mergedLiked.length > cloudLiked.length) {
     await syncLikedSongsCloud(userId, mergedLiked);
   }
-  if (mergedPlaylists.length > 0) {
+  if (mergedPlaylists.length > cloudPlaylists.length) {
     await syncPlaylistsCloud(userId, mergedPlaylists);
   }
 
-  console.log(`[Supabase Sync] Sync complete! Result: ${mergedLiked.length} liked, ${mergedPlaylists.length} playlists, ${mergedHistory.length} history.`);
+  // ── PHASE 4: STATE PERSISTENCE TO LOCALSTORAGE ───────────────────────
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const playlistStr = JSON.stringify(mergedPlaylists);
+      localStorage.setItem('pulse_cus', playlistStr);
+      localStorage.setItem('pulse_playlists', playlistStr);
+
+      const likedStr = JSON.stringify(mergedLiked);
+      localStorage.setItem('likedSongs', likedStr);
+      localStorage.setItem('pulse_like', likedStr);
+      localStorage.setItem('pulse_liked_songs', likedStr);
+
+      localStorage.setItem('pulse_playback_history', JSON.stringify(mergedHistory));
+    } catch (err) {
+      console.warn('[Supabase Sync] Error persisting merged data to localStorage:', err);
+    }
+  }
+
+  console.log(`[Supabase Sync] MERGE COMPLETE: Reconciled ${mergedPlaylists.length} playlists, ${mergedLiked.length} liked songs, and ${mergedHistory.length} history items.`);
 
   return {
     liked: mergedLiked,
     playlists: mergedPlaylists,
     history: mergedHistory,
     stats: {
+      pushedPlaylistsCount,
+      pushedLikedCount,
+      pulledPlaylistsCount: cloudPlaylists.length,
+      pulledLikedCount: cloudLiked.length,
       likedCount: mergedLiked.length,
       playlistsCount: mergedPlaylists.length,
       historyCount: mergedHistory.length,

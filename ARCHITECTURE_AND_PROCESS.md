@@ -284,11 +284,9 @@ cassette.fm features a bi-directional cloud synchronization engine connecting fr
 - **Push Sync (Local to Cloud)**:
   - Triggered automatically on user library mutations (liking a song, creating/modifying playlists, playing a track) or manually via "Sync Now".
   - Upserts formatted JSON metadata into `liked_songs`, `user_playlists`, and `playback_history`.
-- **Pull Sync (Cloud to Local)**:
-  - Triggered on user authentication / app initialization.
-  - Queries Supabase for the user's latest cloud library, deduplicates against local state, and populates `localStorage`.
-- **Manual Full Sync**:
-  - The "Sync Now" button in `SettingsModal` executes `performFullSync()` (pushing local items, pulling cloud updates, and merging with conflict resolution).
-  - Displays rich success metrics or real error banners on failed network/database operations.
+- **OAuth Fragment & SecurityError Prevention**:
+  - Automatically parses and sanitizes OAuth callback URL hashes (`#access_token=...`) using protected `cleanAuthUrlFragments()` and safe `replaceState`/`pushState` wrappers, preventing browser DOM `SecurityError` exceptions during redirect.
+  - Automatically triggers reactive pull sync via `authSequence` on successful Google OAuth login, loading the user's liked songs, playlists, and history immediately without a page refresh.
+
 
 

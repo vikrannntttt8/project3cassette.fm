@@ -18,11 +18,28 @@ import {
 
 const AuthContext = createContext(null);
 
+// Safely cleans OAuth hash fragments without throwing SecurityError on replaceState
+function cleanAuthUrlFragments() {
+  if (typeof window === 'undefined') return;
+  try {
+    const { hash, pathname, search } = window.location;
+    if (hash && (hash.includes('access_token=') || hash.includes('refresh_token=') || hash.includes('error='))) {
+      const cleanUrl = (pathname || '/') + (search || '');
+      if (window.history && typeof window.history.replaceState === 'function') {
+        window.history.replaceState(window.history.state || null, document.title, cleanUrl);
+      }
+    }
+  } catch (err) {
+    console.warn('[Auth] Ignored replaceState error during hash cleanup:', err);
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(isSupabaseConfigured);
+  const [authSequence, setAuthSequence] = useState(0);
 
   // Initialize session and auth state listener
   useEffect(() => {
@@ -32,16 +49,33 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    client.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user || null);
-      setLoading(false);
-    });
+    client.auth.getSession()
+      .then(({ data: { session: currentSession }, error }) => {
+        if (error) {
+          console.warn('[Auth] getSession message:', error.message);
+        }
+        setSession(currentSession);
+        setUser(currentSession?.user || null);
+        setLoading(false);
+        if (currentSession?.user) {
+          setAuthSequence((s) => s + 1);
+        }
+        cleanAuthUrlFragments();
+      })
+      .catch((err) => {
+        console.error('[Auth] getSession failed:', err);
+        setLoading(false);
+      });
 
-    const { data: { subscription } } = client.auth.onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = client.auth.onAuthStateChange((event, newSession) => {
+      console.log(`[Auth] onAuthStateChange event: ${event}`, newSession?.user?.email);
       setSession(newSession);
       setUser(newSession?.user || null);
       setLoading(false);
+      if (newSession?.user) {
+        setAuthSequence((s) => s + 1);
+      }
+      cleanAuthUrlFragments();
     });
 
     return () => {
@@ -116,6 +150,7 @@ export function AuthProvider({ children }) {
     recordHistory,
     fetchHistory,
     performFullSync,
+    authSequence,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

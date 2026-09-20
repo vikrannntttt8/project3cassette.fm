@@ -45,12 +45,37 @@ export function PlayerProvider({ children }) {
   const [lyricsSource, setLyricsSource] = useState('demo');
   const [lyricsLoading, setLyricsLoading] = useState(false);
 
+  // Safe HTML5 History helpers that swallow SecurityErrors (e.g., during OAuth hash fragment handling)
+  const safePushState = useCallback((state, title, url) => {
+    try {
+      if (typeof window !== 'undefined' && window.history?.pushState) {
+        window.history.pushState(state, title, url);
+      }
+    } catch (err) {
+      console.warn('[Router] safePushState caught:', err);
+    }
+  }, []);
+
+  const safeReplaceState = useCallback((state, title, url) => {
+    try {
+      if (typeof window !== 'undefined' && window.history?.replaceState) {
+        window.history.replaceState(state, title, url);
+      }
+    } catch (err) {
+      console.warn('[Router] safeReplaceState caught:', err);
+    }
+  }, []);
+
   // ── View & Navigation state with HTML5 History integration ────────
   // State: { view: 'home' | 'search' | 'artist' | 'album' | 'single' | 'lyrics' | 'library' | 'liked', currentId: string | null, extra: any }
   const [navState, setNavState] = useState(() => {
     if (typeof window !== 'undefined') {
-      if (window.history.state?.view) {
-        return window.history.state;
+      try {
+        if (window.history?.state?.view) {
+          return window.history.state;
+        }
+      } catch {
+        // Ignore SecurityError or cross-origin access issues
       }
       const path = window.location.pathname;
       if (path.startsWith('/artist/')) {
@@ -118,11 +143,11 @@ export function PlayerProvider({ children }) {
           : newView === 'album' ? `/album/${currentId || ''}`
           : newView === 'single' ? `/single/${currentId || ''}`
           : `/${newView}`;
-        window.history.pushState(nextState, '', url);
+        safePushState(nextState, '', url);
       }
       return nextState;
     });
-  }, []);
+  }, [safePushState]);
 
   const setView = useCallback((newView) => {
     navigateTo(newView, null, null);
@@ -140,14 +165,18 @@ export function PlayerProvider({ children }) {
         setNavState(prev || { view: 'home', currentId: null, extra: null });
         return nextH;
       });
-      window.history.back();
+      try {
+        window.history.back();
+      } catch (err) {
+        console.warn('[Router] goBack history.back error:', err);
+      }
     } else {
       setNavState({ view: 'home', currentId: null, extra: null });
       if (typeof window !== 'undefined') {
-        window.history.replaceState({ view: 'home', currentId: null, extra: null }, '', '/');
+        safeReplaceState({ view: 'home', currentId: null, extra: null }, '', '/');
       }
     }
-  }, [navHistory.length]);
+  }, [navHistory.length, safeReplaceState]);
 
   const canGoBack = navHistory.length > 0 || (typeof window !== 'undefined' && window.history.length > 1);
 

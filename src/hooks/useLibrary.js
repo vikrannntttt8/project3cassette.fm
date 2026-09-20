@@ -51,6 +51,7 @@ export function useLibrary() {
     recordHistory,
     fetchHistory,
     performFullSync,
+    authSequence,
   } = useAuth();
 
   const [liked, setLiked] = useState(() => {
@@ -65,7 +66,7 @@ export function useLibrary() {
 
   const isInitialSyncRef = useRef(false);
 
-  // ── 1. Pull Sync on Login / App Mount ─────────────────────────────
+  // ── 1. Pull Sync on Login / App Mount / OAuth Redirect ────────────
   useEffect(() => {
     if (!user?.id) {
       isInitialSyncRef.current = false;
@@ -73,7 +74,7 @@ export function useLibrary() {
     }
 
     let isMounted = true;
-    console.log('[useLibrary] User authenticated, initiating cloud pull sync...');
+    console.log('[useLibrary] Authenticated session active, running cloud pull sync...');
 
     Promise.allSettled([
       fetchLikedSongs(),
@@ -82,33 +83,43 @@ export function useLibrary() {
     ]).then(([likedRes, playlistsRes, historyRes]) => {
       if (!isMounted) return;
 
-      if (likedRes.status === 'fulfilled' && Array.isArray(likedRes.value) && likedRes.value.length > 0) {
+      if (likedRes.status === 'fulfilled') {
+        const cloudLiked = Array.isArray(likedRes.value) ? likedRes.value : [];
         setLiked((prev) => {
           const map = new Map();
-          likedRes.value.forEach((s) => map.set(String(s.id || s.videoId), s));
+          cloudLiked.forEach((s) => map.set(String(s.id || s.videoId), s));
           prev.forEach((s) => map.set(String(s.id || s.videoId), s));
           const merged = Array.from(map.values());
           save(STORAGE_KEYS.liked, merged);
           save(STORAGE_KEYS.legacyLiked, merged);
+          // If local had items not in cloud, push to cloud
+          if (merged.length > cloudLiked.length && user?.id) {
+            syncLikedSongs(merged).catch(() => {});
+          }
           return merged;
         });
       }
 
-      if (playlistsRes.status === 'fulfilled' && Array.isArray(playlistsRes.value) && playlistsRes.value.length > 0) {
+      if (playlistsRes.status === 'fulfilled') {
+        const cloudPlaylists = Array.isArray(playlistsRes.value) ? playlistsRes.value : [];
         setPlaylists((prev) => {
           const map = new Map();
-          playlistsRes.value.forEach((p) => map.set(String(p.id), p));
+          cloudPlaylists.forEach((p) => map.set(String(p.id), p));
           prev.forEach((p) => map.set(String(p.id), p));
           const merged = Array.from(map.values());
           save(STORAGE_KEYS.playlists, merged);
+          if (merged.length > cloudPlaylists.length && user?.id) {
+            syncPlaylists(merged).catch(() => {});
+          }
           return merged;
         });
       }
 
-      if (historyRes.status === 'fulfilled' && Array.isArray(historyRes.value) && historyRes.value.length > 0) {
+      if (historyRes.status === 'fulfilled') {
+        const cloudHistory = Array.isArray(historyRes.value) ? historyRes.value : [];
         setHistory((prev) => {
           const map = new Map();
-          historyRes.value.forEach((h) => map.set(String(h.id || h.videoId), h));
+          cloudHistory.forEach((h) => map.set(String(h.id || h.videoId), h));
           prev.forEach((h) => map.set(String(h.id || h.videoId), h));
           const merged = Array.from(map.values()).slice(0, 50);
           save(STORAGE_KEYS.history, merged);
@@ -124,7 +135,7 @@ export function useLibrary() {
     return () => {
       isMounted = false;
     };
-  }, [user?.id, fetchLikedSongs, fetchPlaylists, fetchHistory]);
+  }, [user?.id, authSequence, fetchLikedSongs, fetchPlaylists, fetchHistory, syncLikedSongs, syncPlaylists]);
 
   // ── 2. Real-time Incremental Sync on Local State Mutations ──────────
   useEffect(() => {

@@ -9,10 +9,10 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
 
   return (
     <div
-      className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-150 cursor-pointer ${
+      className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-2xl transition-all duration-200 cursor-pointer ${
         isActive
-          ? 'bg-[#1b1c24] border-2 border-black shadow-neo-sm'
-          : 'bg-[#121318]/50 hover:bg-[#171821] border-2 border-transparent hover:border-black hover:shadow-neo-sm'
+          ? 'bg-[#1b1e2a] border-2 border-black shadow-neo-sm translate-x-0.5'
+          : 'bg-[#12131b]/60 hover:bg-[#181a25] border-2 border-transparent hover:border-black hover:shadow-neo-sm'
       }`}
       onClick={onPlay}
     >
@@ -20,23 +20,23 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
       <div className="w-8 flex-shrink-0 flex items-center justify-center">
         {isActive && isPlaying ? (
           <div className="flex items-end gap-[3px] h-4 w-4">
-            <span className="visualizer-bar w-[3px] bg-[#CCFF00] rounded-sm" />
+            <span className="visualizer-bar w-[3px] bg-[#86EFAC] rounded-sm" />
             <span className="visualizer-bar w-[3px] bg-[#00F0FF] rounded-sm" />
-            <span className="visualizer-bar w-[3px] bg-[#FF2E93] rounded-sm" />
+            <span className="visualizer-bar w-[3px] bg-[#FDA4AF] rounded-sm" />
           </div>
         ) : (
           <>
-            <span className={`text-xs font-mono font-bold group-hover:hidden ${isActive ? 'text-[#CCFF00]' : 'text-zinc-500'}`}>
+            <span className={`text-xs font-mono font-bold group-hover:hidden transition-colors ${isActive ? 'text-[#86EFAC]' : 'text-zinc-500'}`}>
               {formattedIndex}
             </span>
-            <span className="material-symbols-outlined text-[20px] text-white hidden group-hover:block transition-transform group-hover:scale-110"
+            <span className="material-symbols-outlined text-[20px] text-[#86EFAC] hidden group-hover:block transition-all group-hover:scale-110"
               style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
           </>
         )}
       </div>
 
       {/* Thumbnail */}
-      <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-zinc-800 border-2 border-black shadow-sm">
+      <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-zinc-800 border-2 border-black shadow-sm">
         {song.thumbnail
           ? <img src={song.thumbnail} alt={song.title} className="w-full h-full object-cover" />
           : <span className="material-symbols-outlined text-white/20 text-[20px] m-auto block mt-2.5">music_note</span>
@@ -46,11 +46,11 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
       {/* Title & artist */}
       <div className="flex flex-col min-w-0 flex-1">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className={`text-xs font-black uppercase tracking-tight truncate ${isActive ? 'text-[#CCFF00]' : 'text-white group-hover:text-[#CCFF00]'} transition-colors`}>
+          <span className={`text-xs font-black uppercase tracking-tight truncate ${isActive ? 'text-[#86EFAC]' : 'text-white group-hover:text-[#86EFAC]'} transition-colors duration-150`}>
             {song.title}
           </span>
           {song.explicit && (
-            <span className="neo-badge bg-[#FFE600] text-black text-[8px] py-0 px-1 border border-black font-black">
+            <span className="neo-badge bg-[#FEF08A] text-black text-[8px] py-0 px-1 border border-black font-black">
               E
             </span>
           )}
@@ -64,13 +64,13 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
       </span>
 
       {/* Actions */}
-      <div className={`flex items-center gap-1.5 flex-shrink-0 transition-opacity ${
+      <div className={`flex items-center gap-1.5 flex-shrink-0 transition-opacity duration-150 ${
         liked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
       }`}>
         <button
           onClick={e => { e.stopPropagation(); toggleLike(song); }}
-          className={`neo-btn p-1 rounded-md border-2 border-black transition-all ${
-            liked ? 'bg-[#FF2E93] text-white' : 'bg-zinc-800 text-zinc-400 hover:text-white'
+          className={`neo-btn p-1.5 rounded-lg border-2 border-black transition-all ${
+            liked ? 'bg-[#FDA4AF] text-black' : 'bg-zinc-800 text-zinc-400 hover:text-white'
           }`}
           title={liked ? 'Unlike' : 'Like'}
         >
@@ -80,7 +80,7 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
         </button>
         <button
           onClick={e => { e.stopPropagation(); onAddToPlaylist?.(); }}
-          className="neo-btn p-1 rounded-md border-2 border-black bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
+          className="neo-btn p-1.5 rounded-lg border-2 border-black bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
           title="Add to playlist"
         >
           <span className="material-symbols-outlined text-[16px] block">playlist_add</span>

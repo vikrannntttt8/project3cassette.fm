@@ -32,38 +32,43 @@
 }
 
 @layer utilities {
-  /* ── Neo-Brutalist Cards & Boxes ──────────────────────────────────── */
+  /* ── Neo-Brutalist Cards & Boxes (Somnath Mahanta DM Style) ──────── */
   .neo-card {
-    background-color: #131419;
+    background-color: #13141a;
     border: 2px solid #000000;
     box-shadow: 4px 4px 0px 0px #000000;
-    border-radius: 14px;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border-radius: 16px;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease;
   }
   .neo-card:hover {
-    transform: translate(-1px, -1px);
+    transform: translate(-1.5px, -1.5px);
     box-shadow: 6px 6px 0px 0px #000000;
   }
 
   .neo-card-flat {
-    background-color: #131419;
+    background-color: #13141a;
     border: 2px solid #000000;
     box-shadow: 4px 4px 0px 0px #000000;
-    border-radius: 14px;
+    border-radius: 16px;
   }
 
   .neo-card-subtle {
-    background-color: #1a1b22;
-    border: 2px solid #27272a;
+    background-color: #181922;
+    border: 2px solid #000000;
     box-shadow: 3px 3px 0px 0px #000000;
-    border-radius: 12px;
+    border-radius: 14px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .neo-card-subtle:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px 0px #000000;
   }
 
   /* ── Tactile Neo Buttons ──────────────────────────────────────────── */
   .neo-btn {
     border: 2px solid #000000;
     box-shadow: 3px 3px 0px 0px #000000;
-    transition: all 0.1s ease;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
     user-select: none;
   }
   .neo-btn:hover {
@@ -81,14 +86,32 @@
     font-weight: 800;
     border: 2px solid #000000;
     box-shadow: 3px 3px 0px 0px #000000;
-    transition: all 0.1s ease;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .neo-btn-lime:hover {
-    background-color: #d6ff33;
+    background-color: #d8ff33;
     transform: translate(-1px, -1px);
     box-shadow: 4px 4px 0px 0px #000000;
   }
   .neo-btn-lime:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px 0px #000000;
+  }
+
+  .neo-btn-mint {
+    background-color: #86EFAC;
+    color: #000000;
+    font-weight: 800;
+    border: 2px solid #000000;
+    box-shadow: 3px 3px 0px 0px #000000;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .neo-btn-mint:hover {
+    background-color: #a7f3d0;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px 0px #000000;
+  }
+  .neo-btn-mint:active {
     transform: translate(2px, 2px);
     box-shadow: 1px 1px 0px 0px #000000;
   }
@@ -99,7 +122,7 @@
     font-weight: 800;
     border: 2px solid #000000;
     box-shadow: 3px 3px 0px 0px #000000;
-    transition: all 0.1s ease;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .neo-btn-pink:hover {
     background-color: #ff47a2;
@@ -111,13 +134,67 @@
     box-shadow: 1px 1px 0px 0px #000000;
   }
 
+  .neo-btn-rose {
+    background-color: #FDA4AF;
+    color: #000000;
+    font-weight: 800;
+    border: 2px solid #000000;
+    box-shadow: 3px 3px 0px 0px #000000;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .neo-btn-rose:hover {
+    background-color: #fecdd3;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px 0px #000000;
+  }
+  .neo-btn-rose:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px 0px #000000;
+  }
+
+  .neo-btn-lavender {
+    background-color: #C4B5FD;
+    color: #000000;
+    font-weight: 800;
+    border: 2px solid #000000;
+    box-shadow: 3px 3px 0px 0px #000000;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .neo-btn-lavender:hover {
+    background-color: #ddd6fe;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px 0px #000000;
+  }
+  .neo-btn-lavender:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px 0px #000000;
+  }
+
+  .neo-btn-yellow {
+    background-color: #FEF08A;
+    color: #000000;
+    font-weight: 800;
+    border: 2px solid #000000;
+    box-shadow: 3px 3px 0px 0px #000000;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .neo-btn-yellow:hover {
+    background-color: #fef9c3;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0px 0px #000000;
+  }
+  .neo-btn-yellow:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px 0px #000000;
+  }
+
   .neo-btn-cyan {
     background-color: #00F0FF;
     color: #000000;
     font-weight: 800;
     border: 2px solid #000000;
     box-shadow: 3px 3px 0px 0px #000000;
-    transition: all 0.1s ease;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .neo-btn-cyan:hover {
     background-color: #33f3ff;
@@ -129,19 +206,34 @@
     box-shadow: 1px 1px 0px 0px #000000;
   }
 
+  /* ── Direct Messaging Bubble Styles ───────────────────────────────── */
+  .neo-msg-incoming {
+    background-color: #1a1c25;
+    border: 2px solid #000000;
+    border-radius: 16px 16px 16px 4px;
+    box-shadow: 3px 3px 0px 0px #000000;
+  }
+
+  .neo-msg-outgoing {
+    background-color: #232736;
+    border: 2px solid #000000;
+    border-radius: 16px 16px 4px 16px;
+    box-shadow: 3px 3px 0px 0px #000000;
+  }
+
   /* ── Sticker Badges ───────────────────────────────────────────────── */
   .neo-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 8px;
+    padding: 2.5px 8px;
     font-weight: 800;
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border: 1.5px solid #000000;
     box-shadow: 2px 2px 0px 0px #000000;
-    border-radius: 6px;
+    border-radius: 9999px;
   }
 
   /* ── Background Grid Pattern ──────────────────────────────────────── */
@@ -291,5 +383,21 @@ input[type='range'].volume-slider::-webkit-slider-thumb {
 .visualizer-bar:nth-child(1) { animation-delay: 0s; }
 .visualizer-bar:nth-child(2) { animation-delay: 0.12s; }
 .visualizer-bar:nth-child(3) { animation-delay: 0.24s; }
+
+/* ── Smooth Fade-In Mask Features ───────────────────────────────────── */
+.fade-mask-y {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
+}
+
+.fade-mask-top {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 25%);
+}
+
+.fade-mask-bottom {
+  -webkit-mask-image: linear-gradient(to top, transparent 0%, black 25%);
+  mask-image: linear-gradient(to top, transparent 0%, black 25%);
+}
 
 

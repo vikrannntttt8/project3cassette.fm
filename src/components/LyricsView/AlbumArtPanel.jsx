@@ -12,7 +12,7 @@ export default function AlbumArtPanel() {
   const liked = currentSong ? isLiked(currentSong.id) : false;
 
   return (
-    <section className="lg:col-span-6 flex flex-col justify-center items-center lg:items-start w-full max-w-[440px] mx-auto lg:mx-0">
+    <section className="lg:col-span-6 flex flex-col justify-center items-center lg:items-start w-full max-w-[440px] mx-auto lg:mx-0 animate-fade-in">
       {/* Album Artwork with Neo-Brutalist Frame */}
       <div className="relative w-full aspect-square max-w-[360px] mb-6">
         {currentSong?.thumbnail ? (
@@ -29,7 +29,7 @@ export default function AlbumArtPanel() {
 
         {/* Live sticker */}
         {isPlaying && (
-          <div className="absolute top-3 left-3 neo-badge bg-[#CCFF00] text-black text-[10px] py-1 px-2 border-2 border-black shadow-neo-sm font-black">
+          <div className="absolute top-3 left-3 neo-badge bg-[#86EFAC] text-black text-[10px] py-1 px-2.5 border-2 border-black shadow-neo-sm font-black">
             ● LIVE PLAYBACK
           </div>
         )}
@@ -42,7 +42,7 @@ export default function AlbumArtPanel() {
             {currentSong?.title || 'NO TRACK LOADED'}
           </h1>
           <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-xs font-mono font-bold text-[#CCFF00] uppercase">
+            <span className="text-xs font-mono font-bold text-[#86EFAC] uppercase">
               {currentSong?.artist || '—'}
             </span>
             {currentSong?.album && (
@@ -56,8 +56,8 @@ export default function AlbumArtPanel() {
         {currentSong && (
           <button
             onClick={() => toggleLike(currentSong)}
-            className={`neo-btn p-2 rounded-xl border-2 border-black flex-shrink-0 ${
-              liked ? 'bg-[#FF2E93] text-white' : 'bg-zinc-800 text-zinc-400 hover:text-white'
+            className={`neo-btn p-2 rounded-2xl border-2 border-black flex-shrink-0 ${
+              liked ? 'bg-[#FDA4AF] text-black' : 'bg-zinc-800 text-zinc-400 hover:text-white'
             }`}
             title={liked ? 'Unlike' : 'Like'}
           >
@@ -71,9 +71,9 @@ export default function AlbumArtPanel() {
 
       {/* Seek bar */}
       <div className="w-full mb-5">
-        <div className="relative w-full h-2.5 bg-zinc-800 border-2 border-black rounded-sm overflow-hidden cursor-pointer group">
+        <div className="relative w-full h-2.5 bg-zinc-800 border-2 border-black rounded-full overflow-hidden cursor-pointer group">
           <div
-            className="h-full bg-gradient-to-r from-[#CCFF00] via-[#FFE600] to-[#00F0FF] transition-all duration-100"
+            className="h-full bg-gradient-to-r from-[#86EFAC] via-[#FEF08A] to-[#7DD3FC] transition-all duration-100"
             style={{ width: `${progress}%` }}
           />
           <input
@@ -109,7 +109,7 @@ export default function AlbumArtPanel() {
         <button
           onClick={togglePlay}
           disabled={!currentSong}
-          className="neo-btn-lime w-13 h-13 rounded-full border-2 border-black flex items-center justify-center shadow-neo font-black disabled:opacity-40"
+          className="neo-btn-mint w-13 h-13 rounded-full border-2 border-black flex items-center justify-center shadow-neo font-black disabled:opacity-40"
         >
           <span className="material-symbols-outlined text-[30px] text-black font-bold block" style={{ fontVariationSettings: "'FILL' 1" }}>
             {isPlaying ? 'pause' : 'play_arrow'}

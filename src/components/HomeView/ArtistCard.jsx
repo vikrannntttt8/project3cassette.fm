@@ -2,10 +2,10 @@ export default function ArtistCard({ artist, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col items-center gap-2 p-3 rounded-2xl bg-[#14151b] hover:bg-[#1a1b24] border-2 border-black shadow-neo-sm hover:shadow-neo hover:-translate-y-0.5 transition-all duration-150 w-28 text-center"
+      className="group flex flex-col items-center gap-2 p-3 rounded-2xl bg-[#14151e] hover:bg-[#1a1c28] border-2 border-black shadow-neo-sm hover:shadow-neo hover:-translate-y-0.5 transition-all duration-200 w-28 text-center"
     >
       {/* Avatar frame */}
-      <div className="relative w-16 h-16 rounded-full overflow-hidden bg-zinc-900 border-2 border-black shadow-sm group-hover:scale-105 transition-transform">
+      <div className="relative w-16 h-16 rounded-full overflow-hidden bg-zinc-900 border-2 border-black shadow-sm group-hover:scale-105 transition-transform duration-200">
         {artist.thumbnail ? (
           <img
             src={artist.thumbnail}
@@ -18,18 +18,18 @@ export default function ArtistCard({ artist, onClick }) {
           </span>
         )}
         {/* Hover play overlay */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-          <span className="material-symbols-outlined text-[#CCFF00] text-[26px]" style={{fontVariationSettings:"'FILL' 1"}}>
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+          <span className="material-symbols-outlined text-[#86EFAC] text-[26px]" style={{fontVariationSettings:"'FILL' 1"}}>
             play_circle
           </span>
         </div>
       </div>
 
       {/* Name */}
-      <span className="text-xs font-black uppercase text-white tracking-tight line-clamp-1 group-hover:text-[#CCFF00] transition-colors w-full px-1">
+      <span className="text-xs font-black uppercase text-white tracking-tight line-clamp-1 group-hover:text-[#86EFAC] transition-colors duration-150 w-full px-1">
         {artist.title}
       </span>
-      <span className="neo-badge bg-black text-zinc-400 text-[8px] py-0 px-1 border border-zinc-700 font-mono">
+      <span className="neo-badge bg-black text-[#86EFAC] text-[8px] py-0.5 px-2 border border-black font-mono">
         ARTIST
       </span>
     </button>

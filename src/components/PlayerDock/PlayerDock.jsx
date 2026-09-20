@@ -16,7 +16,7 @@ export default function PlayerDock() {
     <div className={`fixed bottom-4 z-50 pointer-events-auto transition-all duration-300 ${
       view === 'lyrics' ? 'left-4 right-4' : 'left-4 sm:left-[17rem] right-4'
     }`}>
-      <div className="bg-[#111218] border-2 border-black shadow-neo-lg rounded-2xl px-5 py-3 flex items-center justify-between gap-4 max-w-5xl mx-auto">
+      <div className="bg-[#12131c] border-2 border-black shadow-neo-lg rounded-2xl px-5 py-3 flex items-center justify-between gap-4 max-w-5xl mx-auto">
 
         {/* ── Left: Track info ─────────────────────────────── */}
         <div className="flex items-center gap-3 w-[230px] min-w-0 flex-shrink-0">
@@ -32,7 +32,7 @@ export default function PlayerDock() {
             {/* Loading spinner over thumbnail */}
             {isLoading && (
               <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-[#CCFF00] border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-[#86EFAC] border-t-transparent rounded-full animate-spin" />
               </div>
             )}
           </div>
@@ -50,7 +50,7 @@ export default function PlayerDock() {
             <button
               onClick={() => toggleLike(currentSong)}
               className={`neo-btn p-1.5 rounded-lg border-2 border-black flex-shrink-0 transition-all ${
-                isLiked(currentSong.id) ? 'bg-[#FF2E93] text-white' : 'bg-zinc-800 text-zinc-400 hover:text-white'
+                isLiked(currentSong.id) ? 'bg-[#FDA4AF] text-black' : 'bg-zinc-800 text-zinc-400 hover:text-white'
               }`}
               title={isLiked(currentSong.id) ? 'Unlike' : 'Like'}
             >
@@ -81,7 +81,7 @@ export default function PlayerDock() {
             <button
               onClick={togglePlay}
               disabled={!currentSong}
-              className="neo-btn-lime w-10 h-10 rounded-full border-2 border-black flex items-center justify-center shadow-neo-sm font-black disabled:opacity-40"
+              className="neo-btn-mint w-10 h-10 rounded-full border-2 border-black flex items-center justify-center shadow-neo-sm font-black disabled:opacity-40"
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
@@ -116,8 +116,8 @@ export default function PlayerDock() {
             onClick={toggleView}
             className={`neo-btn px-3 py-1.5 rounded-xl font-black uppercase text-xs flex items-center gap-1.5 border-2 border-black shadow-neo-sm transition-all ${
               view === 'lyrics'
-                ? 'bg-[#FF2E93] text-white'
-                : 'bg-[#181920] text-zinc-300 hover:text-white hover:bg-zinc-800'
+                ? 'bg-[#FDA4AF] text-black'
+                : 'bg-[#181926] text-zinc-300 hover:text-white hover:bg-zinc-800'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">lyrics</span>

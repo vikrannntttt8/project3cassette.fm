@@ -212,24 +212,24 @@ export default function HomeView() {
               onChange={search}
               onClear={clear}
             />
-            <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl bg-[#14151b] border-2 border-black shadow-neo-sm">
-              <span className="material-symbols-outlined text-[#00F0FF] text-[18px]">graphic_eq</span>
+            <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-full bg-[#14151e] border-2 border-black shadow-neo-sm">
+              <span className="material-symbols-outlined text-[#86EFAC] text-[18px]">graphic_eq</span>
               <span className="text-[10px] font-black text-white uppercase tracking-wider font-mono">SAAVN · 320K</span>
             </div>
           </div>
         </div>
 
-        {/* ── Neo-Brutalist Search Tabs ────────────────────────── */}
+        {/* ── Neo-Brutalist Search Tabs (DM Pill Style) ──────────── */}
         {showSearch && (
           <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1">
             {SEARCH_TABS.map(tab => (
               <button
                 key={tab}
                 onClick={() => switchTab(tab)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-150 ${
                   activeTab === tab
-                    ? 'bg-[#CCFF00] text-black border-2 border-black shadow-neo-sm translate-x-0.5'
-                    : 'bg-[#181920] text-zinc-400 border-2 border-zinc-800 hover:border-black hover:text-white'
+                    ? 'bg-[#86EFAC] text-black border-2 border-black shadow-neo-sm translate-x-0.5'
+                    : 'bg-[#15161f] text-zinc-400 border-2 border-zinc-800 hover:border-black hover:text-white'
                 }`}
               >
                 {TAB_LABELS[tab]}
@@ -262,14 +262,14 @@ export default function HomeView() {
 
 function ResultSection({ title, icon, badge, children }) {
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex flex-col gap-3 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-[#CCFF00] text-[22px]">{icon}</span>
+          <span className="material-symbols-outlined text-[#86EFAC] text-[22px]">{icon}</span>
           <h2 className="text-sm font-black uppercase tracking-wider text-white">{title}</h2>
         </div>
         {badge && (
-          <span className="neo-badge bg-black text-[#00F0FF] text-[9px] font-mono border border-zinc-700">
+          <span className="neo-badge bg-black text-[#86EFAC] text-[9px] font-mono border border-zinc-700">
             {badge}
           </span>
         )}
@@ -283,7 +283,7 @@ function SearchSkeleton() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-pulse">
       {[...Array(6)].map((_, i) => (
-        <div key={i} className="h-16 rounded-xl bg-zinc-900 border-2 border-zinc-800" />
+        <div key={i} className="h-16 rounded-2xl bg-zinc-900 border-2 border-zinc-800" />
       ))}
     </div>
   );
@@ -291,12 +291,12 @@ function SearchSkeleton() {
 
 function ErrorMsg({ msg, onRetry }) {
   return (
-    <div className="neo-card p-10 bg-[#161720] border-2 border-black shadow-neo text-center flex flex-col items-center gap-3 max-w-lg mx-auto my-12">
-      <span className="material-symbols-outlined text-[48px] text-[#FF2E93]">cloud_off</span>
+    <div className="neo-card p-10 bg-[#161722] border-2 border-black shadow-neo text-center flex flex-col items-center gap-3 max-w-lg mx-auto my-12 animate-fade-in">
+      <span className="material-symbols-outlined text-[48px] text-[#FDA4AF]">cloud_off</span>
       <p className="text-base font-black text-white uppercase tracking-wider">Search Stream Interrupted</p>
       <p className="text-xs font-mono text-zinc-400 max-w-md">{msg || 'Unable to connect to audio API. Verify endpoint or retry.'}</p>
       {onRetry && (
-        <button onClick={onRetry} className="neo-btn-lime px-4 py-2 rounded-xl text-xs uppercase font-black tracking-wider mt-2">
+        <button onClick={onRetry} className="neo-btn-mint px-4 py-2 rounded-2xl text-xs uppercase font-black tracking-wider mt-2">
           Retry Connection
         </button>
       )}
@@ -306,7 +306,7 @@ function ErrorMsg({ msg, onRetry }) {
 
 function NoResults({ query }) {
   return (
-    <div className="neo-card p-12 bg-[#161720] border-2 border-black shadow-neo text-center flex flex-col items-center gap-2 max-w-md mx-auto my-12">
+    <div className="neo-card p-12 bg-[#161722] border-2 border-black shadow-neo text-center flex flex-col items-center gap-2 max-w-md mx-auto my-12 animate-fade-in">
       <span className="material-symbols-outlined text-[48px] text-zinc-600">search_off</span>
       <p className="text-sm font-black uppercase text-zinc-300 tracking-wider">NO RESULTS FOUND FOR "{query}"</p>
       <p className="text-xs font-mono text-zinc-500">Try searching for a different song title, artist, or album</p>
@@ -345,83 +345,41 @@ function BentoHomeDefault() {
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-      {/* ── Top Bento Row: Hero Station (Col 8) + Sound Vibes Matrix (Col 4) ── */}
+    <div className="flex flex-col gap-6 max-w-7xl mx-auto animate-fade-in">
+      {/* ── Top Bento Row: Hero Studio (Col 7/8) + Pulse DJ Direct Chat Feed (Col 5/4) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Bento Tile 1: Now Playing Studio Hero (Col 7 / Col 8) */}
-        <div className="lg:col-span-7 xl:col-span-8">
+        {/* Bento Tile 1: Now Playing Studio Hero */}
+        <div className="lg:col-span-7 xl:col-span-7">
           <BentoHeroNowPlaying onQuickPlay={playByQuery} />
         </div>
 
-        {/* Bento Tile 2: Quick Moods / Vibe Stations Matrix (Col 5 / Col 4) */}
-        <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-sm bg-[#CCFF00] border border-black" />
-              SOUND VIBES
-            </span>
-            <span className="neo-badge bg-black text-[#CCFF00] text-[8px] font-mono border border-zinc-700">
-              5 CURATED
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5">
-            {STATIONS.slice(0, 4).map(st => (
-              <button
-                key={st.id}
-                onClick={() => playByQuery(st.query, st.id)}
-                className="group p-3 rounded-xl bg-[#14151c] hover:bg-[#1b1d28] border-2 border-black shadow-neo-sm hover:shadow-neo hover:-translate-y-0.5 transition-all duration-150 flex items-center justify-between text-left"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-9 h-9 rounded-lg bg-gradient-to-br ${st.color} border-2 border-black flex items-center justify-center flex-shrink-0 shadow-sm`}>
-                    <span className="material-symbols-outlined text-white text-[18px]" style={{fontVariationSettings:"'FILL' 1"}}>
-                      music_note
-                    </span>
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-black uppercase text-white truncate group-hover:text-[#CCFF00] transition-colors">
-                      {st.title}
-                    </span>
-                    <span className="text-[10px] font-mono text-zinc-400 truncate">{st.subtitle}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                  {stationLoading === st.id ? (
-                    <div className="w-5 h-5 border-2 border-[#CCFF00] border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <span className="w-7 h-7 rounded-md bg-[#CCFF00] text-black border-2 border-black flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-neo-sm">
-                      <span className="material-symbols-outlined text-[16px] font-bold" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
-                    </span>
-                  )}
-                </div>
-              </button>
-            ))}
-          </div>
+        {/* Bento Tile 2: Pulse DJ Direct Messenger Feed (Somnath Mahanta DM Style) */}
+        <div className="lg:col-span-5 xl:col-span-5">
+          <BentoPulseDJChat onQuickPlay={playByQuery} stationLoading={stationLoading} />
         </div>
       </div>
 
-      {/* ── Mid Bento Row: Audiophile Spec Console + Quick Hits Bento ── */}
+      {/* ── Mid Bento Row: Audiophile Spec Console + Trending Contact Thread Hits ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Bento Tile 3: Audiophile Lab Spec Tile */}
-        <div className="lg:col-span-4 neo-card p-4 bg-[#14151c] border-2 border-black shadow-neo flex flex-col justify-between">
+        <div className="lg:col-span-4 neo-card p-4 bg-[#14151e] border-2 border-black shadow-neo flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[#00F0FF] text-[18px]">equalizer</span>
+                <span className="material-symbols-outlined text-[#86EFAC] text-[18px]">equalizer</span>
                 AUDIO ENGINE LAB
               </span>
-              <span className="neo-badge bg-[#00F0FF] text-black text-[9px] font-mono border border-black">
+              <span className="neo-badge bg-[#86EFAC] text-black text-[9px] font-mono border border-black font-bold">
                 LIVE
               </span>
             </div>
 
             {/* Stepped Visualizer graphic */}
-            <div className="p-3 bg-black/60 rounded-xl border-2 border-black flex items-end justify-between h-20 gap-1.5 mb-3">
+            <div className="p-3 bg-black/60 rounded-2xl border-2 border-black flex items-end justify-between h-20 gap-1.5 mb-3">
               {[60, 85, 45, 95, 30, 75, 90, 50, 80, 65, 40, 95, 70, 85].map((h, i) => (
                 <div key={i} className="flex-1 bg-zinc-800 rounded-sm overflow-hidden flex flex-col justify-end h-full">
                   <div
-                    className="w-full bg-gradient-to-t from-[#00F0FF] to-[#CCFF00] rounded-sm transition-all duration-300"
+                    className="w-full bg-gradient-to-t from-[#7DD3FC] via-[#86EFAC] to-[#CCFF00] rounded-sm transition-all duration-300"
                     style={{ height: `${h}%` }}
                   />
                 </div>
@@ -429,55 +387,55 @@ function BentoHomeDefault() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 font-mono text-[10px]">
-              <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
-                <span className="text-zinc-500 block uppercase">BITRATE</span>
-                <span className="text-white font-bold">320 KBPS AAC</span>
+              <div className="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800">
+                <span className="text-zinc-500 block uppercase font-bold text-[9px]">BITRATE</span>
+                <span className="text-white font-black text-xs">320 KBPS AAC</span>
               </div>
-              <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
-                <span className="text-zinc-500 block uppercase">SPATIAL FX</span>
-                <span className="text-[#CCFF00] font-bold">DOLBY ATMOS</span>
+              <div className="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800">
+                <span className="text-zinc-500 block uppercase font-bold text-[9px]">SPATIAL FX</span>
+                <span className="text-[#86EFAC] font-black text-xs">DOLBY ATMOS</span>
               </div>
-              <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
-                <span className="text-zinc-500 block uppercase">BUFFERING</span>
-                <span className="text-white font-bold">0.08s · INSTANT</span>
+              <div className="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800">
+                <span className="text-zinc-500 block uppercase font-bold text-[9px]">BUFFERING</span>
+                <span className="text-white font-black text-xs">0.08s · INSTANT</span>
               </div>
-              <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
-                <span className="text-zinc-500 block uppercase">OUTPUT</span>
-                <span className="text-[#00F0FF] font-bold">STUDIO MASTER</span>
+              <div className="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800">
+                <span className="text-zinc-500 block uppercase font-bold text-[9px]">OUTPUT</span>
+                <span className="text-[#7DD3FC] font-black text-xs">STUDIO MASTER</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bento Tile 4: Trending Quick Replay Hits (Col 8) */}
-        <div className="lg:col-span-8 neo-card p-4 bg-[#14151c] border-2 border-black shadow-neo flex flex-col justify-between">
+        {/* Bento Tile 4: Trending Daily Chart Tracks */}
+        <div className="lg:col-span-8 neo-card p-4 bg-[#14151e] border-2 border-black shadow-neo flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2.5">
             <span className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[#FF2E93] text-[18px]">trending_up</span>
+              <span className="material-symbols-outlined text-[#FDA4AF] text-[18px]">trending_up</span>
               TRENDING ON PULSE // TOP CURATION
             </span>
-            <span className="neo-badge bg-[#FF2E93] text-white text-[9px] font-mono border border-black">
+            <span className="neo-badge bg-[#FDA4AF] text-black text-[9px] font-mono border border-black font-bold">
               DAILY CHART
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {CURATED_TRACKS.map((t, idx) => (
               <button
                 key={t.id}
                 onClick={() => playByQuery(t.query, t.id)}
-                className="p-2.5 rounded-xl bg-zinc-900/60 hover:bg-zinc-800/90 border-2 border-zinc-800 hover:border-black transition-all flex items-center gap-3 text-left group hover:shadow-neo-sm"
+                className="p-2.5 rounded-2xl bg-zinc-900/60 hover:bg-[#1c1f2e] border-2 border-zinc-800 hover:border-black transition-all duration-200 flex items-center gap-3 text-left group hover:shadow-neo-sm hover:-translate-x-0.5"
               >
-                <span className="font-mono font-bold text-xs text-[#CCFF00] w-6 text-center">
+                <span className="font-mono font-bold text-xs text-[#86EFAC] w-6 text-center">
                   #{String(idx + 1).padStart(2, '0')}
                 </span>
-                <div className="w-9 h-9 rounded-lg bg-black border border-zinc-700 flex items-center justify-center flex-shrink-0 group-hover:border-[#CCFF00]">
-                  <span className="material-symbols-outlined text-white/50 group-hover:text-[#CCFF00] text-[18px]">
+                <div className="w-10 h-10 rounded-xl bg-black border border-zinc-700 flex items-center justify-center flex-shrink-0 group-hover:border-[#86EFAC] transition-colors">
+                  <span className="material-symbols-outlined text-white/50 group-hover:text-[#86EFAC] text-[20px] transition-colors">
                     play_arrow
                   </span>
                 </div>
-                <div className="flex flex-col min-w-0">
-                  <span className="text-xs font-black uppercase text-white truncate group-hover:text-[#CCFF00] transition-colors">
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-xs font-black uppercase text-white truncate group-hover:text-[#86EFAC] transition-colors">
                     {t.title}
                   </span>
                   <span className="text-[10px] font-mono text-zinc-400 truncate">{t.artist}</span>
@@ -488,11 +446,11 @@ function BentoHomeDefault() {
         </div>
       </div>
 
-      {/* ── Bento Tile 5: Featured Worldwide Stations Banner ── */}
+      {/* ── Bento Tile 5: Popular Radio Stations Banner ── */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#CCFF00] text-[22px]">radio</span>
+            <span className="material-symbols-outlined text-[#86EFAC] text-[22px]">radio</span>
             <h2 className="text-sm font-black uppercase tracking-wider text-white">
               POPULAR PLAYLIST STATIONS
             </h2>
@@ -507,7 +465,7 @@ function BentoHomeDefault() {
             <button
               key={`card-${st.id}`}
               onClick={() => playByQuery(st.query, st.id)}
-              className="group flex flex-col justify-between h-36 rounded-xl p-3 bg-[#14151b] hover:bg-[#1a1b24] border-2 border-black shadow-neo-sm hover:shadow-neo hover:-translate-y-0.5 transition-all text-left relative overflow-hidden"
+              className="group flex flex-col justify-between h-36 rounded-2xl p-3.5 bg-[#14151e] hover:bg-[#1c1f2e] border-2 border-black shadow-neo-sm hover:shadow-neo hover:-translate-y-0.5 transition-all duration-200 text-left relative overflow-hidden"
             >
               <div className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl ${st.color} opacity-20 rounded-bl-full pointer-events-none group-hover:opacity-35 transition-opacity`} />
 
@@ -515,15 +473,15 @@ function BentoHomeDefault() {
                 <span className="neo-badge bg-black text-zinc-300 text-[8px] border border-zinc-800 font-mono mb-1.5 inline-block">
                   {st.badge}
                 </span>
-                <p className="text-xs font-black uppercase text-white group-hover:text-[#CCFF00] transition-colors">
+                <p className="text-xs font-black uppercase text-white group-hover:text-[#86EFAC] transition-colors">
                   {st.title}
                 </p>
                 <p className="text-[10px] font-mono text-zinc-400 mt-0.5">{st.subtitle}</p>
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-zinc-800">
-                <span className="text-[9px] font-mono text-zinc-500 uppercase">CLICK TO STREAM</span>
-                <div className="w-7 h-7 rounded-md bg-[#CCFF00] text-black border-2 border-black flex items-center justify-center shadow-neo-sm group-hover:scale-105 transition-transform">
+              <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
+                <span className="text-[9px] font-mono text-zinc-500 uppercase font-bold">CLICK TO STREAM</span>
+                <div className="w-7 h-7 rounded-lg bg-[#86EFAC] text-black border-2 border-black flex items-center justify-center shadow-neo-sm group-hover:scale-105 transition-transform">
                   <span className="material-symbols-outlined text-[16px] font-bold" style={{fontVariationSettings:"'FILL' 1"}}>
                     play_arrow
                   </span>
@@ -535,13 +493,136 @@ function BentoHomeDefault() {
       </section>
 
       {/* ── Neo-Brutalist Tip Banner ── */}
-      <div className="neo-card p-4 bg-[#181922] border-2 border-black shadow-neo flex items-center gap-3.5">
-        <div className="w-9 h-9 rounded-lg bg-[#FFE600] text-black border-2 border-black flex items-center justify-center font-black flex-shrink-0 shadow-sm">
+      <div className="neo-card p-4 bg-[#161822] border-2 border-black shadow-neo flex items-center gap-3.5">
+        <div className="w-9 h-9 rounded-xl bg-[#FEF08A] text-black border-2 border-black flex items-center justify-center font-black flex-shrink-0 shadow-sm">
           ★
         </div>
         <p className="text-xs font-mono text-zinc-300 leading-relaxed">
-          <span className="text-white font-black uppercase text-xs">PRO TIP:</span> Search any song, album, or artist. Click any station above to instantly launch an intelligent radio mix with synced lyrics.
+          <span className="text-white font-black uppercase text-xs">PRO TIP:</span> Direct messaging audio channel: Tap any quick vibe in the DJ chat or click any station to launch synced lyrics streaming in 320kbps Lossless.
         </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Somnath Mahanta DM Style: Pulse DJ Direct Chat Widget ─────────────
+
+function BentoPulseDJChat({ onQuickPlay, stationLoading }) {
+  return (
+    <div className="neo-card p-4 bg-[#13141e] border-2 border-black shadow-neo flex flex-col justify-between h-full relative overflow-hidden">
+      {/* DM Chat Header */}
+      <div className="flex items-center justify-between pb-3 border-b-2 border-black/80">
+        <div className="flex items-center gap-2.5">
+          <div className="relative">
+            <div className="w-8 h-8 rounded-full bg-[#86EFAC] text-black font-black text-xs border-2 border-black flex items-center justify-center shadow-sm">
+              🎧
+            </div>
+            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#86EFAC] border-2 border-black rounded-full" />
+          </div>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-black text-white uppercase tracking-tight">PULSE AI DJ</span>
+              <span className="neo-badge bg-[#86EFAC] text-black text-[8px] py-0 px-1 border-black">LIVE</span>
+            </div>
+            <span className="text-[9px] font-mono text-[#86EFAC] flex items-center gap-1 leading-tight font-bold">
+              ● ACTIVE MIX CURATOR
+            </span>
+          </div>
+        </div>
+
+        <span className="neo-badge bg-black text-[#86EFAC] text-[9px] font-mono border border-black">
+          DIRECT FEED
+        </span>
+      </div>
+
+      {/* DM Message Bubbles Stream */}
+      <div className="flex flex-col gap-2.5 my-3 overflow-y-auto max-h-[170px] pr-1">
+        {/* Message 1: Incoming from DJ */}
+        <div className="flex flex-col items-start gap-1">
+          <div className="neo-msg-incoming p-2.5 max-w-[95%] bg-[#1a1c27] text-left">
+            <p className="text-xs font-bold text-zinc-200 leading-snug">
+              🔥 Dropping today's top Bollywood & Punjabi hits! Perfect for coding or chill vibe.
+            </p>
+            {/* Embedded interactive music suggestion */}
+            <div className="mt-2 p-2 rounded-xl bg-black/60 border border-black flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#FDA4AF] to-[#FF6B00] border border-black flex items-center justify-center text-[13px] flex-shrink-0">
+                  🎵
+                </span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[11px] font-black text-white truncate">Arijit Singh Hits</span>
+                  <span className="text-[9px] font-mono text-zinc-400">Bollywood // Hot</span>
+                </div>
+              </div>
+              <button
+                onClick={() => onQuickPlay('arijit singh hits', 'st1')}
+                disabled={stationLoading === 'st1'}
+                className="neo-btn-mint px-2.5 py-1 rounded-lg text-[10px] uppercase font-black tracking-wider flex items-center gap-1 flex-shrink-0"
+              >
+                {stationLoading === 'st1' ? (
+                  <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[14px]" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
+                    <span>STREAM</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+          <span className="text-[9px] font-mono text-zinc-500 pl-2">10:42 AM · READ</span>
+        </div>
+
+        {/* Message 2: DJ status note */}
+        <div className="flex flex-col items-start gap-1">
+          <div className="neo-msg-incoming p-2.5 max-w-[95%] bg-[#1a1c27] text-left">
+            <p className="text-xs font-bold text-zinc-300 leading-snug">
+              🎧 Spatial Audio Master is enabled on your device. Zero latency 320kbps AAC streaming active.
+            </p>
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <span className="neo-badge bg-black text-[#86EFAC] text-[8px] py-0 px-1.5 border border-black">
+                ❤️ 3.2k
+              </span>
+              <span className="neo-badge bg-black text-[#7DD3FC] text-[8px] py-0 px-1.5 border border-black">
+                ⚡ LOSSLESS
+              </span>
+            </div>
+          </div>
+          <span className="text-[9px] font-mono text-zinc-500 pl-2">JUST NOW</span>
+        </div>
+      </div>
+
+      {/* Quick Interactive Vibe Reply Bar */}
+      <div className="pt-2 border-t-2 border-black/80 flex flex-col gap-1.5">
+        <span className="text-[9px] font-mono text-zinc-400 uppercase font-bold flex items-center gap-1">
+          <span>QUICK VIBE REPLY:</span>
+        </span>
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+          <button
+            onClick={() => onQuickPlay('lofi chill study beats', 'st2')}
+            className="neo-btn bg-[#181a24] hover:bg-[#C4B5FD] hover:text-black text-zinc-300 text-[10px] font-black px-2.5 py-1 rounded-full border-2 border-black whitespace-nowrap transition-all"
+          >
+            🌙 Lofi
+          </button>
+          <button
+            onClick={() => onQuickPlay('punjabi hits latest', 'st3')}
+            className="neo-btn bg-[#181a24] hover:bg-[#FEF08A] hover:text-black text-zinc-300 text-[10px] font-black px-2.5 py-1 rounded-full border-2 border-black whitespace-nowrap transition-all"
+          >
+            🔥 Punjabi
+          </button>
+          <button
+            onClick={() => onQuickPlay('romantic hindi classics', 'st4')}
+            className="neo-btn bg-[#181a24] hover:bg-[#FDA4AF] hover:text-black text-zinc-300 text-[10px] font-black px-2.5 py-1 rounded-full border-2 border-black whitespace-nowrap transition-all"
+          >
+            💖 Romance
+          </button>
+          <button
+            onClick={() => onQuickPlay('top english hits', 'st5')}
+            className="neo-btn bg-[#181a24] hover:bg-[#7DD3FC] hover:text-black text-zinc-300 text-[10px] font-black px-2.5 py-1 rounded-full border-2 border-black whitespace-nowrap transition-all"
+          >
+            🌍 Global
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -554,9 +635,9 @@ function BentoHeroNowPlaying({ onQuickPlay }) {
 
   if (!currentSong) {
     return (
-      <div className="neo-card p-6 bg-[#13141a] border-2 border-black shadow-neo h-full flex flex-col justify-between relative overflow-hidden">
+      <div className="neo-card p-6 bg-[#13141e] border-2 border-black shadow-neo h-full flex flex-col justify-between relative overflow-hidden">
         <div className="flex items-center justify-between mb-4">
-          <span className="neo-badge bg-[#CCFF00] text-black text-[10px] font-black">
+          <span className="neo-badge bg-[#86EFAC] text-black text-[10px] font-black">
             ✦ READY TO STREAM
           </span>
           <span className="neo-badge bg-black text-zinc-400 text-[9px] font-mono border border-zinc-800">
@@ -565,7 +646,7 @@ function BentoHeroNowPlaying({ onQuickPlay }) {
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-5 my-2">
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl bg-zinc-900 border-2 border-black shadow-neo-sm flex items-center justify-center flex-shrink-0">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-zinc-900 border-2 border-black shadow-neo-sm flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-zinc-600 text-[48px]">album</span>
           </div>
           <div className="flex flex-col text-center sm:text-left">
@@ -578,7 +659,7 @@ function BentoHeroNowPlaying({ onQuickPlay }) {
             <div className="mt-3">
               <button
                 onClick={() => onQuickPlay('arijit singh hits', 'hero-starter')}
-                className="neo-btn-lime px-4 py-2 rounded-xl text-xs uppercase font-black tracking-wider flex items-center gap-2"
+                className="neo-btn-mint px-4 py-2 rounded-2xl text-xs uppercase font-black tracking-wider flex items-center gap-2"
               >
                 <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings:"'FILL' 1"}}>
                   play_arrow
@@ -591,7 +672,7 @@ function BentoHeroNowPlaying({ onQuickPlay }) {
 
         <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 pt-3 border-t border-zinc-800 mt-3">
           <span>SPATIAL AUDIO ENGINE // 24-BIT</span>
-          <span className="text-[#00F0FF]">SYSTEM READY</span>
+          <span className="text-[#86EFAC] font-bold">SYSTEM READY</span>
         </div>
       </div>
     );
@@ -600,31 +681,31 @@ function BentoHeroNowPlaying({ onQuickPlay }) {
   const liked = isLiked(currentSong.id);
 
   return (
-    <div className="neo-card p-5 bg-[#13141a] border-2 border-black shadow-neo h-full flex flex-col justify-between relative overflow-hidden">
+    <div className="neo-card p-5 bg-[#13141e] border-2 border-black shadow-neo h-full flex flex-col justify-between relative overflow-hidden">
       {/* Top status bar */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="neo-badge bg-[#CCFF00] text-black text-[9px] font-black">
+          <span className="neo-badge bg-[#86EFAC] text-black text-[9px] font-black">
             NOW PLAYING
           </span>
-          <span className="neo-badge bg-black text-[#00F0FF] text-[9px] font-mono border border-zinc-700">
+          <span className="neo-badge bg-black text-[#7DD3FC] text-[9px] font-mono border border-zinc-700">
             320 KBPS · LOSSLESS
           </span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="visualizer-bar w-[3px] bg-[#CCFF00] rounded-sm" />
-          <span className="visualizer-bar w-[3px] bg-[#00F0FF] rounded-sm" />
-          <span className="visualizer-bar w-[3px] bg-[#FF2E93] rounded-sm" />
+          <span className="visualizer-bar w-[3px] bg-[#86EFAC] rounded-sm" />
+          <span className="visualizer-bar w-[3px] bg-[#7DD3FC] rounded-sm" />
+          <span className="visualizer-bar w-[3px] bg-[#FDA4AF] rounded-sm" />
         </div>
       </div>
 
       {/* Main track display */}
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 my-2">
         {/* Artwork frame with hard border and shadow */}
-        <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden border-2 border-black shadow-neo-sm flex-shrink-0 bg-zinc-900">
-          <img src={currentSong.thumbnail} alt="" className="w-full h-full object-cover" />
+        <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border-2 border-black shadow-neo-sm flex-shrink-0 bg-zinc-900">
+          <img src={currentSong.thumbnail} alt="" className={`w-full h-full object-cover transition-transform duration-700 ${isPlaying ? 'scale-105' : ''}`} />
           {isPlaying && (
-            <div className="absolute top-1 left-1 neo-badge bg-black/80 text-[#CCFF00] text-[8px] py-0 px-1 border border-black">
+            <div className="absolute top-1.5 left-1.5 neo-badge bg-black/80 text-[#86EFAC] text-[8px] py-0 px-1.5 border border-black font-black">
               LIVE
             </div>
           )}
@@ -648,7 +729,7 @@ function BentoHeroNowPlaying({ onQuickPlay }) {
           <div className="flex items-center justify-center sm:justify-start gap-3 mt-3">
             <button
               onClick={togglePlay}
-              className="neo-btn-lime px-4 py-2 rounded-xl text-xs uppercase font-black tracking-wider flex items-center gap-2"
+              className="neo-btn-mint px-4 py-2 rounded-2xl text-xs uppercase font-black tracking-wider flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-[20px]" style={{fontVariationSettings:"'FILL' 1"}}>
                 {isPlaying ? 'pause' : 'play_arrow'}
@@ -658,8 +739,8 @@ function BentoHeroNowPlaying({ onQuickPlay }) {
 
             <button
               onClick={() => toggleLike(currentSong)}
-              className={`neo-btn p-2 rounded-xl border-2 border-black ${
-                liked ? 'bg-[#FF2E93] text-white' : 'bg-zinc-800 text-zinc-400 hover:text-white'
+              className={`neo-btn p-2 rounded-2xl border-2 border-black ${
+                liked ? 'bg-[#FDA4AF] text-black' : 'bg-zinc-800 text-zinc-400 hover:text-white'
               }`}
               title={liked ? 'Unlike' : 'Like'}
             >
@@ -673,9 +754,10 @@ function BentoHeroNowPlaying({ onQuickPlay }) {
 
       {/* Bottom specs */}
       <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 pt-3 border-t border-zinc-800 mt-2">
-        <span className="text-[#CCFF00]">● AUDIO STREAM ACTIVE</span>
-        <span className="uppercase">DOLBY SPATIAL MATRIX</span>
+        <span className="text-[#86EFAC] font-bold">● AUDIO STREAM ACTIVE</span>
+        <span className="uppercase font-bold">DOLBY SPATIAL MATRIX</span>
       </div>
     </div>
   );
 }
+

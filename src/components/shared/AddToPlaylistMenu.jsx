@@ -41,17 +41,17 @@ export default function AddToPlaylistMenu({ song, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm select-none"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm select-none animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="neo-card p-5 w-full max-w-sm mx-4 flex flex-col gap-4 bg-[#14151c] border-2 border-black shadow-neo-lg"
+        className="neo-card p-5 w-full max-w-sm mx-4 flex flex-col gap-4 bg-[#14151e] border-2 border-black shadow-neo-lg rounded-2xl"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-2 border-b-2 border-black">
           <div className="flex flex-col min-w-0">
-            <span className="neo-badge bg-[#CCFF00] text-black text-[9px] font-black self-start mb-0.5">
+            <span className="neo-badge bg-[#86EFAC] text-black text-[9px] font-black self-start mb-0.5">
               SAVE TO COLLECTION
             </span>
             <h3 className="text-sm font-black uppercase text-white truncate">{song.title}</h3>
@@ -59,33 +59,33 @@ export default function AddToPlaylistMenu({ song, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="neo-btn p-1 rounded-lg bg-zinc-800 text-zinc-400 hover:text-white border border-black flex-shrink-0"
+            className="neo-btn p-1.5 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white border border-black flex-shrink-0"
           >
             <span className="material-symbols-outlined text-[18px] block">close</span>
           </button>
         </div>
 
         {/* Tab switch */}
-        <div className="flex items-center gap-2 p-1 bg-zinc-900/80 rounded-xl border border-zinc-800">
+        <div className="flex items-center gap-2 p-1 bg-zinc-900/90 rounded-full border border-zinc-800">
           <button
             onClick={() => { setTab('playlist'); setCreating(false); }}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+            className={`flex-1 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-150 ${
               tab === 'playlist'
-                ? 'bg-[#CCFF00] text-black border border-black shadow-neo-sm'
+                ? 'bg-[#86EFAC] text-black border border-black shadow-neo-sm'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            Playlists ({playlists.length})
+            Channels ({playlists.length})
           </button>
           <button
             onClick={() => { setTab('album'); setCreating(false); }}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+            className={`flex-1 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-150 ${
               tab === 'album'
-                ? 'bg-[#00F0FF] text-black border border-black shadow-neo-sm'
+                ? 'bg-[#7DD3FC] text-black border border-black shadow-neo-sm'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
-            Albums ({customAlbums.length})
+            Studio LPs ({customAlbums.length})
           </button>
         </div>
 
@@ -97,20 +97,20 @@ export default function AddToPlaylistMenu({ song, onClose }) {
               value={newTitle}
               onChange={e => setNewTitle(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleCreate()}
-              placeholder={tab === 'playlist' ? "Playlist Name..." : "Album Name..."}
-              className="flex-1 bg-zinc-900 border-2 border-black rounded-lg px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wider outline-none focus:border-[#CCFF00]"
+              placeholder={tab === 'playlist' ? "Channel Name..." : "Studio LP Name..."}
+              className="flex-1 bg-zinc-900 border-2 border-black rounded-xl px-3 py-1.5 text-white text-xs font-bold uppercase tracking-wider outline-none focus:border-[#86EFAC]"
             />
             <button
               onClick={handleCreate}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${
-                tab === 'playlist' ? 'neo-btn-lime' : 'neo-btn-cyan'
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-colors ${
+                tab === 'playlist' ? 'neo-btn-mint' : 'neo-btn-cyan'
               }`}
             >
               Add
             </button>
             <button
               onClick={() => setCreating(false)}
-              className="neo-btn p-1 rounded-lg bg-zinc-800 text-zinc-400 hover:text-white border border-black"
+              className="neo-btn p-1.5 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white border border-black"
             >
               <span className="material-symbols-outlined text-[16px] block">close</span>
             </button>
@@ -118,13 +118,13 @@ export default function AddToPlaylistMenu({ song, onClose }) {
         ) : (
           <button
             onClick={() => setCreating(true)}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-zinc-900/60 hover:bg-zinc-800 border-2 border-dashed border-zinc-700 hover:border-[#CCFF00] transition-all text-left group shadow-neo-sm"
+            className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-zinc-900/60 hover:bg-zinc-800 border-2 border-dashed border-zinc-700 hover:border-[#86EFAC] transition-all duration-200 text-left group shadow-neo-sm"
           >
-            <div className={`w-6 h-6 rounded-md border border-black flex items-center justify-center font-black text-black text-xs ${tab === 'playlist' ? 'bg-[#CCFF00]' : 'bg-[#00F0FF]'}`}>
+            <div className={`w-6 h-6 rounded-lg border border-black flex items-center justify-center font-black text-black text-xs ${tab === 'playlist' ? 'bg-[#86EFAC]' : 'bg-[#7DD3FC]'}`}>
               +
             </div>
             <span className="text-xs font-black uppercase tracking-wider text-zinc-300 group-hover:text-white">
-              {tab === 'playlist' ? 'NEW PLAYLIST' : 'NEW CUSTOM ALBUM'}
+              {tab === 'playlist' ? 'NEW CHANNEL' : 'NEW STUDIO LP'}
             </span>
           </button>
         )}

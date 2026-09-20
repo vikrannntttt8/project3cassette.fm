@@ -1,8 +1,8 @@
-# Pulse Music Studio — Architecture & Process Guide
+# cassette.fm — Architecture & Process Guide
 
 ## 1. Project Overview & Tech Stack
 
-**Pulse Music Studio** is a high-performance web music player delivering uncompressed audio streaming, synchronized lyrics, responsive discography browsing, and cloud-synced playlist curation without reliance on third-party SaaS subscriptions.
+**cassette.fm** is a high-performance web music player delivering uncompressed audio streaming, synchronized lyrics, responsive discography browsing, and cloud-synced playlist curation without reliance on third-party SaaS subscriptions.
 
 ### Technology Stack
 - **Framework & Runtime**: React 18 / 19 with Vite 8 development server & build toolchain.
@@ -11,7 +11,9 @@
 - **Cloud Database & Authentication**: Supabase (`@supabase/supabase-js`) providing Google OAuth 1-click authentication and PostgreSQL database synchronization with Row Level Security (RLS).
 - **State & Flow Management**: React Context (`PlayerContext`, `AuthContext`, `LibraryContext`) combined with custom hooks (`useMusicSearch`, `useLrcSync`, `useDebounce`).
 - **Styling Architecture**: Tailwind CSS + custom Vanilla CSS design tokens.
-- **Aesthetic Direction**: Strict Black & White Monochrome (`#000000` deep background, `#FFFFFF` high-contrast interactive elements, `#888888` secondary text, `#222222` structural borders). Album artwork is the sole element of color across the interface.
+- **Aesthetic Direction & Typography**:
+  - Strict Black & White Monochrome (`#000000` deep background, `#FFFFFF` high-contrast interactive elements, `#888888` secondary text, `#222222` structural borders). Album artwork is the sole element of color across the interface.
+  - **Brand Typography (`cassette.fm`)**: Vintage 70s display typeface inspired by *Keep On Truckin'* via Google Fonts (`Shrikhand` / `Rubik Vinyl` / `Righteous`), rendering a distinctive retro aesthetic without logo box clutter.
 
 ---
 
@@ -97,24 +99,29 @@ const clean = (str) =>
 
 ---
 
-## 5. Live YouTube Music Home Feed
-
-All legacy static "Featured Stations" have been completely removed from the homepage and replaced with a real-time, live-synced YouTube Music feed (`GET /api/home/feed`):
-
-1. **Quick Picks**:
-   - 16 hot, chart-topping tracks from YouTube Music rendered in a responsive grid.
-   - 1-click play starts instant radio and loads full recommendations into the queue.
-   - Includes "Play All" trigger and `TrackContextMenu` support.
-2. **Daily Mixes & Radio**:
-   - Curated radio mixes directly from YouTube Music's live homepage.
-   - Clicking any station searches and plays the curated track selection.
-3. **Trending Albums**:
-   - Official full-length album releases presented in a responsive 5-column grid.
-   - Clicking an album navigates to the dedicated `AlbumView` with complete tracklist.
-4. **Listen Again / Jump Back In**:
+## 5. Live YouTube Music Home Feed & Horizontal Carousels
+ 
+All legacy static "Featured Stations" have been completely removed from the homepage and replaced with a real-time, live-synced YouTube Music feed (`GET /api/home/feed`) formatted in YouTube Music-style horizontal scrolling carousels:
+ 
+1. **Quick Picks Horizontal Carousel**:
+   - 16 chart-topping tracks grouped into **columns of 4 tracks per column** (`min-w-[320px] max-w-[380px] snap-start`).
+   - Columns are laid out side-by-side in a horizontal scroll container (`flex flex-row gap-4 overflow-x-auto no-scrollbar snap-x scroll-smooth`).
+   - **Standardized Song Row Layout (`QuickPickRow`)**:
+     - *Thumbnail*: Fixed ~48px square (`w-12 h-12 rounded-md`) with hover play button and active animated visualizer equalizer.
+     - *Track Info*: Line 1 track title (`font-medium text-white truncate text-sm`), Line 2 artist name (`text-xs text-neutral-400 truncate`).
+     - *Controls*: Cleanly aligned duration (`3:22`), favorite toggle, and 3-dot context menu (`TrackContextMenu`).
+2. **Carousel Navigation Controls**:
+   - Sleek monochrome left (`<`) and right (`>`) arrow buttons embedded in every shelf header (`ShelfHeader`).
+   - Smoothly scrolls the carousel (`scrollBy({ left: 400, behavior: 'smooth' })`).
+   - Browser scrollbars are hidden globally (`no-scrollbar` / `::-webkit-scrollbar { display: none; }`).
+3. **Daily Mixes & Radio Carousel**:
+   - Curated radio mixes directly from YouTube Music rendered as square cards (`w-44 sm:w-48 snap-start`) in a horizontal carousel with `<` and `>` arrow controls.
+4. **Trending Albums Carousel**:
+   - Official full-length album releases in a horizontal carousel (`AlbumCard`) with instant navigation to dedicated album tracklists.
+5. **Listen Again / Jump Back In**:
    - Dynamically generated from the user's `history` store in `PlayerContext` and synced via Supabase.
-5. **Dynamic Shelves**:
-   - Any personalized or mood-based shelves returned by YouTube Music are dynamically parsed and rendered.
+6. **Dynamic Shelves**:
+   - Any personalized or mood-based shelves returned by YouTube Music are dynamically parsed and rendered with full carousel navigation.
 
 ---
 

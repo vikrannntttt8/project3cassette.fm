@@ -20,8 +20,8 @@ export default function LyricsView() {
           <svg className="w-5 h-5 transition-transform group-hover:-translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
           </svg>
-          <span className="text-label-lg font-semibold tracking-wider text-on-surface-variant group-hover:text-white uppercase">
-            Pulse
+          <span className="font-cassette text-[20px] text-white tracking-normal group-hover:opacity-90 leading-none">
+            cassette.fm
           </span>
         </button>
 

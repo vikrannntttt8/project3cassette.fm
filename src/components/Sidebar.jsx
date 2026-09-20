@@ -12,12 +12,15 @@ export default function Sidebar() {
   return (
     <aside className="h-full w-60 bg-black flex flex-col justify-between py-4 px-3 border-r border-[#1a1a1a] select-none overflow-hidden">
       <div className="flex flex-col gap-4 min-h-0">
-        {/* Logo — Minimalist Monochrome */}
-        <div className="flex items-center gap-2.5 px-2 py-1 flex-shrink-0">
-          <div className="w-7 h-7 rounded-md bg-white text-black flex items-center justify-center font-extrabold text-sm shadow-sm">
-            P
-          </div>
-          <span className="text-headline-sm font-bold text-white tracking-tight">Pulse</span>
+        {/* Logo — cassette.fm */}
+        <div
+          onClick={() => setView('home')}
+          className="flex items-center px-2 py-1.5 flex-shrink-0 cursor-pointer group"
+          title="cassette.fm"
+        >
+          <span className="font-cassette text-[26px] text-white tracking-tight select-none leading-none group-hover:opacity-90 transition-opacity">
+            cassette.fm
+          </span>
         </div>
 
         {/* Nav */}

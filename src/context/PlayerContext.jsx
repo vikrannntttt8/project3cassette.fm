@@ -454,6 +454,11 @@ export function PlayerProvider({ children }) {
       executeLoadSong(cleanSong);
     }
 
+    // Record into local & Supabase playback history
+    if (typeof library.recordPlayback === 'function') {
+      library.recordPlayback(cleanSong);
+    }
+
     // Auto-fetch Watch Next if queue is a single song and not part of an existing playlist
     if (!newQueue || (Array.isArray(newQueue) && newQueue.length <= 1)) {
       populateWatchNextQueue(cleanSong);

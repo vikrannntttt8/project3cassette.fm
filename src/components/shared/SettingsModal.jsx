@@ -3,7 +3,7 @@ import { usePlayer } from '../../context/PlayerContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function SettingsModal({ isOpen, onClose }) {
-  const { liked, playlists, audioQuality, setAudioQuality } = usePlayer();
+  const { liked, playlists, history, syncAllWithCloud, audioQuality, setAudioQuality } = usePlayer();
   const {
     user,
     isConfigured,
@@ -11,10 +11,6 @@ export default function SettingsModal({ isOpen, onClose }) {
     updateCredentials,
     signInWithGoogle,
     signOut,
-    syncLikedSongs,
-    syncPlaylists,
-    fetchLikedSongs,
-    fetchPlaylists,
   } = useAuth();
 
   const [normalizeAudio, setNormalizeAudio] = useState(
@@ -24,7 +20,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [supabaseKey, setSupabaseKey] = useState(credentials.anonKey || '');
   const [showConfigDetails, setShowConfigDetails] = useState(false);
   const [syncLoading, setSyncLoading] = useState(false);
-  const [syncStatus, setSyncStatus] = useState(null);
+  const [syncStatus, setSyncStatus] = useState(null); // { type: 'success' | 'error', text: string }
   const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
@@ -63,7 +59,7 @@ export default function SettingsModal({ isOpen, onClose }) {
   const handleSaveSupabaseConfig = (e) => {
     e.preventDefault();
     updateCredentials(supabaseUrl, supabaseKey);
-    setSyncStatus('Supabase settings updated successfully.');
+    setSyncStatus({ type: 'success', text: 'Supabase settings updated successfully.' });
     setTimeout(() => setSyncStatus(null), 4000);
   };
 
@@ -82,19 +78,23 @@ export default function SettingsModal({ isOpen, onClose }) {
     setSyncLoading(true);
     setSyncStatus(null);
     try {
-      // Sync local liked songs and playlists to cloud
-      if (liked && liked.length > 0) {
-        await syncLikedSongs(liked);
-      }
-      if (playlists && playlists.length > 0) {
-        await syncPlaylists(playlists);
-      }
-      setSyncStatus('All playlists and liked songs synced with cloud database!');
+      console.log('[SettingsModal] Triggering manual sync...');
+      const result = await syncAllWithCloud();
+      const likedCount = result?.stats?.likedCount ?? liked?.length ?? 0;
+      const plCount = result?.stats?.playlistsCount ?? playlists?.length ?? 0;
+      setSyncStatus({
+        type: 'success',
+        text: `Successfully synced ${likedCount} liked tracks, ${plCount} custom playlists, and playback history to Supabase Cloud.`,
+      });
+      setTimeout(() => setSyncStatus(null), 6000);
     } catch (err) {
-      setSyncStatus(`Sync error: ${err.message}`);
+      console.error('[Supabase Sync Error]:', err);
+      setSyncStatus({
+        type: 'error',
+        text: `Sync failed: ${err.message || 'Database error occurred. Ensure schema tables are created in Supabase.'}`,
+      });
     } finally {
       setSyncLoading(false);
-      setTimeout(() => setSyncStatus(null), 5000);
     }
   };
 
@@ -153,8 +153,17 @@ export default function SettingsModal({ isOpen, onClose }) {
             )}
 
             {syncStatus && (
-              <div className="mt-4 p-3 rounded-lg bg-white/5 border border-white/20 text-white text-body-sm font-medium">
-                {syncStatus}
+              <div
+                className={`mt-4 p-3 rounded-lg text-body-sm font-medium flex items-center gap-2.5 ${
+                  syncStatus.type === 'error'
+                    ? 'bg-red-950/50 border border-red-800 text-red-300'
+                    : 'bg-white/5 border border-white/20 text-white'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px] flex-shrink-0">
+                  {syncStatus.type === 'error' ? 'error' : 'check_circle'}
+                </span>
+                <span>{typeof syncStatus === 'string' ? syncStatus : syncStatus.text}</span>
               </div>
             )}
 

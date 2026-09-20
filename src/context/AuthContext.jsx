@@ -12,6 +12,8 @@ import {
   fetchPlaylistsCloud,
   saveHistoryItemCloud,
   fetchHistoryCloud,
+  syncHistoryCloud,
+  performFullCloudSync,
 } from '../services/supabase.js';
 
 const AuthContext = createContext(null);
@@ -93,6 +95,11 @@ export function AuthProvider({ children }) {
     return await fetchHistoryCloud(user.id);
   }, [user]);
 
+  const performFullSync = useCallback(async (localData) => {
+    if (!user?.id) throw new Error('User not logged in');
+    return await performFullCloudSync(user.id, localData);
+  }, [user]);
+
   const value = {
     user,
     session,
@@ -108,6 +115,7 @@ export function AuthProvider({ children }) {
     fetchPlaylists,
     recordHistory,
     fetchHistory,
+    performFullSync,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

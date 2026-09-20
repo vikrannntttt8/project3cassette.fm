@@ -55,14 +55,14 @@ export default function ArtistModal({ artistId, artistName, onClose, onSelectTra
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-[#121214] border border-white/10 shadow-2xl overflow-hidden"
+        className="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-2xl bg-[#0a0a0a] border border-[#222222] shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="relative h-44 sm:h-52 bg-gradient-to-b from-brand-violet/30 to-[#121214] p-6 flex flex-col justify-end">
+        <div className="relative h-44 sm:h-52 bg-[#121212] border-b border-[#222222] p-6 flex flex-col justify-end">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-black/40 text-white/70 hover:text-white hover:bg-black/60 transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-full bg-black/60 text-neutral-400 hover:text-white hover:bg-black/80 transition-colors border border-white/10"
             title="Close"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -74,32 +74,32 @@ export default function ArtistModal({ artistId, artistName, onClose, onSelectTra
               alt={data?.name || ''}
               icon="person"
               iconClassName="text-white/40 text-[36px]"
-              className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-brand-violet/40 shadow-lg flex-shrink-0"
+              className="w-20 h-20 sm:w-24 sm:h-24 aspect-square rounded-full overflow-hidden object-cover border-2 border-white/20 shadow-lg flex-shrink-0"
             />
             <div className="min-w-0">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-brand-violet">Artist Discography</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">Artist Discography</span>
               <h2 className="text-headline-md font-bold text-white truncate">
                 {data?.name || artistName || 'Loading Artist...'}
               </h2>
               {data?.description && (
-                <p className="text-body-sm text-outline line-clamp-2 mt-1">{data.description}</p>
+                <p className="text-body-sm text-neutral-400 line-clamp-2 mt-1">{data.description}</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth bg-[#0a0a0a]">
           {loading && (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <div className="w-8 h-8 border-2 border-brand-violet border-t-transparent rounded-full animate-spin" />
-              <p className="text-body-md text-outline">Loading discography...</p>
+              <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <p className="text-body-md text-neutral-400">Loading discography...</p>
             </div>
           )}
 
           {error && !loading && (
             <div className="text-center py-8">
-              <p className="text-body-md text-brand-pink">{error}</p>
+              <p className="text-body-md text-neutral-300">{error}</p>
             </div>
           )}
 
@@ -110,21 +110,21 @@ export default function ArtistModal({ artistId, artistName, onClose, onSelectTra
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-label-lg font-bold text-white flex items-center gap-2">
-                      <span className="material-symbols-outlined text-brand-violet text-[18px]">music_note</span>
+                      <span className="material-symbols-outlined text-white text-[18px]">music_note</span>
                       Top Releases & Songs
                     </h3>
                   </div>
-                  <div className="divide-y divide-neutral-800 rounded-xl bg-white/[0.02] border border-white/5 overflow-hidden">
+                  <div className="divide-y divide-[#1e1e1e] rounded-xl bg-[#111111] border border-[#222222] overflow-hidden">
                     {data.topSongs.map((track, idx) => (
                       <div
                         key={track.id || idx}
                         onClick={() => onSelectTrack?.(track)}
                         className="group flex items-center gap-3 p-3 hover:bg-white/5 transition-colors cursor-pointer"
                       >
-                        <span className="w-5 text-center text-label-sm font-mono text-outline group-hover:hidden">
+                        <span className="w-5 text-center text-label-sm font-mono text-neutral-400 group-hover:hidden">
                           {idx + 1}
                         </span>
-                        <span className="w-5 text-center hidden group-hover:inline text-brand-violet material-symbols-outlined text-[18px]">
+                        <span className="w-5 text-center hidden group-hover:inline text-white material-symbols-outlined text-[18px]">
                           play_arrow
                         </span>
                         <ImageWithFallback
@@ -135,13 +135,13 @@ export default function ArtistModal({ artistId, artistName, onClose, onSelectTra
                           className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <p className="text-label-md font-medium text-white truncate group-hover:text-brand-violet transition-colors">
+                          <p className="text-label-md font-medium text-white truncate group-hover:text-neutral-300 transition-colors">
                             {track.title}
                           </p>
-                          <p className="text-label-sm text-outline truncate">{track.artist}</p>
+                          <p className="text-label-sm text-neutral-400 truncate">{track.artist}</p>
                         </div>
                         {track.duration > 0 && (
-                          <span className="text-label-sm font-mono text-outline tabular-nums">
+                          <span className="text-label-sm font-mono text-neutral-400 tabular-nums">
                             {formatDuration(track.duration)}
                           </span>
                         )}
@@ -155,14 +155,14 @@ export default function ArtistModal({ artistId, artistName, onClose, onSelectTra
               {data.albums && data.albums.length > 0 && (
                 <div>
                   <h3 className="text-label-lg font-bold text-white flex items-center gap-2 mb-3">
-                    <span className="material-symbols-outlined text-brand-violet text-[18px]">album</span>
+                    <span className="material-symbols-outlined text-white text-[18px]">album</span>
                     Albums
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {data.albums.map((alb, i) => (
                       <div
                         key={alb.id || i}
-                        className="p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/5 transition-colors"
+                        className="p-3 rounded-xl bg-[#111111] border border-[#222222] hover:border-white/30 transition-colors"
                       >
                         <ImageWithFallback
                           src={alb.thumbnail}
@@ -172,7 +172,7 @@ export default function ArtistModal({ artistId, artistName, onClose, onSelectTra
                           className="w-full aspect-square rounded-lg object-cover mb-2"
                         />
                         <p className="text-label-md font-semibold text-white truncate">{alb.title}</p>
-                        <p className="text-label-sm text-outline">{alb.year || 'Album'}</p>
+                        <p className="text-label-sm text-neutral-400">{alb.year || 'Album'}</p>
                       </div>
                     ))}
                   </div>
@@ -183,14 +183,14 @@ export default function ArtistModal({ artistId, artistName, onClose, onSelectTra
               {data.singles && data.singles.length > 0 && (
                 <div>
                   <h3 className="text-label-lg font-bold text-white flex items-center gap-2 mb-3">
-                    <span className="material-symbols-outlined text-brand-cyan text-[18px]">disc_full</span>
+                    <span className="material-symbols-outlined text-white text-[18px]">disc_full</span>
                     Singles & EPs
                   </h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {data.singles.map((single, i) => (
                       <div
                         key={single.id || i}
-                        className="p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/5 transition-colors"
+                        className="p-3 rounded-xl bg-[#111111] border border-[#222222] hover:border-white/30 transition-colors"
                       >
                         <ImageWithFallback
                           src={single.thumbnail}
@@ -200,7 +200,7 @@ export default function ArtistModal({ artistId, artistName, onClose, onSelectTra
                           className="w-full aspect-square rounded-lg object-cover mb-2"
                         />
                         <p className="text-label-md font-semibold text-white truncate">{single.title}</p>
-                        <p className="text-label-sm text-outline">{single.year || 'Single'}</p>
+                        <p className="text-label-sm text-neutral-400">{single.year || 'Single'}</p>
                       </div>
                     ))}
                   </div>
@@ -211,7 +211,7 @@ export default function ArtistModal({ artistId, artistName, onClose, onSelectTra
               {data.videos && data.videos.length > 0 && (
                 <div>
                   <h3 className="text-label-lg font-bold text-white flex items-center gap-2 mb-3">
-                    <span className="material-symbols-outlined text-rose-400 text-[18px]">smart_display</span>
+                    <span className="material-symbols-outlined text-white text-[18px]">smart_display</span>
                     Videos & Live
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

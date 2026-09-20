@@ -15,7 +15,8 @@ export default function AlbumView({ browseId, initialData }) {
     togglePlay,
     isLiked,
     toggleLike,
-    handleEntityClick,
+    routeToSongEntity,
+    routeToArtistEntity,
   } = usePlayer();
   const [data, setData] = useState(initialData || null);
   const [loading, setLoading] = useState(!initialData?.tracks);
@@ -60,38 +61,38 @@ export default function AlbumView({ browseId, initialData }) {
   };
 
   return (
-    <div className="h-full w-full overflow-y-auto pb-32 pt-4 px-4 sm:px-8 space-y-8 scroll-smooth">
+    <div className="h-full w-full overflow-y-auto pb-32 pt-4 px-4 sm:px-8 space-y-8 scroll-smooth bg-black text-white">
       {/* ── Top Navigation Bar ── */}
       <div className="flex items-center gap-4">
         <BackButton label="Back" />
-        <span className="text-body-sm text-outline">/ Album Release</span>
+        <span className="text-body-sm text-[#888888]">/ Album Release</span>
       </div>
 
       {/* ── Loading Skeleton ── */}
       {loading && (
         <div className="space-y-6 animate-pulse">
           <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-end">
-            <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl bg-white/10 flex-shrink-0" />
+            <div className="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl bg-[#141414] border border-[#222222] flex-shrink-0" />
             <div className="space-y-3 w-full max-w-md">
-              <div className="h-4 w-20 bg-white/10 rounded" />
-              <div className="h-8 w-64 bg-white/10 rounded-lg" />
-              <div className="h-5 w-40 bg-white/10 rounded" />
-              <div className="h-10 w-36 bg-white/10 rounded-full mt-4" />
+              <div className="h-4 w-20 bg-[#1a1a1a] rounded" />
+              <div className="h-8 w-64 bg-[#1a1a1a] rounded-lg" />
+              <div className="h-5 w-40 bg-[#1a1a1a] rounded" />
+              <div className="h-10 w-36 bg-[#1a1a1a] rounded-full mt-4" />
             </div>
           </div>
           <div className="space-y-2 pt-6">
-            <div className="h-12 bg-white/5 rounded-xl" />
-            <div className="h-12 bg-white/5 rounded-xl" />
-            <div className="h-12 bg-white/5 rounded-xl" />
+            <div className="h-12 bg-[#111111] rounded-xl border border-[#1f1f1f]" />
+            <div className="h-12 bg-[#111111] rounded-xl border border-[#1f1f1f]" />
+            <div className="h-12 bg-[#111111] rounded-xl border border-[#1f1f1f]" />
           </div>
         </div>
       )}
 
       {/* ── Error Banner ── */}
       {error && !loading && (
-        <div className="p-6 rounded-2xl bg-brand-pink/10 border border-brand-pink/20 text-center space-y-3">
-          <p className="text-body-lg text-brand-pink font-semibold">{error}</p>
-          <BackButton label="Return to Previous View" className="px-4 py-2 bg-white/10 hover:bg-white/20" />
+        <div className="p-6 rounded-2xl bg-[#141414] border border-[#333333] text-center space-y-3">
+          <p className="text-body-lg text-white font-semibold">{error}</p>
+          <BackButton label="Return to Previous View" className="px-4 py-2 bg-white text-black hover:bg-neutral-200" />
         </div>
       )}
 
@@ -99,18 +100,18 @@ export default function AlbumView({ browseId, initialData }) {
       {data && !loading && (
         <>
           {/* Header Banner */}
-          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-b from-brand-violet/20 via-[#141419] to-[#09090B] border border-white/10 p-6 sm:p-8 shadow-2xl">
+          <div className="relative rounded-3xl overflow-hidden bg-[#0a0a0a] border border-[#222222] p-6 sm:p-8 shadow-2xl">
             <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 sm:gap-8">
               <ImageWithFallback
                 src={data.thumbnail || data.cover}
                 alt={data.title}
                 icon="album"
                 iconClassName="text-white/30 text-[64px]"
-                className="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl object-cover border-2 border-white/10 shadow-2xl flex-shrink-0"
+                className="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl object-cover border border-[#262626] shadow-2xl flex-shrink-0"
               />
 
               <div className="flex-1 text-center sm:text-left min-w-0 space-y-2.5">
-                <span className="inline-block text-[11px] font-semibold uppercase tracking-wider text-brand-violet px-2.5 py-0.5 rounded-full bg-brand-violet/20 border border-brand-violet/30">
+                <span className="inline-block text-[11px] font-semibold uppercase tracking-wider text-[#888888] px-2.5 py-0.5 rounded-full bg-[#141414] border border-[#333333]">
                   Album Release
                 </span>
                 <h1 className="text-headline-lg sm:text-display-sm font-extrabold text-white tracking-tight leading-tight">
@@ -121,28 +122,28 @@ export default function AlbumView({ browseId, initialData }) {
                   {data.artist && (
                     <button
                       type="button"
-                      onClick={() => handleEntityClick({ type: 'artist', id: data.artistId, browseId: data.artistId, name: data.artist })}
-                      className="font-semibold text-white hover:text-brand-violet hover:underline transition-colors"
+                      onClick={() => routeToArtistEntity(data.artist, data.artistId)}
+                      className="font-semibold text-white hover:underline transition-colors"
                     >
                       {data.artist}
                     </button>
                   )}
                   {data.year && (
                     <>
-                      <span className="text-outline">•</span>
-                      <span className="text-outline">{data.year}</span>
+                      <span className="text-[#666666]">•</span>
+                      <span className="text-[#888888]">{data.year}</span>
                     </>
                   )}
                   {data.tracks && (
                     <>
-                      <span className="text-outline">•</span>
-                      <span className="text-outline">{data.tracks.length} songs</span>
+                      <span className="text-[#666666]">•</span>
+                      <span className="text-[#888888]">{data.tracks.length} songs</span>
                     </>
                   )}
                 </div>
 
                 {data.description && (
-                  <p className="text-body-sm text-outline line-clamp-2 max-w-xl">
+                  <p className="text-body-sm text-[#888888] line-clamp-2 max-w-xl">
                     {data.description}
                   </p>
                 )}
@@ -152,7 +153,7 @@ export default function AlbumView({ browseId, initialData }) {
                   <div className="pt-3">
                     <button
                       onClick={() => handlePlayAlbum(0)}
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-brand-violet hover:bg-brand-violet/90 text-white font-semibold text-label-lg shadow-xl hover:shadow-brand-violet/25 hover:scale-105 active:scale-95 transition-all"
+                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-black font-semibold text-label-lg shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                         play_arrow
@@ -169,33 +170,33 @@ export default function AlbumView({ browseId, initialData }) {
           {data.tracks && data.tracks.length > 0 && (
             <section className="space-y-4">
               <div className="flex items-center justify-between px-2">
-                <h2 className="text-label-lg font-bold text-white uppercase tracking-wider text-outline">
+                <h2 className="text-label-lg font-bold text-white uppercase tracking-wider">
                   Tracklist
                 </h2>
-                <span className="text-label-sm text-outline">Duration</span>
+                <span className="text-label-sm text-[#888888]">Duration</span>
               </div>
 
-              <div className="divide-y divide-neutral-800/80 rounded-2xl bg-white/[0.02] border border-white/5 overflow-hidden shadow-lg">
+              <div className="divide-y divide-[#1a1a1a] rounded-2xl bg-[#050505] border border-[#222222] overflow-hidden shadow-2xl">
                 {data.tracks.map((track, idx) => {
                   const isCurrent = currentSong?.videoId === track.videoId || currentSong?.id === track.id;
                   return (
                     <div
                       key={track.id || idx}
                       onClick={() => handleTrackClick(track, idx)}
-                      className={`group flex items-center justify-between p-3.5 hover:bg-white/[0.06] transition-colors cursor-pointer ${
-                        isCurrent ? 'bg-brand-violet/10' : ''
+                      className={`group flex items-center justify-between p-3.5 hover:bg-white/[0.04] transition-colors cursor-pointer ${
+                        isCurrent ? 'bg-white/10' : ''
                       }`}
                     >
                       <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        <div className="w-8 text-center text-label-md font-mono text-outline flex-shrink-0 flex items-center justify-center">
+                        <div className="w-8 text-center text-label-md font-mono text-[#888888] flex-shrink-0 flex items-center justify-center">
                           {isCurrent && isPlaying ? (
-                            <span className="material-symbols-outlined text-brand-violet text-[20px] animate-pulse">
+                            <span className="material-symbols-outlined text-white text-[20px] animate-pulse">
                               volume_up
                             </span>
                           ) : (
                             <>
                               <span className="group-hover:hidden">{track.trackNumber || idx + 1}</span>
-                              <span className="hidden group-hover:inline text-brand-violet material-symbols-outlined text-[20px]">
+                              <span className="hidden group-hover:inline text-white material-symbols-outlined text-[20px]">
                                 play_arrow
                               </span>
                             </>
@@ -203,12 +204,28 @@ export default function AlbumView({ browseId, initialData }) {
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <p className={`text-label-md font-medium truncate transition-colors ${
-                            isCurrent ? 'text-brand-violet font-semibold' : 'text-white group-hover:text-brand-violet'
-                          }`}>
+                          <p
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              routeToSongEntity(track);
+                            }}
+                            className={`text-label-md font-medium truncate transition-colors hover:underline cursor-pointer ${
+                              isCurrent ? 'text-white font-bold' : 'text-white'
+                            }`}
+                            title={`View "${track.title}"`}
+                          >
                             {track.title}
                           </p>
-                          <p className="text-label-sm text-outline truncate">{track.artist || data.artist}</p>
+                          <p
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              routeToArtistEntity(track.artist || data.artist, track.artistId || data.artistId);
+                            }}
+                            className="text-label-sm text-[#888888] truncate hover:text-white hover:underline cursor-pointer"
+                            title={`View artist "${track.artist || data.artist}"`}
+                          >
+                            {track.artist || data.artist}
+                          </p>
                         </div>
                       </div>
 
@@ -221,7 +238,7 @@ export default function AlbumView({ browseId, initialData }) {
                             toggleLike(track);
                           }}
                           className={`p-1.5 rounded-full transition-transform active:scale-90 ${
-                            isLiked(track.id) ? 'text-brand-pink' : 'text-outline hover:text-brand-pink'
+                            isLiked(track.id) ? 'text-white' : 'text-[#888888] hover:text-white'
                           }`}
                           title={isLiked(track.id) ? 'Unlike' : 'Like'}
                         >
@@ -237,19 +254,17 @@ export default function AlbumView({ browseId, initialData }) {
                             e.stopPropagation();
                             setAddMenuSong(track);
                           }}
-                          className="p-1.5 rounded-full text-outline hover:text-white transition-colors"
+                          className="p-1.5 rounded-full text-[#888888] hover:text-white transition-colors"
                           title="Add to playlist"
                         >
-                          <span className="material-symbols-outlined text-[19px]">playlist_add</span>
+                          <span className="material-symbols-outlined text-[19px]">
+                            playlist_add
+                          </span>
                         </button>
 
-                        {track.duration > 0 && (
-                          <span className="text-label-sm font-mono text-outline tabular-nums ml-1 hidden sm:inline">
-                            {formatDuration(track.duration)}
-                          </span>
-                        )}
-                        <span className="material-symbols-outlined text-[20px] text-white/40 group-hover:text-white transition-colors ml-1">
-                          play_circle
+                        {/* Duration */}
+                        <span className="text-label-sm text-[#888888] font-mono min-w-[36px] text-right hidden sm:inline-block">
+                          {formatDuration(track.duration)}
                         </span>
                       </div>
                     </div>

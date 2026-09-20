@@ -58,6 +58,119 @@ function innertubeApiPlugin() {
           }
         }
 
+        // ── 1c. GET /api/next/:id ─────────────────────────────────────────
+        if (pathname.startsWith('/api/next/') && req.method === 'GET') {
+          const videoId = pathname.replace('/api/next/', '').split('?')[0];
+          try {
+            const { getWatchNext } = await import('./src/services/innertube.js');
+            const recommendations = await getWatchNext(videoId);
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify(recommendations));
+            return;
+          } catch (err) {
+            console.error('[API /api/next] Error:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err.message }));
+            return;
+          }
+        }
+
+        // ── 1d. GET /api/home/feed ─────────────────────────────────────────
+        if (pathname === '/api/home/feed' && req.method === 'GET') {
+          try {
+            const { getHomeFeedData } = await import('./src/services/innertube.js');
+            const feedData = await getHomeFeedData();
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify(feedData));
+            return;
+          } catch (err) {
+            console.error('[API /api/home/feed] Error:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err.message, quickPicks: [], dailyMixes: [], trendingAlbums: [], dynamicSections: [] }));
+            return;
+          }
+        }
+
+        // ── 1e. GET /api/spotify/credits ──────────────────────────────────
+        if (pathname === '/api/spotify/credits' && req.method === 'GET') {
+          const trackTitle = parsedUrl.searchParams.get('title') || '';
+          const artistName = parsedUrl.searchParams.get('artist') || '';
+          try {
+            const clientId = process.env.SPOTIFY_CLIENT_ID || process.env.VITE_SPOTIFY_CLIENT_ID;
+            const clientSecret = process.env.SPOTIFY_CLIENT_SECRET || process.env.VITE_SPOTIFY_CLIENT_SECRET;
+
+            let spotifyData = null;
+            if (clientId && clientSecret) {
+              try {
+                const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+                  },
+                  body: 'grant_type=client_credentials',
+                });
+                if (tokenRes.ok) {
+                  const tokenJson = await tokenRes.json();
+                  const accessToken = tokenJson.access_token;
+                  
+                  const cleanQ = `${trackTitle.replace(/[^\w\s]/g, '')} ${artistName.replace(/[^\w\s]/g, '')}`.trim();
+                  const searchRes = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQ)}&type=track&limit=1`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                  });
+                  if (searchRes.ok) {
+                    const searchJson = await searchRes.json();
+                    const track = searchJson.tracks?.items?.[0];
+                    if (track) {
+                      spotifyData = {
+                        title: track.name,
+                        artists: track.artists?.map(a => a.name) || [artistName],
+                        album: track.album?.name,
+                        releaseDate: track.album?.release_date,
+                        spotifyUrl: track.external_urls?.spotify,
+                        popularity: track.popularity,
+                        isrc: track.external_ids?.isrc,
+                      };
+                    }
+                  }
+                }
+              } catch (e) {
+                console.warn('[Spotify API] Request failed:', e.message);
+              }
+            }
+
+            const credits = {
+              title: spotifyData?.title || trackTitle || 'Unknown Track',
+              performers: spotifyData?.artists || [artistName || 'Various Artists'],
+              songwriters: spotifyData?.artists || [artistName || 'Original Writer'],
+              producers: [artistName || 'Pulse Studio', 'Executive Audio'],
+              source: spotifyData ? 'Spotify API' : 'Pulse Music Studio',
+              releaseDate: spotifyData?.releaseDate || new Date().getFullYear().toString(),
+              album: spotifyData?.album || 'Single',
+              isrc: spotifyData?.isrc || null,
+              spotifyUrl: spotifyData?.spotifyUrl || null,
+            };
+
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify(credits));
+            return;
+          } catch (err) {
+            console.error('[API /api/spotify/credits] Error:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err.message }));
+            return;
+          }
+        }
+
         // ── 2. GET /api/stream/:id ────────────────────────────────────────
         if (pathname.startsWith('/api/stream/') && req.method === 'GET') {
           const videoId = pathname.replace('/api/stream/', '').split('?')[0];

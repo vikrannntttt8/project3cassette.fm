@@ -1,14 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import { useMusicSearch, SEARCH_TABS } from '../../hooks/useMusicSearch.js';
-import { getPlaylistSongs, searchSongs as saavnSearchSongs } from '../../utils/saavn.js';
-import SearchBar      from './SearchBar.jsx';
-import SongRow        from './SongRow.jsx';
-import AlbumCard      from './AlbumCard.jsx';
-import ArtistCard     from './ArtistCard.jsx';
+import SearchBar from './SearchBar.jsx';
+import SongRow from './SongRow.jsx';
+import AlbumCard from './AlbumCard.jsx';
+import ArtistCard from './ArtistCard.jsx';
+import TopResultHero from './TopResultHero.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
-import Search         from '../Search.jsx';
-import ArtistModal    from '../ArtistView/ArtistModal.jsx';
+import ArtistModal from '../ArtistView/ArtistModal.jsx';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -18,78 +17,150 @@ function getGreeting() {
 }
 
 const TAB_LABELS = {
-  all: 'All', songs: 'Songs', albums: 'Albums', artists: 'Artists', playlists: 'Playlists',
+  all: 'All',
+  songs: 'Songs',
+  albums: 'Albums',
+  artists: 'Artists',
 };
 
 export default function HomeView() {
-  const { loadSong, playCollection, currentSong, isPlaying, togglePlay, navigateTo, handleEntityClick } = usePlayer();
+  const {
+    loadSong,
+    currentSong,
+    isPlaying,
+    togglePlay,
+    routeToSongEntity,
+    routeToArtistEntity,
+  } = usePlayer();
   const { query, results, loading, error, activeTab, search, switchTab, clear } = useMusicSearch();
 
-  const [addMenuSong, setAddMenuSong]   = useState(null); // song to add to playlist
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [selectedArtist, setSelectedArtist] = useState(null); // { artistName, artistId }
+  const [addMenuSong, setAddMenuSong] = useState(null);
+  const [selectedArtist, setSelectedArtist] = useState(null);
 
   // ── Play handlers ─────────────────────────────────────────────────
+  const handlePlaySong = useCallback(
+    (song, songList = null) => {
+      if (currentSong?.id === song.id) {
+        togglePlay();
+        return;
+      }
+      const queue = songList || (results && activeTab === 'songs' ? results : null) || [song];
+      const idx = queue.findIndex((s) => s.id === song.id);
+      loadSong(song, queue, idx >= 0 ? idx : 0);
+    },
+    [currentSong, togglePlay, loadSong, results, activeTab]
+  );
 
-  const handlePlaySong = useCallback((song, songList = null) => {
-    if (currentSong?.id === song.id) { togglePlay(); return; }
-    const queue = songList || (results && activeTab === 'songs' ? results : null) || [song];
-    const idx   = queue.findIndex(s => s.id === song.id);
-    loadSong(song, queue, idx >= 0 ? idx : 0);
-  }, [currentSong, togglePlay, loadSong, results, activeTab]);
+  const handleAlbumClick = useCallback(
+    (album) => {
+      routeToSongEntity({
+        ...album,
+        albumId: album.id || album.browseId,
+        album: album.title || album.name,
+      });
+    },
+    [routeToSongEntity]
+  );
 
-  const handleAlbumClick = useCallback((album) => {
-    handleEntityClick({
-      ...album,
-      id: album.id || album.browseId,
-      title: album.title || album.name,
-      artist: album.artist,
-      cover: album.image || album.thumbnail,
-      type: 'album',
-    }, { preferType: 'album' });
-  }, [handleEntityClick]);
-
-  const handleArtistClick = useCallback((artist) => {
-    const name = typeof artist === 'string' ? artist : (artist.title || artist.name);
-    const id = typeof artist === 'string' ? null : (artist.id || artist.browseId);
-    handleEntityClick({ id, name, type: 'artist' }, { preferType: 'artist' });
-  }, [handleEntityClick]);
-
-  const handlePlaylistClick = useCallback(async (playlist) => {
-    setDetailLoading(true);
-    try {
-      const data = await getPlaylistSongs(playlist.id);
-      if (data.songs.length) playCollection(data.songs, 0);
-    } catch (e) { console.error(e); }
-    finally { setDetailLoading(false); }
-  }, [playCollection]);
+  const handleArtistClick = useCallback(
+    (artist) => {
+      const name = typeof artist === 'string' ? artist : artist.title || artist.name;
+      const id = typeof artist === 'string' ? null : artist.id || artist.browseId;
+      routeToArtistEntity(name, id);
+    },
+    [routeToArtistEntity]
+  );
 
   // ── Render results by tab ─────────────────────────────────────────
-
   const renderResults = () => {
     if (!results) return null;
     if (loading) return <SearchSkeleton />;
-    if (error)   return <ErrorMsg msg={error} onRetry={() => search(query)} />;
+    if (error) return <ErrorMsg msg={error} onRetry={() => search(query)} />;
 
     if (activeTab === 'all') {
-      const { songs = [], albums = [], artists = [], playlists = [] } = results;
+      const { songs = [], albums = [], artists = [] } = results;
+
+      // ── Determine High-Confidence Top Result Hero Card ───────────────
+      const clean = (str) =>
+        (str || '')
+          .toLowerCase()
+          .replace(/[^\w\s]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      const cleanQ = clean(query);
+      let topResult = null;
+
+      // 1. Exact matches (punctuation and symbols stripped)
+      const exactArtist = artists.find((a) => clean(a.name || a.title) === cleanQ);
+      const exactSong = songs.find((s) => clean(s.title) === cleanQ);
+      const exactAlbum = albums.find((al) => clean(al.title) === cleanQ);
+
+      // 2. Prefix matches
+      const prefixArtist = artists.find((a) => clean(a.name || a.title).startsWith(cleanQ));
+      const prefixSong = songs.find((s) => clean(s.title).startsWith(cleanQ));
+
+      // Intelligent Ranking:
+      // Exact Artist -> Exact Song (Steve Lacy's "oh yeah?" beats obscure "Oh Yeah" albums) -> Exact Album
+      // -> Prefix Artist -> Prefix Song -> Popular First Song Fallback
+      if (exactArtist) {
+        topResult = { ...exactArtist, type: 'artist' };
+      } else if (exactSong) {
+        topResult = { ...exactSong, type: 'song' };
+      } else if (exactAlbum) {
+        topResult = { ...exactAlbum, type: 'album' };
+      } else if (prefixArtist) {
+        topResult = { ...prefixArtist, type: 'artist' };
+      } else if (prefixSong) {
+        topResult = { ...prefixSong, type: 'song' };
+      } else if (songs.length > 0) {
+        topResult = { ...songs[0], type: 'song' };
+      } else if (artists.length > 0) {
+        topResult = { ...artists[0], type: 'artist' };
+      } else if (albums.length > 0) {
+        topResult = { ...albums[0], type: 'album' };
+      }
+
       return (
         <div className="flex flex-col gap-8">
+          {/* Top Result Hero Section */}
+          {topResult && (
+            <section className="w-full">
+              <TopResultHero
+                entity={topResult}
+                onPlay={(ent) => {
+                  if (ent.type === 'artist') handleArtistClick(ent);
+                  else if (ent.type === 'album') handleAlbumClick(ent);
+                  else handlePlaySong(ent, songs);
+                }}
+                onNavigate={() => {
+                  if (topResult.type === 'artist') handleArtistClick(topResult);
+                  else if (topResult.type === 'album') handleAlbumClick(topResult);
+                  else routeToSongEntity(topResult);
+                }}
+              />
+            </section>
+          )}
+
+          {/* Shelves in order: Songs -> Albums -> Artists */}
           {songs.length > 0 && (
             <ResultSection title="Songs" icon="music_note">
-              {songs.slice(0, 5).map((s, i) => (
-                <SongRow key={s.id} song={s} index={i}
+              {songs.slice(0, 6).map((s, i) => (
+                <SongRow
+                  key={s.id}
+                  song={s}
+                  index={i}
                   isActive={currentSong?.id === s.id}
                   isPlaying={currentSong?.id === s.id && isPlaying}
                   onPlay={() => handlePlaySong(s, songs)}
-                  onAddToPlaylist={() => setAddMenuSong(s)} />
+                  onAddToPlaylist={() => setAddMenuSong(s)}
+                />
               ))}
             </ResultSection>
           )}
           {albums.length > 0 && (
             <ResultSection title="Albums" icon="album">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                {albums.slice(0, 5).map(a => (
+                {albums.slice(0, 5).map((a) => (
                   <AlbumCard key={a.id} item={a} onClick={() => handleAlbumClick(a)} />
                 ))}
               </div>
@@ -98,22 +169,13 @@ export default function HomeView() {
           {artists.length > 0 && (
             <ResultSection title="Artists" icon="person">
               <div className="flex flex-wrap gap-4">
-                {artists.slice(0, 6).map(a => (
+                {artists.slice(0, 6).map((a) => (
                   <ArtistCard key={a.id} artist={a} onClick={() => handleArtistClick(a)} />
                 ))}
               </div>
             </ResultSection>
           )}
-          {playlists.length > 0 && (
-            <ResultSection title="Playlists" icon="queue_music">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-                {playlists.slice(0, 5).map(p => (
-                  <AlbumCard key={p.id} item={p} onClick={() => handlePlaylistClick(p)} />
-                ))}
-              </div>
-            </ResultSection>
-          )}
-          {!songs.length && !albums.length && !artists.length && !playlists.length && (
+          {!topResult && !songs.length && !albums.length && !artists.length && (
             <NoResults query={query} />
           )}
         </div>
@@ -126,11 +188,15 @@ export default function HomeView() {
       return (
         <div className="flex flex-col gap-1">
           {songs.map((s, i) => (
-            <SongRow key={s.id} song={s} index={i}
+            <SongRow
+              key={s.id}
+              song={s}
+              index={i}
               isActive={currentSong?.id === s.id}
               isPlaying={currentSong?.id === s.id && isPlaying}
               onPlay={() => handlePlaySong(s, songs)}
-              onAddToPlaylist={() => setAddMenuSong(s)} />
+              onAddToPlaylist={() => setAddMenuSong(s)}
+            />
           ))}
         </div>
       );
@@ -141,7 +207,7 @@ export default function HomeView() {
       if (!items.length) return <NoResults query={query} />;
       return (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {items.map(a => (
+          {items.map((a) => (
             <AlbumCard key={a.id} item={a} onClick={() => handleAlbumClick(a)} />
           ))}
         </div>
@@ -153,20 +219,8 @@ export default function HomeView() {
       if (!items.length) return <NoResults query={query} />;
       return (
         <div className="flex flex-wrap gap-5">
-          {items.map(a => (
+          {items.map((a) => (
             <ArtistCard key={a.id} artist={a} onClick={() => handleArtistClick(a)} />
-          ))}
-        </div>
-      );
-    }
-
-    if (activeTab === 'playlists') {
-      const items = Array.isArray(results) ? results : [];
-      if (!items.length) return <NoResults query={query} />;
-      return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {items.map(p => (
-            <AlbumCard key={p.id} item={p} onClick={() => handlePlaylistClick(p)} />
           ))}
         </div>
       );
@@ -178,48 +232,34 @@ export default function HomeView() {
   const showSearch = query.trim().length > 0;
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto relative">
-      {/* Detail loading overlay */}
-      {detailLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="glass-panel rounded-2xl p-6 flex items-center gap-4">
-            <div className="w-6 h-6 border-2 border-brand-violet border-t-transparent rounded-full animate-spin" />
-            <span className="text-body-lg text-white">Loading tracks…</span>
-          </div>
-        </div>
-      )}
-
+    <div className="h-full flex flex-col overflow-y-auto relative bg-[#000000]">
       {/* ── Header ──────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-20 px-4 sm:px-6 md:px-8 py-4 bg-[#09090B]/80 backdrop-blur-xl border-b border-white/5 pl-14 md:pl-8">
+      <header className="sticky top-0 z-20 px-4 sm:px-6 md:px-8 py-4 bg-[#000000]/90 backdrop-blur-xl border-b border-[#1a1a1a] pl-14 md:pl-8">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex flex-col">
-            <p className="text-label-sm uppercase tracking-widest text-on-surface-variant text-[11px] sm:text-[12px]">
-              {showSearch ? `Results for "${query}"` : 'Pulse · Spatial Studio'}
+            <p className="text-label-sm uppercase tracking-widest text-[#888888] text-[11px] sm:text-[12px]">
+              {showSearch ? `Results for "${query}"` : 'Pulse · Monochrome Studio'}
             </p>
             <h1 className="text-headline-md sm:text-headline-lg font-bold text-white tracking-tight">
               {showSearch ? 'Search Results' : `${getGreeting()}, Vikrant`}
             </h1>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-initial justify-end">
-            <SearchBar
-              query={query}
-              onChange={search}
-              onClear={clear}
-            />
+            <SearchBar query={query} onChange={search} onClear={clear} />
           </div>
         </div>
 
-        {/* ── Search Tabs ─────────────────────────────────────── */}
+        {/* ── Search Tabs ───────────────────────────────────────── */}
         {showSearch && (
-          <div className="flex items-center gap-1.5 mt-3 overflow-x-auto pb-1 no-scrollbar">
-            {SEARCH_TABS.map(tab => (
+          <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1 no-scrollbar">
+            {SEARCH_TABS.map((tab) => (
               <button
                 key={tab}
                 onClick={() => switchTab(tab)}
-                className={`px-3.5 sm:px-4 py-1.5 rounded-full text-label-md font-medium whitespace-nowrap transition-all text-[13px] sm:text-[14px] ${
+                className={`px-4 py-1.5 rounded-full text-label-md font-medium whitespace-nowrap transition-all text-[13px] sm:text-[14px] border ${
                   activeTab === tab
-                    ? 'bg-white text-black font-semibold'
-                    : 'bg-white/8 text-on-surface-variant hover:bg-white/12 hover:text-white'
+                    ? 'bg-white text-black border-white font-semibold shadow-sm'
+                    : 'bg-transparent text-[#888888] border-[#333333] hover:text-white hover:border-[#666666]'
                 }`}
               >
                 {TAB_LABELS[tab]}
@@ -231,15 +271,16 @@ export default function HomeView() {
 
       {/* ── Content ─────────────────────────────────────────────── */}
       <main className="flex-1 px-4 sm:px-6 md:px-8 py-5 sm:py-6 pb-36">
-        {showSearch
-          ? renderResults()
-          : (
-            <HomeDefault
-              onPlaySong={handlePlaySong}
-              onArtistClick={(artistName, artistId) => navigateTo('artist', artistId, { name: artistName })}
-            />
-          )
-        }
+        {showSearch ? (
+          renderResults()
+        ) : (
+          <HomeDefault
+            onPlaySong={handlePlaySong}
+            onAlbumClick={handleAlbumClick}
+            onArtistClick={(artistName, artistId) => routeToArtistEntity(artistName, artistId)}
+            onAddToPlaylist={(song) => setAddMenuSong(song)}
+          />
+        )}
       </main>
 
       {/* ── Dedicated Artist Discography Modal ──────────────── */}
@@ -257,10 +298,7 @@ export default function HomeView() {
 
       {/* ── Add to Playlist menu overlay ────────────────────── */}
       {addMenuSong && (
-        <AddToPlaylistMenu
-          song={addMenuSong}
-          onClose={() => setAddMenuSong(null)}
-        />
+        <AddToPlaylistMenu song={addMenuSong} onClose={() => setAddMenuSong(null)} />
       )}
     </div>
   );
@@ -272,7 +310,7 @@ function ResultSection({ title, icon, children }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <span className="material-symbols-outlined text-[#d0bcff] text-[20px]">{icon}</span>
+        <span className="material-symbols-outlined text-white text-[20px]">{icon}</span>
         <h2 className="text-headline-sm font-semibold text-white">{title}</h2>
       </div>
       {children}
@@ -284,7 +322,7 @@ function SearchSkeleton() {
   return (
     <div className="flex flex-col gap-3 animate-pulse">
       {[...Array(6)].map((_, i) => (
-        <div key={i} className="h-16 rounded-xl bg-white/5" />
+        <div key={i} className="h-16 rounded-xl bg-[#111111] border border-[#222222]" />
       ))}
     </div>
   );
@@ -293,11 +331,16 @@ function SearchSkeleton() {
 function ErrorMsg({ msg, onRetry }) {
   return (
     <div className="flex flex-col items-center gap-3 py-16 text-center">
-      <span className="material-symbols-outlined text-[48px] text-brand-pink/60">cloud_off</span>
+      <span className="material-symbols-outlined text-[48px] text-[#888888]">cloud_off</span>
       <p className="text-headline-sm text-white font-semibold">Search encountered an issue</p>
-      <p className="text-body-md text-outline max-w-md">{msg || 'Unable to reach music endpoints. Please try again.'}</p>
+      <p className="text-body-md text-[#888888] max-w-md">
+        {msg || 'Unable to reach music endpoints. Please try again.'}
+      </p>
       {onRetry && (
-        <button onClick={onRetry} className="px-4 py-1.5 rounded-full bg-white/10 hover:bg-white/15 text-white font-medium text-label-md transition-colors mt-2">
+        <button
+          onClick={onRetry}
+          className="px-4 py-1.5 rounded-full bg-white text-black font-semibold text-label-md hover:bg-neutral-200 transition-colors mt-2"
+        >
           Retry Search
         </button>
       )}
@@ -308,83 +351,349 @@ function ErrorMsg({ msg, onRetry }) {
 function NoResults({ query }) {
   return (
     <div className="flex flex-col items-center gap-2 py-16 text-center">
-      <span className="material-symbols-outlined text-[48px] text-on-surface-variant">search_off</span>
-      <p className="text-headline-sm text-on-surface-variant">No results found for "{query}"</p>
-      <p className="text-body-md text-outline">Try searching for a song title, artist, or album</p>
+      <span className="material-symbols-outlined text-[48px] text-[#666666]">search_off</span>
+      <p className="text-headline-sm text-white">No results found for "{query}"</p>
+      <p className="text-body-md text-[#888888]">Try searching for a song title, artist, or album</p>
     </div>
   );
 }
 
-// ── Default home content when not searching ───────────────────────────
-const FEATURED = [
-  { id: 'f1', title: 'Arijit Singh Hits',    subtitle: 'Top Bollywood',    gradient: 'from-rose-900 to-orange-900',   query: 'arijit singh' },
-  { id: 'f2', title: 'Midnight Lofi',        subtitle: 'Chill Focus Mix',  gradient: 'from-indigo-900 to-violet-900', query: 'lofi chill' },
-  { id: 'f3', title: 'Punjabi Bangers',      subtitle: 'Party Hits',       gradient: 'from-yellow-900 to-red-900',    query: 'punjabi hits' },
-  { id: 'f4', title: 'Romantic Melodies',    subtitle: 'Evergreen Love',   gradient: 'from-pink-900 to-fuchsia-900',  query: 'romantic hindi' },
-  { id: 'f5', title: 'English Top Charts',   subtitle: 'Global Hits',      gradient: 'from-teal-900 to-cyan-900',     query: 'top english hits' },
-];
+// ── Live Synced Home Feed (Quick Picks, Daily Mixes, Trending Albums) ──
 
-function HomeDefault({ onPlaySong, onArtistClick }) {
-  const { loadSong } = usePlayer();
-  const [loadingId, setLoadingId] = useState(null);
+function HomeDefault({ onPlaySong, onAlbumClick, onArtistClick, onAddToPlaylist }) {
+  const { currentSong, isPlaying, history } = usePlayer();
+  const [feedData, setFeedData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [loadingMixId, setLoadingMixId] = useState(null);
 
-  const playSuggestion = async (query, cardId) => {
-    setLoadingId(cardId);
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    fetch('/api/home/feed')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load YouTube Music live feed');
+        return res.json();
+      })
+      .then((data) => {
+        if (isMounted) {
+          setFeedData(data);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setError(err.message);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const playMix = async (mix) => {
+    setLoadingMixId(mix.id);
     try {
-      const songs = await saavnSearchSongs(query, 5);
-      if (songs.length) loadSong(songs[0], songs, 0);
-    } catch (e) { console.error(e); }
-    finally { setLoadingId(null); }
+      const res = await fetch(`/api/search?q=${encodeURIComponent(mix.title + ' songs')}&type=songs`);
+      if (res.ok) {
+        const songs = await res.json();
+        if (Array.isArray(songs) && songs.length > 0) {
+          onPlaySong(songs[0], songs);
+        }
+      }
+    } catch (e) {
+      console.error('[Live Mix Playback] Error:', e);
+    } finally {
+      setLoadingMixId(null);
+    }
   };
 
+  if (loading) {
+    return (
+      <div className="flex flex-col gap-10">
+        <FeedSkeleton title="Quick Picks" />
+        <FeedSkeleton title="Daily Mixes & Radio" />
+        <FeedSkeleton title="Trending Albums" />
+      </div>
+    );
+  }
+
+  if (error && (!feedData || !feedData.quickPicks?.length)) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <span className="material-symbols-outlined text-[48px] text-[#666666]">wifi_off</span>
+        <p className="text-headline-sm font-semibold text-white mt-2">Live feed currently unavailable</p>
+        <p className="text-body-sm text-[#888888] mt-1">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 rounded-full bg-white text-black font-semibold text-label-md hover:bg-neutral-200 transition-colors"
+        >
+          Reload Feed
+        </button>
+      </div>
+    );
+  }
+
+  const quickPicks = feedData?.quickPicks || [];
+  const dailyMixes = feedData?.dailyMixes || [];
+  const trendingAlbums = feedData?.trendingAlbums || [];
+  const dynamicSections = feedData?.dynamicSections || [];
+
   return (
-    <div className="flex flex-col gap-8">
-      {/* ── Fast Innertube Search Experience ── */}
-      <section className="w-full">
-        <Search
-          onSelectTrack={(track) => onPlaySong(track)}
-          onArtistClick={(artistName, artistId) => onArtistClick?.(artistName, artistId)}
-        />
-      </section>
+    <div className="flex flex-col gap-10">
+      {/* ── 1. Listen Again / Jump Back In (If history exists) ──── */}
+      {history && history.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-white text-[20px]">history</span>
+            <div>
+              <h2 className="text-headline-sm font-bold text-white tracking-tight">Listen Again</h2>
+              <p className="text-body-xs text-[#888888]">Jump back into your recent favorites</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {history.slice(0, 6).map((s, idx) => (
+              <SongRow
+                key={`hist-${s.id}-${idx}`}
+                song={s}
+                index={idx}
+                isActive={currentSong?.id === s.id}
+                isPlaying={currentSong?.id === s.id && isPlaying}
+                onPlay={() => onPlaySong(s, history)}
+                onAddToPlaylist={() => onAddToPlaylist(s)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
-      {/* Featured grid */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-headline-sm font-semibold text-white">Featured Stations</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-          {FEATURED.map(f => (
-            <button
-              key={f.id}
-              onClick={() => playSuggestion(f.query, f.id)}
-              className={`group relative h-28 rounded-xl bg-gradient-to-br ${f.gradient} overflow-hidden hover:scale-[1.02] transition-transform duration-300`}
-            >
-              {loadingId === f.id && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
-              <div className="absolute inset-0 bg-black/30" />
-              <div className="absolute bottom-3 left-3 text-left">
-                <p className="text-label-lg font-bold text-white">{f.title}</p>
-                <p className="text-label-sm text-white/70">{f.subtitle}</p>
+      {/* ── 2. Quick Picks (Live YouTube Music Tracks) ─────────── */}
+      {quickPicks.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-white text-[20px]">bolt</span>
+              <div>
+                <h2 className="text-headline-sm font-bold text-white tracking-tight">Quick Picks</h2>
+                <p className="text-body-xs text-[#888888]">
+                  Start instant radio with live YouTube Music hits
+                </p>
               </div>
-              <span className="material-symbols-outlined text-white/0 group-hover:text-white/80 absolute top-3 right-3 text-[28px] transition-colors" style={{fontVariationSettings:"'FILL' 1"}}>play_circle</span>
+            </div>
+            <button
+              onClick={() => onPlaySong(quickPicks[0], quickPicks)}
+              className="px-3 py-1 rounded-full border border-[#333333] hover:border-white text-[12px] text-[#888888] hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[15px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                play_arrow
+              </span>
+              Play All
             </button>
-          ))}
-        </div>
-      </section>
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+            {quickPicks.map((s, idx) => (
+              <SongRow
+                key={`qp-${s.id}-${idx}`}
+                song={s}
+                index={idx}
+                isActive={currentSong?.id === s.id}
+                isPlaying={currentSong?.id === s.id && isPlaying}
+                onPlay={() => onPlaySong(s, quickPicks)}
+                onAddToPlaylist={() => onAddToPlaylist(s)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── 3. Daily Mixes & Curated Radio ───────────────────────── */}
+      {dailyMixes.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-white text-[20px]">radio</span>
+            <div>
+              <h2 className="text-headline-sm font-bold text-white tracking-tight">
+                Daily Mixes & Radio
+              </h2>
+              <p className="text-body-xs text-[#888888]">Non-stop curated radio stations</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {dailyMixes.slice(0, 10).map((mix) => (
+              <button
+                key={mix.id}
+                onClick={() => playMix(mix)}
+                className="group flex flex-col gap-2 rounded-xl p-3 bg-[#0a0a0a] hover:bg-[#111111] border border-[#222222] hover:border-white transition-all duration-200 text-left w-full cursor-pointer relative"
+              >
+                {loadingMixId === mix.id && (
+                  <div className="absolute inset-0 bg-black/80 rounded-xl flex items-center justify-center z-10">
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+                <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-[#141414] border border-[#262626]">
+                  {mix.thumbnail ? (
+                    <img
+                      src={mix.thumbnail}
+                      alt={mix.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="material-symbols-outlined text-white/20 text-[40px]">
+                        radio
+                      </span>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                      <span
+                        className="material-symbols-outlined text-black text-[22px]"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                      >
+                        play_arrow
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-label-lg font-semibold text-white truncate group-hover:underline">
+                    {mix.title}
+                  </span>
+                  <span className="text-body-sm text-[#888888] truncate">
+                    {mix.subtitle || 'YouTube Music Radio'}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── 4. Trending Albums & Releases ────────────────────────── */}
+      {trendingAlbums.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-white text-[20px]">album</span>
+            <div>
+              <h2 className="text-headline-sm font-bold text-white tracking-tight">
+                Trending Albums
+              </h2>
+              <p className="text-body-xs text-[#888888]">
+                Top chart-topping albums on YouTube Music
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {trendingAlbums.map((album) => (
+              <AlbumCard key={album.id} item={album} onClick={() => onAlbumClick(album)} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── 5. Extra Dynamic Shelves from YouTube Music Feed ───── */}
+      {dynamicSections.slice(1).map((sec) => (
+        <section key={sec.id} className="flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-white text-[20px]">queue_music</span>
+            <div>
+              <h2 className="text-headline-sm font-bold text-white tracking-tight">{sec.title}</h2>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            {sec.items.slice(0, 5).map((it) => (
+              <button
+                key={it.id}
+                onClick={() => {
+                  if (it.type === 'album') onAlbumClick(it);
+                  else playMix(it);
+                }}
+                className="group flex flex-col gap-2 rounded-xl p-3 bg-[#0a0a0a] hover:bg-[#111111] border border-[#222222] hover:border-white transition-all duration-200 text-left w-full cursor-pointer"
+              >
+                <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-[#141414] border border-[#262626]">
+                  {it.thumbnail ? (
+                    <img
+                      src={it.thumbnail}
+                      alt={it.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="material-symbols-outlined text-white/20 text-[40px]">
+                        graphic_eq
+                      </span>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                      <span
+                        className="material-symbols-outlined text-black text-[22px]"
+                        style={{ fontVariationSettings: "'FILL' 1" }}
+                      >
+                        play_arrow
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-label-lg font-semibold text-white truncate group-hover:underline">
+                    {it.title}
+                  </span>
+                  <span className="text-body-sm text-[#888888] truncate">
+                    {it.subtitle || 'Curated Feed'}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
+
+      {/* Tip Banner */}
       <TipBanner />
     </div>
   );
 }
 
-function TipBanner() {
+function FeedSkeleton({ title }) {
   return (
-    <div className="w-full rounded-xl bg-gradient-to-r from-brand-violet/10 to-brand-pink/10 border border-brand-violet/20 p-4 flex items-center gap-3">
-      <span className="material-symbols-outlined text-[#d0bcff] text-[24px]">tips_and_updates</span>
-      <p className="text-body-md text-on-surface-variant">
-        <span className="text-white font-semibold">Tip:</span> Search any song, album, or artist. Click album/artist cards to load their full tracklist. Use <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white text-label-sm">+</kbd> on any song to save it to your playlist.
-      </p>
+    <div className="flex flex-col gap-3 animate-pulse">
+      <div className="h-6 w-40 bg-[#1a1a1a] rounded" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-44 rounded-xl bg-[#111111] border border-[#222222]" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TipBanner() {
+  const [dismissed, setDismissed] = useState(false);
+  if (dismissed) return null;
+
+  return (
+    <div className="w-full rounded-lg border border-[#222222] bg-[#0a0a0a] px-3.5 py-2 flex items-center justify-between gap-3 text-body-sm text-[#888888]">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="material-symbols-outlined text-[16px] text-white flex-shrink-0">info</span>
+        <p className="truncate text-[12px]">
+          <span className="text-white font-medium">Tip:</span> All tracks stream in high-fidelity
+          OPUS via YouTube Music. Sign in with Google in Settings to sync your library.
+        </p>
+      </div>
+      <button
+        onClick={() => setDismissed(true)}
+        className="text-[#666666] hover:text-white transition-colors flex-shrink-0 p-0.5 cursor-pointer"
+        title="Dismiss tip"
+      >
+        <span className="material-symbols-outlined text-[16px]">close</span>
+      </button>
     </div>
   );
 }

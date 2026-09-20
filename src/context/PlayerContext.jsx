@@ -25,6 +25,19 @@ export function PlayerProvider({ children }) {
   const [currentSong, setCurrentSong] = useState(null);
   const [queue,       setQueue]       = useState([]);
   const [queueIndex,  setQueueIndex]  = useState(0);
+  const [history,     setHistory]     = useState([]);
+
+  const queueRef = useRef([]);
+  const queueIndexRef = useRef(0);
+  const isFetchingNextRef = useRef(false);
+
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+
+  useEffect(() => {
+    queueIndexRef.current = queueIndex;
+  }, [queueIndex]);
 
   // ── Lyrics state ──────────────────────────────────────────────────
   // ── Lyrics state ──────────────────────────────────────────────────
@@ -35,8 +48,27 @@ export function PlayerProvider({ children }) {
   // ── View & Navigation state with HTML5 History integration ────────
   // State: { view: 'home' | 'search' | 'artist' | 'album' | 'single' | 'lyrics' | 'library' | 'liked', currentId: string | null, extra: any }
   const [navState, setNavState] = useState(() => {
-    if (typeof window !== 'undefined' && window.history.state?.view) {
-      return window.history.state;
+    if (typeof window !== 'undefined') {
+      if (window.history.state?.view) {
+        return window.history.state;
+      }
+      const path = window.location.pathname;
+      if (path.startsWith('/artist/')) {
+        const id = path.replace('/artist/', '').split('/')[0];
+        if (id) return { view: 'artist', currentId: decodeURIComponent(id), extra: null };
+      }
+      if (path.startsWith('/album/')) {
+        const id = path.replace('/album/', '').split('/')[0];
+        if (id) return { view: 'album', currentId: decodeURIComponent(id), extra: null };
+      }
+      if (path.startsWith('/single/')) {
+        const id = path.replace('/single/', '').split('/')[0];
+        if (id) return { view: 'single', currentId: decodeURIComponent(id), extra: null };
+      }
+      if (path === '/search') return { view: 'search', currentId: null, extra: null };
+      if (path === '/library') return { view: 'library', currentId: null, extra: null };
+      if (path === '/liked') return { view: 'liked', currentId: null, extra: null };
+      if (path === '/lyrics') return { view: 'lyrics', currentId: null, extra: null };
     }
     return { view: 'home', currentId: null, extra: null };
   });
@@ -374,6 +406,29 @@ export function PlayerProvider({ children }) {
     }
   }, [volume, isMuted]);
 
+  // ── Helper to fetch recommendations and populate/append to queue ──
+  const populateWatchNextQueue = useCallback(async (track) => {
+    const targetVid = track?.videoId || track?.youtubeId || track?.id;
+    if (!targetVid) return;
+    try {
+      const res = await fetch(`/api/next/${targetVid}`);
+      if (res.ok) {
+        const recommendations = await res.json();
+        if (Array.isArray(recommendations) && recommendations.length > 0) {
+          setQueue((prevQueue) => {
+            const currentVid = track.videoId || track.id;
+            // Filter out current song from recommendations to avoid duplicate playing
+            const fresh = recommendations.filter((r) => (r.videoId || r.id) !== currentVid);
+            return [track, ...fresh];
+          });
+          setQueueIndex(0);
+        }
+      }
+    } catch (err) {
+      console.warn('[Watch Next] Failed to populate queue:', err);
+    }
+  }, []);
+
   // ── Load a song into the embedded YouTube engine ───────────────────
   const loadSong = useCallback(async (song, newQueue = null, newIndex = 0) => {
     if (!song) return;
@@ -387,6 +442,9 @@ export function PlayerProvider({ children }) {
     if (newQueue) {
       setQueue(newQueue);
       setQueueIndex(newIndex);
+    } else if (queueRef.current.length === 0) {
+      setQueue([cleanSong]);
+      setQueueIndex(0);
     }
 
     if (!ytReadyRef.current || !ytPlayerRef.current) {
@@ -394,6 +452,11 @@ export function PlayerProvider({ children }) {
       setIsLoading(true);
     } else {
       executeLoadSong(cleanSong);
+    }
+
+    // Auto-fetch Watch Next if queue is a single song and not part of an existing playlist
+    if (!newQueue || (Array.isArray(newQueue) && newQueue.length <= 1)) {
+      populateWatchNextQueue(cleanSong);
     }
 
     // Fetch lyrics async (non-blocking)
@@ -420,7 +483,7 @@ export function PlayerProvider({ children }) {
         })
         .catch(() => {});
     }
-  }, [executeLoadSong, audioQuality]);
+  }, [executeLoadSong, audioQuality, populateWatchNextQueue]);
 
   // ── Centralized Contextual Entity Click Router ─────────────────────
   const handleEntityClick = useCallback((item, options = {}) => {
@@ -479,28 +542,158 @@ export function PlayerProvider({ children }) {
     loadSong(item, options.queue, options.queueIndex);
   }, [navigateTo, loadSong]);
 
-  // ── Queue navigation ──────────────────────────────────────────────
-  const playNext = useCallback(() => {
-    if (!queue.length) return;
-    const nextIndex = (queueIndex + 1) % queue.length;
-    setQueueIndex(nextIndex);
-    loadSong(queue[nextIndex], null, nextIndex);
-  }, [queue, queueIndex, loadSong]);
+  // ── Dedicated Entity Click Handlers (Song title & Artist clicks) ──
+  const routeToSongEntity = useCallback((song) => {
+    if (!song) return;
+    const albumId = song.albumId || (typeof song.album === 'object' ? song.album?.id || song.album?.browseId : null);
+    if (albumId) {
+      navigateTo('album', albumId, {
+        title: typeof song.album === 'string' ? song.album : song.album?.name || song.title,
+        artist: song.artist,
+        cover: song.cover || song.thumbnail,
+      });
+      return;
+    }
 
-  playNextRef.current = playNext;
+    // Fallback: If entity lacks an official album, route to /single/[videoId] or trigger seamless single-track playback
+    const targetVideoId = song.videoId || song.id;
+    if (targetVideoId) {
+      navigateTo('single', targetVideoId, song);
+    } else {
+      loadSong(song);
+    }
+  }, [navigateTo, loadSong]);
 
-  const playPrev = useCallback(() => {
+  const routeToArtistEntity = useCallback((artistName, artistId = null) => {
+    if (artistId) {
+      navigateTo('artist', artistId, { name: artistName });
+      return;
+    }
+    if (artistName) {
+      navigateTo('artist', encodeURIComponent(artistName), { name: artistName });
+    }
+  }, [navigateTo]);
+
+  // ── Queue Management & Auto-Advance Engine ────────────────────────
+  const playTrackNow = useCallback((track, customQueue = null, startIndex = 0) => {
+    if (!track) return;
+    if (customQueue && Array.isArray(customQueue) && customQueue.length > 1) {
+      loadSong(track, customQueue, startIndex);
+    } else {
+      loadSong(track, [track], 0);
+      populateWatchNextQueue(track);
+    }
+  }, [loadSong, populateWatchNextQueue]);
+
+  const playNextTrack = useCallback((track) => {
+    if (!track) return;
+    setQueue((prevQueue) => {
+      const next = [...prevQueue];
+      const insertAt = queueIndexRef.current + 1;
+      next.splice(insertAt, 0, track);
+      return next;
+    });
+  }, []);
+
+  const addToQueue = useCallback((track) => {
+    if (!track) return;
+    setQueue((prevQueue) => [...prevQueue, track]);
+  }, []);
+
+  const skipToNext = useCallback(async () => {
+    const currentQ = queueRef.current;
+    const currentIdx = queueIndexRef.current;
+    if (!currentQ.length) return;
+
+    if (currentSongRef.current) {
+      setHistory((h) => [...h, currentSongRef.current]);
+    }
+
+    const nextIndex = currentIdx + 1;
+    if (nextIndex < currentQ.length) {
+      setQueueIndex(nextIndex);
+      loadSong(currentQ[nextIndex], null, nextIndex);
+
+      // Pre-fetch next batch if nearing the end of current recommendations
+      if (nextIndex >= currentQ.length - 2 && !isFetchingNextRef.current) {
+        const lastSong = currentQ[currentQ.length - 1];
+        const targetVid = lastSong?.videoId || lastSong?.id;
+        if (targetVid) {
+          isFetchingNextRef.current = true;
+          try {
+            const res = await fetch(`/api/next/${targetVid}`);
+            if (res.ok) {
+              const recs = await res.json();
+              if (Array.isArray(recs) && recs.length > 0) {
+                setQueue((prev) => {
+                  const existingIds = new Set(prev.map((s) => s.videoId || s.id));
+                  const fresh = recs.filter((s) => !existingIds.has(s.videoId || s.id));
+                  return [...prev, ...fresh];
+                });
+              }
+            }
+          } catch (e) {
+            console.warn('[Queue Auto-Advance] Prefetch error:', e);
+          } finally {
+            isFetchingNextRef.current = false;
+          }
+        }
+      }
+    } else {
+      // Reached the end of queue — fetch next recommendation batch immediately
+      const lastSong = currentQ[currentIdx];
+      const targetVid = lastSong?.videoId || lastSong?.id;
+      if (targetVid && !isFetchingNextRef.current) {
+        isFetchingNextRef.current = true;
+        try {
+          const res = await fetch(`/api/next/${targetVid}`);
+          if (res.ok) {
+            const recs = await res.json();
+            if (Array.isArray(recs) && recs.length > 0) {
+              const existingIds = new Set(currentQ.map((s) => s.videoId || s.id));
+              const fresh = recs.filter((s) => !existingIds.has(s.videoId || s.id));
+              if (fresh.length > 0) {
+                setQueue((prev) => [...prev, ...fresh]);
+                setQueueIndex(nextIndex);
+                loadSong(fresh[0], null, nextIndex);
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[Queue Auto-Advance] Fetch error:', e);
+        } finally {
+          isFetchingNextRef.current = false;
+        }
+      }
+      // Fallback: loop back to beginning
+      setQueueIndex(0);
+      loadSong(currentQ[0], null, 0);
+    }
+  }, [loadSong]);
+
+  playNextRef.current = skipToNext;
+
+  const skipToPrev = useCallback(() => {
     const p = ytPlayerRef.current;
     if (p && typeof p.getCurrentTime === 'function' && p.getCurrentTime() > 3) {
       p.seekTo(0, true);
       setCurrentTime(0);
       return;
     }
-    if (!queue.length) return;
-    const prevIndex = (queueIndex - 1 + queue.length) % queue.length;
-    setQueueIndex(prevIndex);
-    loadSong(queue[prevIndex], null, prevIndex);
-  }, [queue, queueIndex, loadSong]);
+    const currentQ = queueRef.current;
+    const currentIdx = queueIndexRef.current;
+    if (!currentQ.length) return;
+
+    if (currentIdx > 0) {
+      const prevIndex = currentIdx - 1;
+      setQueueIndex(prevIndex);
+      loadSong(currentQ[prevIndex], null, prevIndex);
+    } else {
+      p?.seekTo?.(0, true);
+      setCurrentTime(0);
+    }
+  }, [loadSong]);
 
   const playCollection = useCallback((songs, startIndex = 0) => {
     if (!songs || !songs.length) return;
@@ -524,17 +717,20 @@ export function PlayerProvider({ children }) {
   const value = {
     ytPlayerRef,
     isPlaying, currentTime, duration, volume, isMuted, isLoading,
-    currentSong, queue, queueIndex,
+    currentSong, queue, queueIndex, history,
     lrcString, lyricsSource, lyricsLoading,
     view, setView,
     navState, setNavState, navigateTo, goBack, canGoBack, navHistory, playAlbum,
     handleEntityClick,
+    routeToSongEntity,
+    routeToArtistEntity,
     isSettingsOpen, setIsSettingsOpen,
     // Audio Quality & Bitrate
     audioQuality, setAudioQuality, activeStreamMeta, streamToast, setStreamToast,
     // Actions
     play, pause, togglePlay, seek, changeVolume, toggleMute,
-    loadSong, playNext, playPrev, playCollection, toggleView,
+    loadSong, playTrackNow, playNextTrack, addToQueue, skipToNext, skipToPrev,
+    playNext: skipToNext, playPrev: skipToPrev, playCollection, toggleView,
     // Library
     ...library,
   };

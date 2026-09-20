@@ -1,32 +1,16 @@
 import { useState, useCallback, useRef } from 'react';
-import {
-  searchAll,
-  searchSongs,
-  searchAlbums,
-  searchArtists,
-  searchPlaylists,
-} from '../utils/saavn.js';
 
-export const SEARCH_TABS = ['all', 'songs', 'albums', 'artists', 'playlists'];
-
-const SEARCH_FNS = {
-  all:       searchAll,
-  songs:     searchSongs,
-  albums:    searchAlbums,
-  artists:   searchArtists,
-  playlists: searchPlaylists,
-};
+export const SEARCH_TABS = ['all', 'songs', 'albums', 'artists'];
 
 /**
- * useMusicSearch — Saavn.dev powered search hook
+ * useMusicSearch — YouTube Music / Innertube powered search hook
  *
- * Manages debounced search across 5 tabs: All | Songs | Albums | Artists | Playlists.
- * `results` shape depends on active tab:
+ * Manages debounced search across tabs: All | Songs | Albums | Artists
+ * `results` shape:
  *   - 'all'       → { songs[], albums[], artists[], playlists[] }
  *   - 'songs'     → Song[]
  *   - 'albums'    → Album[]
  *   - 'artists'   → Artist[]
- *   - 'playlists' → Playlist[]
  */
 export function useMusicSearch() {
   const [results,      setResults]      = useState(null); // null = not searched yet
@@ -43,34 +27,28 @@ export function useMusicSearch() {
     setLoading(true);
     setError(null);
     try {
-      // Primary: Innertube backend search gateway
       const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&type=${tab}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          if (tab === 'all') {
-            const songs = data.filter(item => !item.type || item.type === 'song');
-            const albums = data.filter(item => item.type === 'album');
-            const artists = data.filter(item => item.type === 'artist');
-            setResults({
-              songs,
-              albums,
-              artists,
-              playlists: [],
-            });
-            return;
-          }
-          setResults(data);
+      if (!res.ok) throw new Error(`Search failed (${res.status})`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        if (tab === 'all') {
+          const songs = data.filter(item => !item.type || item.type === 'song');
+          const albums = data.filter(item => item.type === 'album');
+          const artists = data.filter(item => item.type === 'artist');
+          setResults({
+            songs,
+            albums,
+            artists,
+            playlists: [],
+          });
           return;
         }
+        setResults(data);
+      } else {
+        setResults([]);
       }
-
-      // Fallback: standard SEARCH_FNS
-      const fn = SEARCH_FNS[tab] || searchAll;
-      const data = await fn(q);
-      setResults(data);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Search failed');
       setResults(null);
     } finally {
       setLoading(false);

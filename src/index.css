@@ -21,8 +21,8 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background: #09090B;
-    color: #e5e1e4;
+    background: #000000;
+    color: #ffffff;
     overscroll-behavior: none;
   }
 
@@ -32,51 +32,47 @@
 }
 
 @layer utilities {
-  /* Active lyric glow — neon pink text shadow */
+  /* Active lyric glow — crisp white text shadow */
   .lyric-active-glow {
-    text-shadow: 0 0 35px rgba(236, 72, 153, 0.45),
-                 0 0 15px rgba(255, 255, 255, 0.25);
+    text-shadow: 0 0 25px rgba(255, 255, 255, 0.45),
+                 0 0 10px rgba(255, 255, 255, 0.25);
   }
 
-  /* Glass dock elevation — Stitch Level 3 */
+  /* Glass dock elevation */
   .glass-dock {
-    background: rgba(18, 18, 21, 0.65);
-    backdrop-filter: blur(40px) saturate(1.8);
-    -webkit-backdrop-filter: blur(40px) saturate(1.8);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow:
-      0 12px 32px rgba(0, 0, 0, 0.6),
-      0 0 48px -12px rgba(139, 92, 246, 0.2);
+    background: rgba(5, 5, 5, 0.92);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border: 1px solid #222222;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.9);
   }
 
-  /* Glass card — Stitch Level 1 */
+  /* Glass card */
   .glass-card {
-    background: rgba(18, 18, 21, 0.40);
+    background: rgba(10, 10, 10, 0.70);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid #222222;
   }
 
-  /* Glass panel — Stitch Level 2 */
+  /* Glass panel */
   .glass-panel {
-    background: rgba(24, 24, 28, 0.70);
+    background: rgba(5, 5, 5, 0.90);
     backdrop-filter: blur(32px);
     -webkit-backdrop-filter: blur(32px);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+    border: 1px solid #1c1c1c;
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8);
   }
 
-  /* Gradient text clip for active lyrics */
+  /* Active lyrics highlight */
   .gradient-text-active {
-    background: linear-gradient(90deg, #ffffff 0%, #ffb0cd 50%, #d0bcff 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #ffffff;
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
   }
 
-  /* Seek bar gradient fill */
+  /* Seek bar white fill */
   .seek-fill {
-    background: linear-gradient(90deg, #8B5CF6, #EC4899);
+    background: #ffffff;
   }
 }
 

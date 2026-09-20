@@ -4,6 +4,7 @@ import { usePlayer } from '../context/PlayerContext.jsx';
 import { formatDuration } from '../utils/timeFormat.js';
 import AddToPlaylistMenu from './shared/AddToPlaylistMenu.jsx';
 import ImageWithFallback from './shared/ImageWithFallback.jsx';
+import TrackContextMenu from './shared/TrackContextMenu.jsx';
 
 const TABS = [
   { id: 'all',     label: 'All',     icon: 'explore' },
@@ -14,16 +15,19 @@ const TABS = [
 
 /**
  * Search Component — High-performance YouTube Music search powered by Innertube
- *
- * - Synchronous input state (0ms UI typing lag)
- * - 200ms debounced network requests via useDebounce
- * - Category tabs: All, Songs, Albums, Artists
- * - Official track sorting & fan-edit filtering on backend
- * - Container constrained to max-h-[72vh] with smooth scrolling & subtle dividers
- * - Integrated navigation to Artist and Album views
+ * Strict B&W monochrome aesthetic with clean minimal outline filter pills
  */
 export default function Search({ onSelectTrack, onArtistClick }) {
-  const { navigateTo, loadSong, isLiked, toggleLike, handleEntityClick } = usePlayer();
+  const {
+    navigateTo,
+    loadSong,
+    isLiked,
+    toggleLike,
+    handleEntityClick,
+    routeToSongEntity,
+    routeToArtistEntity,
+  } = usePlayer();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [results, setResults] = useState([]);
@@ -101,25 +105,22 @@ export default function Search({ onSelectTrack, onArtistClick }) {
     if (onArtistClick) {
       onArtistClick(artistName, artistId);
     }
-    handleEntityClick({ id: artistId, name: artistName, type: 'artist' }, { preferType: 'artist' });
+    routeToArtistEntity(artistName, artistId);
   };
 
   const handleAlbumNavigation = (album) => {
-    handleEntityClick({
+    routeToSongEntity({
       ...album,
-      id: album.browseId || album.id,
-      title: album.title,
-      artist: album.artist,
-      cover: album.thumbnail || album.cover,
-      type: 'album',
-    }, { preferType: 'album' });
+      albumId: album.browseId || album.id,
+      album: album.title,
+    });
   };
 
   return (
     <div className="w-full flex flex-col gap-3">
-      {/* Search Input Bar (0-latency synchronous typing) */}
+      {/* Search Input Bar (Sleek monochrome input) */}
       <div className="relative w-full">
-        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-outline">
+        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#888888]">
           <span className="material-symbols-outlined text-[20px]">search</span>
         </div>
         <input
@@ -127,21 +128,21 @@ export default function Search({ onSelectTrack, onArtistClick }) {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search songs, artists, or albums via YouTube Music..."
-          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-outline text-body-md focus:outline-none focus:border-brand-violet/60 focus:ring-1 focus:ring-brand-violet/60 transition-all"
+          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-black border border-[#262626] text-white placeholder-[#666666] text-body-md focus:outline-none focus:border-white focus:ring-1 focus:ring-white transition-all"
         />
         {searchTerm && (
           <button
             type="button"
             onClick={handleClear}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-outline hover:text-white transition-colors"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#888888] hover:text-white transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         )}
       </div>
 
-      {/* Category Tabs: All, Songs, Albums, Artists */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      {/* Filter Chips (Minimal outline pills: border #333333/white, bg transparent, active: bg #FFFFFF text #000000) */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -149,10 +150,10 @@ export default function Search({ onSelectTrack, onArtistClick }) {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-1 rounded-lg text-label-sm font-medium transition-all duration-200 flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-label-sm font-medium transition-all duration-150 flex-shrink-0 border ${
                 isActive
-                  ? 'bg-brand-violet text-white shadow-md shadow-brand-violet/20 font-semibold'
-                  : 'bg-white/5 text-white/70 hover:text-white hover:bg-white/10'
+                  ? 'bg-white text-black border-white font-semibold shadow-sm'
+                  : 'bg-transparent text-[#888888] border-[#333333] hover:text-white hover:border-[#666666]'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">{tab.icon}</span>
@@ -164,23 +165,23 @@ export default function Search({ onSelectTrack, onArtistClick }) {
 
       {/* Loading Indicator */}
       {loading && (
-        <div className="flex items-center gap-2 px-3 py-2 text-label-sm text-outline animate-pulse">
-          <div className="w-4 h-4 border-2 border-brand-violet border-t-transparent rounded-full animate-spin" />
+        <div className="flex items-center gap-2 px-3 py-2 text-label-sm text-[#888888] animate-pulse">
+          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
           <span>Searching YouTube Music ({activeTab})...</span>
         </div>
       )}
 
       {/* Error Message */}
       {error && !loading && (
-        <div className="p-3 rounded-xl bg-brand-pink/10 border border-brand-pink/20 text-brand-pink text-body-sm">
+        <div className="p-3 rounded-xl bg-[#141414] border border-[#333333] text-white text-body-sm">
           {error}
         </div>
       )}
 
       {/* Results Container: Constrained to max-h-[72vh] with smooth scroll & subtle dividers */}
       {results.length > 0 && (
-        <div className="w-full max-h-[72vh] overflow-y-auto pr-2 scroll-smooth rounded-xl bg-white/[0.02] border border-white/5 shadow-xl">
-          <div className="divide-y divide-neutral-800">
+        <div className="w-full max-h-[72vh] overflow-y-auto pr-2 scroll-smooth rounded-xl bg-[#050505] border border-[#222222] shadow-2xl">
+          <div className="divide-y divide-[#1a1a1a]">
             {results.map((item, idx) => {
               const itemType = item.type || (activeTab === 'albums' ? 'album' : activeTab === 'artists' ? 'artist' : 'song');
 
@@ -190,7 +191,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                   <div
                     key={item.id || item.browseId || idx}
                     onClick={() => handleArtistNavigation(item.name, item.browseId || item.id)}
-                    className="group flex items-center justify-between p-3 hover:bg-white/[0.06] transition-colors cursor-pointer"
+                    className="group flex items-center justify-between p-3 hover:bg-white/[0.04] transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <ImageWithFallback
@@ -198,23 +199,23 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                         alt={item.name}
                         icon="person"
                         iconClassName="text-white/50 text-[24px]"
-                        className="w-12 h-12 rounded-full object-cover flex-shrink-0 border border-white/10 group-hover:border-brand-violet/50 transition-colors"
+                        className="w-12 h-12 aspect-square rounded-full overflow-hidden object-cover flex-shrink-0 border border-[#262626] group-hover:border-white transition-colors"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-label-md font-semibold text-white truncate group-hover:text-brand-violet transition-colors">
+                          <span className="text-label-md font-semibold text-white truncate group-hover:underline transition-colors">
                             {item.name}
                           </span>
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30 flex-shrink-0">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#111111] text-[#888888] border border-[#333333] flex-shrink-0">
                             Artist
                           </span>
                         </div>
-                        <p className="text-body-sm text-outline truncate mt-0.5">
+                        <p className="text-body-sm text-[#888888] truncate mt-0.5">
                           View profile & discography
                         </p>
                       </div>
                     </div>
-                    <span className="material-symbols-outlined text-[20px] text-white/40 group-hover:text-white transition-colors">
+                    <span className="material-symbols-outlined text-[20px] text-[#666666] group-hover:text-white transition-colors">
                       chevron_right
                     </span>
                   </div>
@@ -227,7 +228,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                   <div
                     key={item.id || item.browseId || idx}
                     onClick={() => handleAlbumNavigation(item)}
-                    className="group flex items-center justify-between p-3 hover:bg-white/[0.06] transition-colors cursor-pointer"
+                    className="group flex items-center justify-between p-3 hover:bg-white/[0.04] transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <ImageWithFallback
@@ -235,23 +236,23 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                         alt={item.title}
                         icon="album"
                         iconClassName="text-white/40 text-[24px]"
-                        className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-white/10 group-hover:scale-105 transition-transform"
+                        className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-[#262626] group-hover:scale-105 transition-transform"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-label-md font-semibold text-white truncate group-hover:text-brand-violet transition-colors">
+                          <span className="text-label-md font-semibold text-white truncate group-hover:underline transition-colors">
                             {item.title}
                           </span>
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand-violet/20 text-brand-violet border border-brand-violet/30 flex-shrink-0">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#111111] text-[#888888] border border-[#333333] flex-shrink-0">
                             Album
                           </span>
                         </div>
-                        <p className="text-body-sm text-outline truncate mt-0.5">
+                        <p className="text-body-sm text-[#888888] truncate mt-0.5">
                           {item.artist} {item.year ? `• ${item.year}` : ''}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-white/50 group-hover:text-white transition-colors">
+                    <div className="flex items-center gap-2 text-[#888888] group-hover:text-white transition-colors">
                       <span className="text-label-sm font-medium hidden sm:inline">Play Album</span>
                       <span className="material-symbols-outlined text-[20px]">chevron_right</span>
                     </div>
@@ -265,10 +266,10 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                 <div
                   key={track.id || track.videoId || idx}
                   onClick={() => handleTrackClick(track)}
-                  className="group flex items-center justify-between p-3 hover:bg-white/[0.06] transition-colors cursor-pointer"
+                  className="group flex items-center justify-between p-3 hover:bg-white/[0.04] transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-900">
+                    <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-900 border border-[#262626]">
                       <ImageWithFallback
                         src={track.thumbnail || track.cover}
                         alt={track.title}
@@ -276,7 +277,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                         iconClassName="text-white/40 text-[22px]"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                         <span className="material-symbols-outlined text-white text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                           play_arrow
                         </span>
@@ -285,7 +286,14 @@ export default function Search({ onSelectTrack, onArtistClick }) {
 
                     <div className="flex flex-col min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-label-md font-semibold text-white truncate group-hover:text-brand-violet transition-colors">
+                        <span
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            routeToSongEntity(track);
+                          }}
+                          className="text-label-md font-semibold text-white truncate hover:underline transition-colors"
+                          title={`View album / single details for "${track.title}"`}
+                        >
                           {track.title}
                         </span>
                         {track.isMusicVideo || track.isRemix || (!track.album && !track.albumId) ? (
@@ -293,26 +301,26 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleEntityClick(track, { preferType: 'single' });
+                              routeToSongEntity(track);
                             }}
-                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand-pink/20 text-brand-pink hover:bg-brand-pink/30 border border-brand-pink/30 flex-shrink-0 transition-colors"
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#111111] text-[#888888] hover:text-white border border-[#333333] hover:border-[#666666] flex-shrink-0 transition-colors"
                             title="Open Single / Video View"
                           >
                             <span className="material-symbols-outlined text-[12px]">smart_display</span>
                             <span>{track.isMusicVideo ? 'Video' : 'Single'}</span>
                           </button>
                         ) : track.isOfficial ? (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand-violet/20 text-brand-violet border border-brand-violet/30 flex-shrink-0">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#111111] text-[#888888] border border-[#333333] flex-shrink-0">
                             Official
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/10 text-white/70 flex-shrink-0">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/5 text-[#888888] flex-shrink-0">
                             Song
                           </span>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1 text-body-sm text-outline truncate mt-0.5">
+                      <div className="flex items-center gap-1 text-body-sm text-[#888888] truncate mt-0.5">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -331,12 +339,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleEntityClick({
-                                  id: track.albumId || track.albumBrowseId,
-                                  title: track.album,
-                                  artist: track.artist,
-                                  type: 'album',
-                                }, { preferType: 'album' });
+                                routeToSongEntity(track);
                               }}
                               className="hover:text-white hover:underline focus:outline-none transition-colors text-left truncate"
                               title={`View album: ${track.album}`}
@@ -355,12 +358,12 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleEntityClick(track);
+                        routeToSongEntity(track);
                       }}
-                      className="p-1.5 rounded-full hover:bg-white/10 text-outline hover:text-white transition-colors"
-                      title="View Details / Context"
+                      className="p-1.5 rounded-full hover:bg-white/10 text-[#888888] hover:text-white transition-colors"
+                      title="View Release Details"
                     >
-                      <span className="material-symbols-outlined text-[19px]">info</span>
+                      <span className="material-symbols-outlined text-[19px]">open_in_new</span>
                     </button>
 
                     {/* Like button */}
@@ -371,7 +374,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                         toggleLike(track);
                       }}
                       className={`p-1.5 rounded-full transition-transform active:scale-90 ${
-                        isLiked(track.id) ? 'text-brand-pink' : 'text-outline hover:text-brand-pink'
+                        isLiked(track.id) ? 'text-white' : 'text-[#888888] hover:text-white'
                       }`}
                       title={isLiked(track.id) ? 'Unlike' : 'Like'}
                     >
@@ -380,35 +383,13 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                       </span>
                     </button>
 
-                    {/* Add to playlist button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAddMenuSong(track);
-                      }}
-                      className="p-1.5 rounded-full text-outline hover:text-white transition-colors"
-                      title="Add to playlist"
-                    >
-                      <span className="material-symbols-outlined text-[19px]">playlist_add</span>
-                    </button>
+                    {/* Track Context Menu */}
+                    <TrackContextMenu track={track} onAddToPlaylist={setAddMenuSong} />
 
-                    {track.duration > 0 && (
-                      <span className="text-label-sm font-mono text-outline tabular-nums ml-1 hidden sm:inline">
-                        {formatDuration(track.duration)}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTrackClick(track);
-                      }}
-                      className="p-1.5 rounded-full hover:bg-white/10 text-white/60 hover:text-white transition-colors ml-1"
-                      title="Play track"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">play_circle</span>
-                    </button>
+                    {/* Duration */}
+                    <span className="text-label-sm text-[#888888] font-mono min-w-[36px] text-right hidden sm:inline-block">
+                      {formatDuration(track.duration)}
+                    </span>
                   </div>
                 </div>
               );
@@ -417,6 +398,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
         </div>
       )}
 
+      {/* Add To Playlist Modal */}
       {addMenuSong && (
         <AddToPlaylistMenu song={addMenuSong} onClose={() => setAddMenuSong(null)} />
       )}

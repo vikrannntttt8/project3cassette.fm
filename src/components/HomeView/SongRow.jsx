@@ -1,14 +1,15 @@
 import { formatTime } from '../../utils/timeFormat.js';
 import { usePlayer } from '../../context/PlayerContext.jsx';
+import TrackContextMenu from '../shared/TrackContextMenu.jsx';
 
 export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAddToPlaylist }) {
-  const { isLiked, toggleLike, handleEntityClick } = usePlayer();
+  const { isLiked, toggleLike, routeToSongEntity, routeToArtistEntity } = usePlayer();
   const liked = isLiked(song.id);
 
   return (
     <div
       className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
-        isActive ? 'bg-brand-violet/10 border border-brand-violet/20' : 'hover:bg-white/5'
+        isActive ? 'bg-white/10 border border-white/20' : 'hover:bg-white/[0.04] border border-transparent'
       }`}
       onClick={onPlay}
     >
@@ -17,12 +18,12 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
         {isActive && isPlaying ? (
           <div className="flex items-end gap-[2px] h-4 w-4">
             {[...Array(3)].map((_, i) => (
-              <span key={i} className={`visualizer-bar w-[3px] bg-brand-violet rounded-full`} />
+              <span key={i} className="visualizer-bar w-[3px] bg-white rounded-full" />
             ))}
           </div>
         ) : (
           <>
-            <span className={`text-label-md font-mono group-hover:hidden ${isActive ? 'text-brand-violet' : 'text-outline'}`}>
+            <span className={`text-label-md font-mono group-hover:hidden ${isActive ? 'text-white font-bold' : 'text-[#888888]'}`}>
               {index + 1}
             </span>
             <span className="material-symbols-outlined text-[18px] text-white hidden group-hover:block"
@@ -32,7 +33,7 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
       </div>
 
       {/* Thumbnail */}
-      <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-white/5">
+      <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-[#111111] border border-[#222222]">
         {song.thumbnail
           ? <img src={song.thumbnail} alt={song.title} className="w-full h-full object-cover" />
           : <span className="material-symbols-outlined text-white/20 text-[20px] m-auto block mt-2.5">music_note</span>
@@ -41,22 +42,27 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
 
       {/* Title & artist */}
       <div className="flex flex-col min-w-0 flex-1">
-        <span className={`text-label-lg font-semibold truncate ${isActive ? 'text-brand-violet' : 'text-white group-hover:text-[#d0bcff]'} transition-colors`}>
+        <span
+          onClick={(e) => {
+            e.stopPropagation();
+            routeToSongEntity(song);
+          }}
+          className={`text-label-lg font-semibold truncate hover:underline cursor-pointer ${
+            isActive ? 'text-white font-bold' : 'text-white'
+          } transition-colors`}
+          title={`View album / single for "${song.title}"`}
+        >
           {song.title}
           {song.explicit && (
-            <span className="ml-1 text-label-sm bg-white/10 text-on-surface-variant px-1 rounded align-middle">E</span>
+            <span className="ml-1 text-label-sm bg-white/10 text-[#888888] px-1 rounded align-middle">E</span>
           )}
         </span>
         <span
           onClick={(e) => {
             e.stopPropagation();
-            handleEntityClick({
-              id: song.artistId || null,
-              name: song.artist,
-              type: 'artist',
-            }, { preferType: 'artist' });
+            routeToArtistEntity(song.artist, song.artistId);
           }}
-          className="text-body-sm text-on-surface-variant hover:text-white hover:underline truncate inline-block cursor-pointer transition-colors"
+          className="text-body-sm text-[#888888] hover:text-white hover:underline truncate inline-block cursor-pointer transition-colors"
           title={`View ${song.artist}'s profile`}
         >
           {song.artist}
@@ -68,14 +74,9 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
         <span
           onClick={(e) => {
             e.stopPropagation();
-            handleEntityClick({
-              id: song.albumId || null,
-              title: song.album,
-              artist: song.artist,
-              type: 'album',
-            }, { preferType: 'album' });
+            routeToSongEntity(song);
           }}
-          className="hidden lg:block text-body-sm text-on-surface-variant hover:text-white hover:underline truncate max-w-[160px] cursor-pointer transition-colors"
+          className="hidden lg:block text-body-sm text-[#888888] hover:text-white hover:underline truncate max-w-[160px] cursor-pointer transition-colors"
           title={`View album: ${song.album}`}
         >
           {song.album}
@@ -83,13 +84,13 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
       )}
 
       {/* Actions */}
-      <div className={`flex items-center gap-2 flex-shrink-0 transition-opacity ${
+      <div className={`flex items-center gap-1.5 flex-shrink-0 transition-opacity ${
         liked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
       }`}>
         <button
           onClick={e => { e.stopPropagation(); toggleLike(song); }}
           className={`p-1.5 rounded-full transition-transform active:scale-90 ${
-            liked ? 'text-brand-pink' : 'text-on-surface-variant hover:text-brand-pink'
+            liked ? 'text-white' : 'text-[#888888] hover:text-white'
           }`}
           title={liked ? 'Unlike' : 'Like'}
         >
@@ -97,17 +98,11 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
             favorite
           </span>
         </button>
-        <button
-          onClick={e => { e.stopPropagation(); onAddToPlaylist?.(); }}
-          className="p-1.5 rounded-full text-on-surface-variant hover:text-white transition-colors"
-          title="Add to playlist"
-        >
-          <span className="material-symbols-outlined text-[20px]">playlist_add</span>
-        </button>
+        <TrackContextMenu track={song} onAddToPlaylist={onAddToPlaylist} />
       </div>
 
       {/* Duration */}
-      <span className="text-label-sm text-outline font-mono w-10 text-right flex-shrink-0">
+      <span className="text-label-sm text-[#888888] font-mono w-10 text-right flex-shrink-0">
         {formatTime(song.duration)}
       </span>
     </div>

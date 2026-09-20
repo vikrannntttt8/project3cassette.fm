@@ -60,11 +60,11 @@ export default function AddToPlaylistMenu({ song, onClose }) {
         </div>
 
         {/* Tab switch */}
-        <div className="flex items-center bg-white/5 p-1 rounded-xl">
+        <div className="flex items-center bg-[#111111] p-1 rounded-xl border border-[#222222]">
           <button
             onClick={() => { setTab('playlist'); setCreating(false); }}
             className={`flex-1 py-1.5 rounded-lg text-label-md font-medium transition-all ${
-              tab === 'playlist' ? 'bg-brand-violet text-white font-semibold' : 'text-on-surface-variant hover:text-white'
+              tab === 'playlist' ? 'bg-white text-black font-semibold shadow-sm' : 'text-[#888888] hover:text-white'
             }`}
           >
             Playlists ({playlists.length})
@@ -72,7 +72,7 @@ export default function AddToPlaylistMenu({ song, onClose }) {
           <button
             onClick={() => { setTab('album'); setCreating(false); }}
             className={`flex-1 py-1.5 rounded-lg text-label-md font-medium transition-all ${
-              tab === 'album' ? 'bg-brand-cyan text-black font-semibold' : 'text-on-surface-variant hover:text-white'
+              tab === 'album' ? 'bg-white text-black font-semibold shadow-sm' : 'text-[#888888] hover:text-white'
             }`}
           >
             Albums ({customAlbums.length})
@@ -88,27 +88,25 @@ export default function AddToPlaylistMenu({ song, onClose }) {
               onChange={e => setNewTitle(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleCreate()}
               placeholder={tab === 'playlist' ? "Playlist name…" : "Album name…"}
-              className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-body-md outline-none focus:border-brand-violet/60"
+              className="flex-1 bg-black border border-[#333333] rounded-lg px-3 py-2 text-white text-body-md outline-none focus:border-white"
             />
             <button
               onClick={handleCreate}
-              className={`px-3 py-2 rounded-lg text-label-md font-semibold transition-colors ${
-                tab === 'playlist' ? 'bg-brand-violet text-white hover:bg-brand-violet/80' : 'bg-brand-cyan text-black hover:bg-brand-cyan/80'
-              }`}
+              className="px-3.5 py-2 rounded-lg text-label-md font-semibold bg-white text-black hover:bg-neutral-200 transition-colors"
             >
               Create
             </button>
-            <button onClick={() => setCreating(false)} className="text-on-surface-variant hover:text-white transition-colors">
+            <button onClick={() => setCreating(false)} className="text-[#888888] hover:text-white transition-colors">
               <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
         ) : (
           <button
             onClick={() => setCreating(true)}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/8 border border-dashed border-white/15 hover:border-brand-violet/40 transition-all"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#111111] hover:bg-[#181818] border border-dashed border-[#333333] hover:border-white transition-all text-left cursor-pointer"
           >
-            <span className={`material-symbols-outlined text-[20px] ${tab === 'playlist' ? 'text-brand-violet' : 'text-brand-cyan'}`}>add</span>
-            <span className="text-label-lg text-on-surface-variant hover:text-white">
+            <span className="material-symbols-outlined text-[20px] text-white">add</span>
+            <span className="text-label-lg text-[#888888] hover:text-white">
               {tab === 'playlist' ? 'New Playlist' : 'New Custom Album'}
             </span>
           </button>
@@ -117,7 +115,7 @@ export default function AddToPlaylistMenu({ song, onClose }) {
         {/* List */}
         <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
           {currentList.length === 0 && (
-            <p className="text-body-sm text-outline text-center py-4">
+            <p className="text-body-sm text-[#888888] text-center py-4">
               {tab === 'playlist' ? 'No playlists yet — create one above' : 'No albums yet — create one above'}
             </p>
           )}
@@ -127,29 +125,29 @@ export default function AddToPlaylistMenu({ song, onClose }) {
               <button
                 key={item.id}
                 onClick={() => !added && (tab === 'playlist' ? handleAddPlaylist(item.id) : handleAddAlbum(item.id))}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all cursor-pointer ${
                   added
-                    ? 'bg-brand-violet/10 border border-brand-violet/20 cursor-default'
-                    : 'hover:bg-white/5 border border-transparent hover:border-white/10'
+                    ? 'bg-white/10 border border-white/20 cursor-default'
+                    : 'hover:bg-white/5 border border-transparent hover:border-[#222222]'
                 }`}
               >
-                <div className="w-9 h-9 rounded-lg bg-white/5 flex-shrink-0 overflow-hidden">
+                <div className="w-9 h-9 rounded-lg bg-[#141414] border border-[#262626] flex-shrink-0 overflow-hidden flex items-center justify-center">
                   {item.thumbnail ? (
                     <img src={item.thumbnail} className="w-full h-full object-cover" alt="" />
                   ) : (
-                    <span className="material-symbols-outlined text-white/20 text-[18px] block mx-auto mt-2">
+                    <span className="material-symbols-outlined text-white/30 text-[18px]">
                       {tab === 'playlist' ? 'queue_music' : 'album'}
                     </span>
                   )}
                 </div>
                 <div className="flex flex-col min-w-0 text-left">
-                  <span className={`text-label-lg font-semibold truncate ${added ? 'text-brand-violet' : 'text-white'}`}>
+                  <span className={`text-label-lg font-semibold truncate ${added ? 'text-white font-bold' : 'text-white'}`}>
                     {item.title}
                   </span>
-                  <span className="text-body-sm text-on-surface-variant">{item.songs.length} tracks</span>
+                  <span className="text-body-sm text-[#888888]">{item.songs.length} tracks</span>
                 </div>
                 {added && (
-                  <span className="material-symbols-outlined text-brand-violet text-[20px] ml-auto flex-shrink-0">check_circle</span>
+                  <span className="material-symbols-outlined text-white text-[20px] ml-auto flex-shrink-0">check_circle</span>
                 )}
               </button>
             );

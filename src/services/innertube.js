@@ -142,6 +142,7 @@ function parseSongItem(item) {
   const artistId = firstArtist?.channel_id || firstArtist?.id || undefined;
 
   const album = item.album?.name || (typeof item.album === 'string' ? item.album : undefined);
+  const albumId = item.album?.id || item.album?.browse_id || item.album?.browseId || item.album_id || undefined;
 
   let duration = 0;
   if (typeof item.duration?.seconds === 'number') {
@@ -168,6 +169,7 @@ function parseSongItem(item) {
     artist,
     artistId,
     album,
+    albumId,
     duration,
     thumbnail,
     cover: thumbnail,
@@ -695,3 +697,154 @@ export async function getAlbumDetails(browseId) {
     tracks,
   };
 }
+
+/**
+ * 7. getWatchNext(videoId: string)
+ * Fetches YouTube Music's "Up Next" / watch playlist recommendations for a videoId.
+ * Maps results into normalized song schema and filters out invalid tracks.
+ */
+export async function getWatchNext(videoId) {
+  if (!videoId || typeof videoId !== 'string') return [];
+  const yt = await getInnertube();
+  try {
+    const upNext = await yt.music.getUpNext(videoId);
+    const contents = upNext?.contents || [];
+    const songs = contents.map((item) => {
+      const id = item.video_id || item.id || '';
+      const title = item.title?.text || item.title || 'Unknown Title';
+      const firstArtist = Array.isArray(item.artists) && item.artists.length > 0 ? item.artists[0] : null;
+      const artist = item.artists?.map((a) => a.name).filter(Boolean).join(', ') || item.author || 'Unknown Artist';
+      const artistId = firstArtist?.channel_id || firstArtist?.id || undefined;
+      const album = item.album?.name || (typeof item.album === 'string' ? item.album : undefined);
+      const albumId = item.album?.id || item.album?.browse_id || undefined;
+
+      let duration = 0;
+      if (typeof item.duration?.seconds === 'number') {
+        duration = item.duration.seconds;
+      } else if (item.duration?.text) {
+        const parts = item.duration.text.split(':').map(Number);
+        if (parts.length === 2) duration = parts[0] * 60 + parts[1];
+        else if (parts.length === 3) duration = parts[0] * 3600 + parts[1] * 60 + parts[2];
+      }
+
+      const thumbnail = resolveThumbnail(item, id);
+
+      return {
+        id,
+        videoId: id,
+        title,
+        artist,
+        artistId,
+        album,
+        albumId,
+        duration,
+        thumbnail,
+        cover: thumbnail,
+        thumbnailUrl: thumbnail,
+        type: 'song',
+      };
+    }).filter((s) => s.id && s.id.length >= 10);
+
+    return songs;
+  } catch (err) {
+    console.error('[Innertube] getWatchNext error:', err);
+    return [];
+  }
+}
+
+/**
+ * 8. getHomeFeedData()
+ * Dynamically fetches and categorizes live YouTube Music home feed:
+ * - Quick Picks (1-click tracks)
+ * - Daily Mixes & Radio
+ * - Trending Albums & Releases
+ * - Dynamic YouTube Music sections
+ */
+export async function getHomeFeedData() {
+  const yt = await getInnertube();
+  try {
+    const [feedRes, quickPicksRes, trendingAlbumsRes] = await Promise.allSettled([
+      yt.music.getHomeFeed(),
+      yt.music.search('top hits songs', { type: 'song' }),
+      yt.music.search('top trending albums', { type: 'album' }),
+    ]);
+
+    // Parse sections from YouTube Music live home feed
+    const rawFeed = feedRes.status === 'fulfilled' ? feedRes.value : null;
+    const dynamicSections = [];
+
+    if (rawFeed?.sections && Array.isArray(rawFeed.sections)) {
+      for (const sec of rawFeed.sections) {
+        const title = sec.header?.title?.text || sec.title?.text || (typeof sec.title === 'string' ? sec.title : '') || '';
+        if (!title || !sec.contents?.length) continue;
+
+        const items = sec.contents.map((item) => {
+          const id = item.id || item.video_id || '';
+          const itemTitle = item.title?.text || (typeof item.title === 'string' ? item.title : '') || 'Untitled';
+          const subtitle = item.subtitle?.text || (typeof item.subtitle === 'string' ? item.subtitle : '') || '';
+          const thumb = resolveThumbnail(item, id);
+          const type = item.item_type || (item.endpoint?.name?.includes('browse') ? 'playlist' : 'song');
+
+          return {
+            id,
+            browseId: id,
+            videoId: id,
+            title: itemTitle,
+            subtitle,
+            thumbnail: thumb,
+            cover: thumb,
+            type,
+          };
+        }).filter((it) => it.id);
+
+        if (items.length > 0) {
+          dynamicSections.push({
+            id: title.toLowerCase().replace(/[^\w]/g, '-'),
+            title,
+            items,
+          });
+        }
+      }
+    }
+
+    // Quick Picks: Top playable tracks
+    const quickPicks = (quickPicksRes.status === 'fulfilled' ? (quickPicksRes.value.songs?.contents || quickPicksRes.value.contents || []) : [])
+      .map(parseSongItem)
+      .filter((s) => s.id && s.id.length >= 10)
+      .slice(0, 16);
+
+    // Trending Albums
+    const trendingAlbums = (trendingAlbumsRes.status === 'fulfilled' ? (trendingAlbumsRes.value.albums?.contents || trendingAlbumsRes.value.contents || []) : [])
+      .map((a) => {
+        const thumb = resolveThumbnail(a);
+        return {
+          id: a.id || '',
+          browseId: a.id || '',
+          title: a.title || 'Unknown Album',
+          artist: a.artists?.map((x) => x.name).filter(Boolean).join(', ') || a.author?.name || 'Artist',
+          year: a.year || '',
+          thumbnail: thumb,
+          cover: thumb,
+          type: 'album',
+        };
+      })
+      .filter((a) => a.id)
+      .slice(0, 10);
+
+    return {
+      quickPicks,
+      trendingAlbums,
+      dailyMixes: dynamicSections[0]?.items || [],
+      dynamicSections,
+    };
+  } catch (err) {
+    console.error('[Innertube] getHomeFeedData error:', err);
+    return {
+      quickPicks: [],
+      trendingAlbums: [],
+      dailyMixes: [],
+      dynamicSections: [],
+    };
+  }
+}
+

@@ -15,10 +15,9 @@ export default function SingleView({ videoId, track: initialTrack }) {
     isPlaying,
     togglePlay,
     loadSong,
-    navigateTo,
     isLiked,
     toggleLike,
-    handleEntityClick,
+    routeToArtistEntity,
   } = usePlayer();
 
   const [track, setTrack] = useState(initialTrack || null);
@@ -34,7 +33,6 @@ export default function SingleView({ videoId, track: initialTrack }) {
 
     if (!videoId) return;
 
-    // If no initial track, resolve via search or info
     let mounted = true;
     setLoading(true);
 
@@ -99,29 +97,29 @@ export default function SingleView({ videoId, track: initialTrack }) {
   const isVideo = track?.type === 'video' || track?.isMusicVideo || track?.views;
 
   return (
-    <div className="h-full w-full overflow-y-auto pb-36 pt-4 px-4 sm:px-8 space-y-8 scroll-smooth">
+    <div className="h-full w-full overflow-y-auto pb-36 pt-4 px-4 sm:px-8 space-y-8 scroll-smooth bg-black text-white">
       {/* ── Top Bar Navigation ── */}
       <div className="flex items-center gap-4">
         <BackButton label="Back" />
-        <span className="text-body-sm text-outline">
+        <span className="text-body-sm text-[#888888]">
           / {isVideo ? 'Music Video' : 'Single Release'}
         </span>
       </div>
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4 animate-pulse">
-          <div className="w-12 h-12 border-2 border-brand-cyan border-t-transparent rounded-full animate-spin" />
-          <p className="text-body-md text-outline">Loading single details...</p>
+          <div className="w-12 h-12 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          <p className="text-body-md text-[#888888]">Loading single details...</p>
         </div>
       ) : track ? (
         <div className="space-y-8">
           {/* Hero Media Card */}
-          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-b from-[#181822] via-[#101014] to-[#09090B] border border-white/10 p-6 sm:p-10 shadow-2xl">
+          <div className="relative rounded-3xl overflow-hidden bg-[#0a0a0a] border border-[#222222] p-6 sm:p-10 shadow-2xl">
             <div className="flex flex-col md:flex-row items-center md:items-end gap-6 sm:gap-10">
               {/* Media Art with Play Action */}
               <div
                 onClick={handlePlay}
-                className="relative group cursor-pointer w-48 sm:w-64 aspect-square rounded-2xl overflow-hidden shadow-2xl border border-white/15 flex-shrink-0 bg-neutral-900"
+                className="relative group cursor-pointer w-48 sm:w-64 aspect-square rounded-2xl overflow-hidden shadow-2xl border border-[#262626] flex-shrink-0 bg-neutral-900"
               >
                 <ImageWithFallback
                   src={track.thumbnail || track.cover}
@@ -132,7 +130,7 @@ export default function SingleView({ videoId, track: initialTrack }) {
                 />
 
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <div className="w-16 h-16 rounded-full bg-brand-cyan flex items-center justify-center text-black shadow-xl transform group-hover:scale-110 transition-transform">
+                  <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-black shadow-xl transform group-hover:scale-110 transition-transform">
                     <span className="material-symbols-outlined text-[36px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                       {isCurrentPlaying ? 'pause' : 'play_arrow'}
                     </span>
@@ -140,7 +138,7 @@ export default function SingleView({ videoId, track: initialTrack }) {
                 </div>
 
                 {isVideo && (
-                  <span className="absolute top-3 left-3 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-[11px] font-bold uppercase tracking-wider text-rose-400 border border-rose-400/30 flex items-center gap-1">
+                  <span className="absolute top-3 left-3 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md text-[11px] font-bold uppercase tracking-wider text-white border border-[#333333] flex items-center gap-1">
                     <span className="material-symbols-outlined text-[14px]">smart_display</span>
                     Video
                   </span>
@@ -149,8 +147,8 @@ export default function SingleView({ videoId, track: initialTrack }) {
 
               {/* Media Metadata & Controls */}
               <div className="flex-1 text-center md:text-left min-w-0 space-y-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white/90 text-[11px] font-semibold uppercase tracking-wider">
-                  <span className="material-symbols-outlined text-[14px] text-brand-cyan">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#141414] border border-[#333333] text-[#888888] text-[11px] font-semibold uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-[14px] text-white">
                     {isVideo ? 'videocam' : 'album'}
                   </span>
                   <span>{isVideo ? 'Official Music Video' : 'Standalone Single'}</span>
@@ -160,16 +158,11 @@ export default function SingleView({ videoId, track: initialTrack }) {
                   {track.title}
                 </h1>
 
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-body-md text-outline">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-body-md text-[#888888]">
                   <button
                     type="button"
-                    onClick={() => handleEntityClick({
-                      type: 'artist',
-                      id: track.artistId,
-                      browseId: track.artistId,
-                      name: track.artist,
-                    })}
-                    className="font-semibold text-white hover:text-brand-cyan hover:underline transition-colors"
+                    onClick={() => routeToArtistEntity(track.artist, track.artistId)}
+                    className="font-semibold text-white hover:underline transition-colors"
                   >
                     {track.artist}
                   </button>
@@ -184,7 +177,7 @@ export default function SingleView({ videoId, track: initialTrack }) {
                   <button
                     type="button"
                     onClick={handlePlay}
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-brand-cyan hover:bg-brand-cyan/90 text-black font-bold text-label-lg shadow-xl shadow-brand-cyan/25 hover:scale-105 active:scale-95 transition-all"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white hover:bg-neutral-200 text-black font-bold text-label-lg shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                       {isCurrentPlaying ? 'pause' : 'play_arrow'}
@@ -195,10 +188,10 @@ export default function SingleView({ videoId, track: initialTrack }) {
                   <button
                     type="button"
                     onClick={() => toggleLike(track)}
-                    className={`p-3 rounded-full border transition-all active:scale-90 ${
+                    className={`p-3 rounded-full border transition-all active:scale-90 cursor-pointer ${
                       liked
-                        ? 'bg-brand-pink/20 border-brand-pink text-brand-pink'
-                        : 'bg-white/5 border-white/10 text-white/70 hover:text-brand-pink hover:border-brand-pink/40'
+                        ? 'bg-white text-black border-white'
+                        : 'bg-transparent border-[#333333] text-[#888888] hover:text-white hover:border-[#666666]'
                     }`}
                     title={liked ? 'Unlike' : 'Like'}
                   >
@@ -210,7 +203,7 @@ export default function SingleView({ videoId, track: initialTrack }) {
                   <button
                     type="button"
                     onClick={() => setAddMenuOpen(true)}
-                    className="p-3 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all"
+                    className="p-3 rounded-full bg-transparent hover:bg-white/[0.05] border border-[#333333] hover:border-[#666666] text-[#888888] hover:text-white transition-all cursor-pointer"
                     title="Add to playlist"
                   >
                     <span className="material-symbols-outlined text-[22px]">playlist_add</span>
@@ -221,8 +214,8 @@ export default function SingleView({ videoId, track: initialTrack }) {
           </div>
         </div>
       ) : (
-        <div className="p-8 rounded-2xl bg-white/5 border border-white/10 text-center space-y-3">
-          <p className="text-body-lg text-outline">Could not load this single.</p>
+        <div className="p-8 rounded-2xl bg-[#0a0a0a] border border-[#222222] text-center space-y-3">
+          <p className="text-body-lg text-[#888888]">Could not load this single.</p>
           <BackButton label="Go Back" />
         </div>
       )}

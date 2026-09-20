@@ -17,7 +17,7 @@ export default function LyricsPanel() {
   if (lyricsLoading) {
     return (
       <section className="lg:col-span-6 flex flex-col items-center justify-center gap-3">
-        <div className="w-6 h-6 border-2 border-brand-violet border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
         <p className="text-on-surface-variant text-body-md">Loading lyrics…</p>
       </section>
     );
@@ -73,7 +73,7 @@ export default function LyricsPanel() {
       <div className="absolute bottom-1 right-0 z-20">
         <span className="text-label-sm text-outline/50 uppercase tracking-wider">
           {lyricsSource === 'synced' ? '✦ Synced · lrclib'
-            : lyricsSource === 'plain' ? '✦ Lyrics · Saavn'
+            : lyricsSource === 'plain' ? '✦ Plain Lyrics'
             : '✦ Demo Lyrics'}
         </span>
       </div>

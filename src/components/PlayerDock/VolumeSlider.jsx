@@ -6,15 +6,15 @@ export default function VolumeSlider({ volume, onChange }) {
     <div className="flex items-center gap-1.5 group">
       <button
         onClick={() => onChange(volume > 0 ? 0 : 0.8)}
-        className="text-on-surface-variant hover:text-white transition-colors"
+        className="text-[#888888] hover:text-white transition-colors"
       >
         <span className="material-symbols-outlined text-[20px]">{icon}</span>
       </button>
 
       <div className="relative w-20">
-        <div className="w-full h-[3px] bg-white/15 rounded-full overflow-hidden">
+        <div className="w-full h-[3px] bg-[#262626] rounded-full overflow-hidden">
           <div
-            className="h-full bg-on-surface-variant rounded-full transition-all duration-100"
+            className="h-full bg-white rounded-full transition-all duration-100"
             style={{ width: `${pct}%` }}
           />
         </div>

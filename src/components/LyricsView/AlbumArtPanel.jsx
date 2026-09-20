@@ -8,7 +8,7 @@ export default function AlbumArtPanel() {
     currentSong, isPlaying, togglePlay,
     currentTime, duration, seek, volume, changeVolume,
     isLiked, toggleLike, playPrev, playNext,
-    handleEntityClick, audioQuality, setAudioQuality, activeStreamMeta, toggleView,
+    routeToSongEntity, routeToArtistEntity, audioQuality, setAudioQuality, activeStreamMeta, toggleView,
   } = usePlayer();
 
   const [addMenuSong, setAddMenuSong] = useState(null);
@@ -22,7 +22,7 @@ export default function AlbumArtPanel() {
         {/* Album Artwork — Scaled down for balanced vertical fit */}
         <div className="relative group w-full aspect-square max-w-[260px] sm:max-w-[290px] lg:max-w-[320px] mb-4 sm:mb-5">
           {/* Ambient glow */}
-          <div className="absolute -inset-2 rounded-[24px] bg-gradient-to-r from-brand-violet via-brand-pink to-brand-cyan opacity-25 blur-xl group-hover:opacity-40 transition-all duration-700 pointer-events-none" />
+          <div className="absolute -inset-2 rounded-[24px] bg-white/5 opacity-20 blur-xl group-hover:opacity-30 transition-all duration-700 pointer-events-none" />
           {/* Art */}
           {currentSong?.thumbnail ? (
             <img
@@ -31,7 +31,7 @@ export default function AlbumArtPanel() {
               className="relative w-full h-full object-cover rounded-[20px] shadow-2xl ring-1 ring-white/10"
             />
           ) : (
-            <div className="relative w-full h-full rounded-[20px] bg-gradient-to-br from-brand-violet/20 to-brand-cyan/10 ring-1 ring-white/10 flex items-center justify-center shadow-2xl">
+            <div className="relative w-full h-full rounded-[20px] bg-[#161616] ring-1 ring-white/10 flex items-center justify-center shadow-2xl">
               <span className="material-symbols-outlined text-white/10 text-[80px]">album</span>
             </div>
           )}
@@ -44,10 +44,10 @@ export default function AlbumArtPanel() {
               onClick={() => {
                 if (currentSong) {
                   toggleView(); // close lyrics view
-                  handleEntityClick(currentSong);
+                  routeToSongEntity(currentSong);
                 }
               }}
-              className="text-[20px] sm:text-[24px] font-bold tracking-tight text-white leading-snug truncate hover:text-brand-violet cursor-pointer transition-colors"
+              className="text-[20px] sm:text-[24px] font-bold tracking-tight text-white leading-snug truncate hover:text-neutral-300 cursor-pointer transition-colors"
               title="View track / album details"
             >
               {currentSong?.title || 'No Track Loaded'}
@@ -57,14 +57,10 @@ export default function AlbumArtPanel() {
                 onClick={() => {
                   if (currentSong?.artist) {
                     toggleView();
-                    handleEntityClick({
-                      id: currentSong.artistId || null,
-                      name: currentSong.artist,
-                      type: 'artist'
-                    }, { preferType: 'artist' });
+                    routeToArtistEntity(currentSong.artist, currentSong.artistId);
                   }
                 }}
-                className="text-body-sm font-medium text-on-surface-variant hover:text-white hover:underline cursor-pointer truncate transition-colors"
+                className="text-body-sm font-medium text-neutral-400 hover:text-white hover:underline cursor-pointer truncate transition-colors"
                 title={`View ${currentSong?.artist}'s profile`}
               >
                 {currentSong?.artist || '—'}
@@ -81,7 +77,7 @@ export default function AlbumArtPanel() {
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/[0.08] hover:bg-white/15 text-[10px] font-mono text-white/70 hover:text-white transition-all ml-1"
                   title={`Active Bitrate: ${activeStreamMeta?.bitrate ? Math.round(activeStreamMeta.bitrate / 1000) + ' kbps' : audioQuality} • Itag: ${activeStreamMeta?.itag || 'N/A'} • Click to change`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full ${audioQuality === 'max' ? 'bg-emerald-400' : audioQuality === 'standard' ? 'bg-cyan-400' : 'bg-amber-400'}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${audioQuality === 'max' ? 'bg-white' : audioQuality === 'standard' ? 'bg-neutral-400' : 'bg-neutral-600'}`} />
                   <span>{audioQuality.toUpperCase()}</span>
                   <span className="text-white/40">•</span>
                   <span>{activeStreamMeta?.bitrate ? `${Math.round(activeStreamMeta.bitrate / 1000)}k` : (audioQuality === 'max' ? '140k' : audioQuality === 'standard' ? '131k' : '72k')}</span>
@@ -96,7 +92,7 @@ export default function AlbumArtPanel() {
               <button
                 onClick={() => toggleLike(currentSong)}
                 className={`p-2 rounded-full transition-transform active:scale-90 hover:bg-white/5 ${
-                  liked ? 'text-brand-pink' : 'text-on-surface-variant hover:text-brand-pink'
+                  liked ? 'text-white' : 'text-neutral-400 hover:text-white'
                 }`}
                 title={liked ? 'Unlike' : 'Like'}
               >

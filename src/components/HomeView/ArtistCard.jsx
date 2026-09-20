@@ -1,14 +1,16 @@
+import { getHighResImage } from '../../utils/imageUtils.js';
+
 export default function ArtistCard({ artist, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-white/5 transition-all duration-300 w-24"
+      className="group flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-white/[0.04] transition-all duration-200 w-24 text-center"
     >
       {/* Circular avatar */}
-      <div className="relative w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-brand-violet/30 to-brand-pink/20 ring-2 ring-white/10 group-hover:ring-brand-violet/50 transition-all">
+      <div className="relative w-16 h-16 aspect-square rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#333333] group-hover:ring-white transition-all">
         {artist.thumbnail ? (
           <img
-            src={artist.thumbnail}
+            src={getHighResImage(artist.thumbnail)}
             alt={artist.title}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />
@@ -18,16 +20,16 @@ export default function ArtistCard({ artist, onClick }) {
           </span>
         )}
         {/* Hover overlay */}
-        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
           <span className="material-symbols-outlined text-white text-[22px]" style={{fontVariationSettings:"'FILL' 1"}}>play_circle</span>
         </div>
       </div>
 
       {/* Name */}
-      <span className="text-label-md font-medium text-white text-center line-clamp-2 group-hover:text-[#d0bcff] transition-colors">
+      <span className="text-label-md font-medium text-white text-center line-clamp-2 group-hover:underline transition-colors">
         {artist.title}
       </span>
-      <span className="text-label-sm text-outline">Artist</span>
+      <span className="text-label-sm text-[#888888]">Artist</span>
     </button>
   );
 }

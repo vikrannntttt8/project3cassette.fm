@@ -5,17 +5,17 @@ export default function SeekBar({ currentTime, duration, onSeek }) {
 
   return (
     <div className="w-full flex items-center gap-2.5 select-none">
-      <span className="text-label-sm text-on-surface-variant min-w-[38px] text-right tabular-nums font-mono text-[12px]">
+      <span className="text-label-sm text-[#888888] min-w-[38px] text-right tabular-nums font-mono text-[12px]">
         {formatTime(currentTime)}
       </span>
 
       {/* Track bar */}
       <div className="relative flex-1 h-1 group cursor-pointer flex items-center">
         {/* Background track */}
-        <div className="absolute inset-0 bg-white/15 rounded-full overflow-hidden">
-          {/* Fill gradient */}
+        <div className="absolute inset-0 bg-[#262626] rounded-full overflow-hidden">
+          {/* Fill pure white */}
           <div
-            className="h-full seek-fill rounded-full transition-all duration-150"
+            className="h-full bg-white rounded-full transition-all duration-150"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -36,7 +36,7 @@ export default function SeekBar({ currentTime, duration, onSeek }) {
         />
       </div>
 
-      <span className="text-label-sm text-on-surface-variant min-w-[38px] text-left tabular-nums font-mono text-[12px]">
+      <span className="text-label-sm text-[#888888] min-w-[38px] text-left tabular-nums font-mono text-[12px]">
         {formatTime(duration)}
       </span>
     </div>

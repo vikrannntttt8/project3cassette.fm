@@ -97,7 +97,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
               onClick={() => setActiveSection('liked')}
               className={`px-4 py-1.5 rounded-full text-label-md font-medium transition-all flex items-center gap-1.5 ${
                 activeSection === 'liked'
-                  ? 'bg-brand-pink text-white font-semibold shadow-lg shadow-brand-pink/20'
+                  ? 'bg-white text-black font-semibold'
                   : 'bg-white/8 text-on-surface-variant hover:bg-white/12 hover:text-white'
               }`}
             >
@@ -157,8 +157,8 @@ export default function LibraryView({ initialSection = 'playlists' }) {
         {!activePlaylist && !activeAlbum && activeSection === 'playlists' && (
           <div className="flex flex-col gap-6">
             {creatingPlaylist ? (
-              <div className="flex items-center gap-3 p-4 rounded-2xl glass-card border border-white/10">
-                <span className="material-symbols-outlined text-brand-violet text-[22px]">queue_music</span>
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-[#111111] border border-white/10">
+                <span className="material-symbols-outlined text-white text-[22px]">queue_music</span>
                 <input
                   autoFocus
                   value={newPlaylistTitle}
@@ -169,7 +169,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                 />
                 <button
                   onClick={handleCreatePlaylist}
-                  className="px-4 py-1.5 rounded-full bg-brand-violet text-white text-label-md font-semibold hover:bg-brand-violet/80 transition-colors"
+                  className="px-4 py-1.5 rounded-full bg-white text-black text-label-md font-semibold hover:bg-white/90 transition-colors"
                 >
                   Create
                 </button>
@@ -180,9 +180,9 @@ export default function LibraryView({ initialSection = 'playlists' }) {
             ) : (
               <button
                 onClick={() => setCreatingPlaylist(true)}
-                className="flex items-center gap-3 px-4 py-3 rounded-2xl glass-card border border-dashed border-white/15 hover:border-brand-violet/40 transition-all group"
+                className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#0a0a0a] border border-dashed border-white/20 hover:border-white/50 transition-all group"
               >
-                <span className="material-symbols-outlined text-[22px] text-brand-violet">add_circle</span>
+                <span className="material-symbols-outlined text-[22px] text-white">add_circle</span>
                 <span className="text-body-lg text-on-surface-variant group-hover:text-white transition-colors">Create New Playlist</span>
               </button>
             )}
@@ -200,7 +200,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                 <button
                   key={p.id}
                   onClick={() => setActivePlaylist(p.id)}
-                  className="group flex flex-col gap-2 rounded-xl p-3 glass-card border border-white/5 hover:border-brand-violet/20 transition-all text-left"
+                  className="group flex flex-col gap-2 rounded-xl p-3 bg-[#0e0e0e] border border-[#222222] hover:border-white/30 transition-all text-left"
                 >
                   <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-white/5">
                     {p.thumbnail ? (
@@ -217,7 +217,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                     </div>
                   </div>
                   <div>
-                    <p className="text-label-lg font-semibold text-white truncate group-hover:text-[#d0bcff] transition-colors">{p.title}</p>
+                    <p className="text-label-lg font-semibold text-white truncate group-hover:text-neutral-300 transition-colors">{p.title}</p>
                     <p className="text-body-sm text-on-surface-variant">{p.songs.length} tracks</p>
                   </div>
                 </button>
@@ -236,7 +236,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                 </span>
                 <button
                   onClick={() => playCollection(liked, 0)}
-                  className="flex items-center gap-2 px-5 py-2 rounded-full bg-brand-pink text-white font-semibold text-label-md hover:scale-105 active:scale-95 transition-all shadow-lg shadow-brand-pink/20"
+                  className="flex items-center gap-2 px-5 py-2 rounded-full bg-white text-black font-semibold text-label-md hover:scale-105 active:scale-95 transition-all shadow-lg"
                 >
                   <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
                   Play All Liked
@@ -246,7 +246,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
 
             {liked.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-16 text-center">
-                <span className="material-symbols-outlined text-[56px] text-brand-pink/20">favorite_border</span>
+                <span className="material-symbols-outlined text-[56px] text-white/20">favorite_border</span>
                 <p className="text-headline-sm text-on-surface-variant">No liked songs yet</p>
                 <p className="text-body-md text-outline">Hit the heart icon on any song, card, or player bar to save it here</p>
               </div>
@@ -272,9 +272,9 @@ export default function LibraryView({ initialSection = 'playlists' }) {
         {!activePlaylist && !activeAlbum && activeSection === 'albums' && (
           <div className="flex flex-col gap-6">
             {creatingAlbum ? (
-              <div className="flex flex-col gap-3 p-4 rounded-2xl glass-card border border-white/10 max-w-md">
+              <div className="flex flex-col gap-3 p-4 rounded-2xl bg-[#111111] border border-white/10 max-w-md">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-brand-cyan text-[22px]">album</span>
+                  <span className="material-symbols-outlined text-white text-[22px]">album</span>
                   <span className="text-headline-sm font-semibold text-white">Create Custom Album</span>
                 </div>
                 <input
@@ -282,13 +282,13 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                   value={newAlbumTitle}
                   onChange={e => setNewAlbumTitle(e.target.value)}
                   placeholder="Album title…"
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-body-md outline-none focus:border-brand-cyan/60"
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-body-md outline-none focus:border-white/40"
                 />
                 <input
                   value={newAlbumArtist}
                   onChange={e => setNewAlbumArtist(e.target.value)}
                   placeholder="Curator / Artist name…"
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-body-md outline-none focus:border-brand-cyan/60"
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-body-md outline-none focus:border-white/40"
                 />
                 <div className="flex items-center gap-2 justify-end mt-1">
                   <button
@@ -299,7 +299,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                   </button>
                   <button
                     onClick={handleCreateAlbum}
-                    className="px-4 py-1.5 rounded-lg bg-brand-cyan text-black font-semibold text-label-md hover:bg-brand-cyan/80 transition-colors"
+                    className="px-4 py-1.5 rounded-lg bg-white text-black font-semibold text-label-md hover:bg-white/90 transition-colors"
                   >
                     Create Album
                   </button>
@@ -308,9 +308,9 @@ export default function LibraryView({ initialSection = 'playlists' }) {
             ) : (
               <button
                 onClick={() => setCreatingAlbum(true)}
-                className="flex items-center gap-3 px-4 py-3 rounded-2xl glass-card border border-dashed border-white/15 hover:border-brand-cyan/40 transition-all group"
+                className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#0a0a0a] border border-dashed border-white/20 hover:border-white/50 transition-all group"
               >
-                <span className="material-symbols-outlined text-[22px] text-brand-cyan">add_circle</span>
+                <span className="material-symbols-outlined text-[22px] text-white">add_circle</span>
                 <span className="text-body-lg text-on-surface-variant group-hover:text-white transition-colors">Create Custom Album</span>
               </button>
             )}
@@ -328,13 +328,13 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                 <button
                   key={a.id}
                   onClick={() => setActiveAlbum(a.id)}
-                  className="group flex flex-col gap-2 rounded-xl p-3 glass-card border border-white/5 hover:border-brand-cyan/20 transition-all text-left"
+                  className="group flex flex-col gap-2 rounded-xl p-3 bg-[#0e0e0e] border border-[#222222] hover:border-white/30 transition-all text-left"
                 >
                   <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-white/5">
                     {a.thumbnail ? (
                       <img src={a.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-cyan/10 to-brand-violet/10">
+                      <div className="w-full h-full flex items-center justify-center bg-[#181818]">
                         <span className="material-symbols-outlined text-white/15 text-[40px]">album</span>
                       </div>
                     )}
@@ -345,7 +345,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                     </div>
                   </div>
                   <div>
-                    <p className="text-label-lg font-semibold text-white truncate group-hover:text-brand-cyan transition-colors">{a.title}</p>
+                    <p className="text-label-lg font-semibold text-white truncate group-hover:text-neutral-300 transition-colors">{a.title}</p>
                     <p className="text-body-sm text-on-surface-variant truncate">{a.artist} · {a.songs.length} tracks</p>
                   </div>
                 </button>
@@ -376,7 +376,7 @@ function CollectionDetail({ item, type, currentSong, isPlaying, onPlaySong, onRe
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex items-end gap-6 flex-wrap sm:flex-nowrap">
-        <div className="w-36 h-36 rounded-2xl overflow-hidden bg-gradient-to-br from-brand-violet/30 to-brand-cyan/20 flex-shrink-0 shadow-2xl">
+        <div className="w-36 h-36 rounded-2xl overflow-hidden bg-[#161616] border border-[#222222] flex-shrink-0 shadow-2xl">
           {item.thumbnail ? (
             <img src={item.thumbnail} className="w-full h-full object-cover" alt="" />
           ) : (
@@ -398,15 +398,15 @@ function CollectionDetail({ item, type, currentSong, isPlaying, onPlaySong, onRe
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleRename()}
-                className="bg-white/5 border border-brand-violet/40 rounded-lg px-3 py-1 text-white text-headline-md outline-none"
+                className="bg-white/5 border border-white/30 rounded-lg px-3 py-1 text-white text-headline-md outline-none"
               />
-              <button onClick={handleRename} className="text-brand-violet hover:text-white transition-colors">
+              <button onClick={handleRename} className="text-white hover:text-neutral-300 transition-colors">
                 <span className="material-symbols-outlined text-[22px]">check</span>
               </button>
             </div>
           ) : (
             <button onClick={() => setEditing(true)} className="text-left group">
-              <h2 className="text-headline-xl font-bold text-white tracking-tight group-hover:text-[#d0bcff] transition-colors">{item.title}</h2>
+              <h2 className="text-headline-xl font-bold text-white tracking-tight group-hover:text-neutral-300 transition-colors">{item.title}</h2>
             </button>
           )}
           <p className="text-body-md text-on-surface-variant">

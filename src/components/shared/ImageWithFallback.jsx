@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { getHighResImage } from '../../utils/imageUtils.js';
 
 /**
  * ImageWithFallback
  * Gracefully loads image URLs and falls back to a clean dark icon
  * on error, broken link, or undefined/empty src.
+ * Automatically upgrades thumbnails to high-resolution (=s800, hq720).
  */
 export default function ImageWithFallback({
   src,
@@ -14,14 +16,15 @@ export default function ImageWithFallback({
   loading = 'lazy',
   ...props
 }) {
-  const [hasError, setHasError] = useState(!src);
+  const normalizedSrc = getHighResImage(src);
+  const [hasError, setHasError] = useState(!normalizedSrc);
 
   // Reset error state if src changes
   useEffect(() => {
-    setHasError(!src);
-  }, [src]);
+    setHasError(!normalizedSrc);
+  }, [normalizedSrc]);
 
-  if (hasError || !src) {
+  if (hasError || !normalizedSrc) {
     return (
       <div
         className={`flex items-center justify-center bg-white/5 select-none ${className}`}
@@ -36,7 +39,7 @@ export default function ImageWithFallback({
 
   return (
     <img
-      src={src}
+      src={normalizedSrc}
       alt={alt}
       className={className}
       loading={loading}

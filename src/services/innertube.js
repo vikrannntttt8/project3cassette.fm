@@ -18,7 +18,7 @@ export async function getInnertube() {
 
   if (!initPromise) {
     initPromise = Innertube.create({
-      cache: new UniversalCache(true),
+      cache: new UniversalCache(false),
       client_type: ClientType.MUSIC, // WEB_REMIX YouTube Music client
     }).then((yt) => {
       innertubeInstance = yt;
@@ -883,16 +883,167 @@ export async function getHomeFeedData() {
       .filter((a) => a.id)
       .slice(0, 10);
 
+    // Curated resilient fallback tracks if API is rate-limited or cold-starting
+    const fallbackQuickPicks = [
+      {
+        id: 'fJ9rUzIMcZQ',
+        videoId: 'fJ9rUzIMcZQ',
+        title: 'Bohemian Rhapsody',
+        artist: 'Queen',
+        duration: 354,
+        thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
+        cover: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
+        isOfficial: true,
+        type: 'song',
+      },
+      {
+        id: '4NRXx6U8ABQ',
+        videoId: '4NRXx6U8ABQ',
+        title: 'Blinding Lights',
+        artist: 'The Weeknd',
+        duration: 200,
+        thumbnail: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
+        cover: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
+        isOfficial: true,
+        type: 'song',
+      },
+      {
+        id: 'JGwWNGJdvx8',
+        videoId: 'JGwWNGJdvx8',
+        title: 'Shape of You',
+        artist: 'Ed Sheeran',
+        duration: 233,
+        thumbnail: 'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg',
+        cover: 'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg',
+        isOfficial: true,
+        type: 'song',
+      },
+      {
+        id: 'kXYiU_JCYtU',
+        videoId: 'kXYiU_JCYtU',
+        title: 'Numb',
+        artist: 'Linkin Park',
+        duration: 187,
+        thumbnail: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
+        cover: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
+        isOfficial: true,
+        type: 'song',
+      },
+      {
+        id: '09R8_2nJtjg',
+        videoId: '09R8_2nJtjg',
+        title: 'Sugar',
+        artist: 'Maroon 5',
+        duration: 235,
+        thumbnail: 'https://i.ytimg.com/vi/09R8_2nJtjg/hqdefault.jpg',
+        cover: 'https://i.ytimg.com/vi/09R8_2nJtjg/hqdefault.jpg',
+        isOfficial: true,
+        type: 'song',
+      },
+      {
+        id: 'L3wKzyIN1yk',
+        videoId: 'L3wKzyIN1yk',
+        title: 'Feel Good Inc.',
+        artist: 'Gorillaz',
+        duration: 221,
+        thumbnail: 'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg',
+        cover: 'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg',
+        isOfficial: true,
+        type: 'song',
+      },
+      {
+        id: 'hT_nvWreIhg',
+        videoId: 'hT_nvWreIhg',
+        title: 'Counting Stars',
+        artist: 'OneRepublic',
+        duration: 257,
+        thumbnail: 'https://i.ytimg.com/vi/hT_nvWreIhg/hqdefault.jpg',
+        cover: 'https://i.ytimg.com/vi/hT_nvWreIhg/hqdefault.jpg',
+        isOfficial: true,
+        type: 'song',
+      },
+      {
+        id: '3JZ_D3ELwOQ',
+        videoId: '3JZ_D3ELwOQ',
+        title: 'Radioactive',
+        artist: 'Imagine Dragons',
+        duration: 186,
+        thumbnail: 'https://i.ytimg.com/vi/3JZ_D3ELwOQ/hqdefault.jpg',
+        cover: 'https://i.ytimg.com/vi/3JZ_D3ELwOQ/hqdefault.jpg',
+        isOfficial: true,
+        type: 'song',
+      }
+    ];
+
+    const fallbackTrendingAlbums = [
+      {
+        id: 'MPREb_V2m2H7oVw9b',
+        browseId: 'MPREb_V2m2H7oVw9b',
+        title: 'After Hours',
+        artist: 'The Weeknd',
+        year: '2020',
+        thumbnail: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
+        cover: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
+        type: 'album',
+      },
+      {
+        id: 'MPREb_kZ3yR3q7sXp',
+        browseId: 'MPREb_kZ3yR3q7sXp',
+        title: 'A Night at the Opera',
+        artist: 'Queen',
+        year: '1975',
+        thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
+        cover: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
+        type: 'album',
+      },
+      {
+        id: 'MPREb_tZ2hF9yLmPq',
+        browseId: 'MPREb_tZ2hF9yLmPq',
+        title: 'Meteora',
+        artist: 'Linkin Park',
+        year: '2003',
+        thumbnail: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
+        cover: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
+        type: 'album',
+      }
+    ];
+
+    const finalQuickPicks = quickPicks.length > 0 ? quickPicks : fallbackQuickPicks;
+    const finalTrendingAlbums = trendingAlbums.length > 0 ? trendingAlbums : fallbackTrendingAlbums;
+
     return {
-      quickPicks,
-      trendingAlbums,
-      dailyMixes: dynamicSections[0]?.items || [],
+      quickPicks: finalQuickPicks,
+      trendingAlbums: finalTrendingAlbums,
+      dailyMixes: dynamicSections[0]?.items?.length ? dynamicSections[0].items : finalQuickPicks.slice(0, 6),
       dynamicSections,
     };
   } catch (err) {
     console.error('[Innertube] getHomeFeedData error:', err);
     return {
-      quickPicks: [],
+      quickPicks: [
+        {
+          id: '4NRXx6U8ABQ',
+          videoId: '4NRXx6U8ABQ',
+          title: 'Blinding Lights',
+          artist: 'The Weeknd',
+          duration: 200,
+          thumbnail: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
+          cover: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
+          isOfficial: true,
+          type: 'song',
+        },
+        {
+          id: 'fJ9rUzIMcZQ',
+          videoId: 'fJ9rUzIMcZQ',
+          title: 'Bohemian Rhapsody',
+          artist: 'Queen',
+          duration: 354,
+          thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
+          cover: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
+          isOfficial: true,
+          type: 'song',
+        }
+      ],
       trendingAlbums: [],
       dailyMixes: [],
       dynamicSections: [],

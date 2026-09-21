@@ -47,6 +47,15 @@ export default function HomeView() {
 
   const [addMenuSong, setAddMenuSong] = useState(null);
   const [selectedArtist, setSelectedArtist] = useState(null);
+  const [mobileChip, setMobileChip] = useState('all'); // YT Music filter chips
+
+  const HOME_CHIPS = [
+    { id: 'all',    label: 'All' },
+    { id: 'picks',  label: 'Quick Picks' },
+    { id: 'mixes',  label: 'Mixes' },
+    { id: 'albums', label: 'Albums' },
+    { id: 'artists',label: 'Artists' },
+  ];
 
   // ── Play handlers ─────────────────────────────────────────────────
   const handlePlaySong = useCallback(
@@ -243,9 +252,9 @@ export default function HomeView() {
   const showSearch = query.trim().length > 0;
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto relative bg-[#000000]">
-      {/* ── Header ──────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-20 px-4 sm:px-6 md:px-8 py-4 bg-[#000000]/90 backdrop-blur-xl border-b border-[#1a1a1a] pl-14 md:pl-8">
+    <div className="h-full flex flex-col overflow-y-auto relative bg-[#000000] pt-14 md:pt-0">
+      {/* ── Desktop-only Header (hidden on mobile — MobileHeader handles branding) ── */}
+      <header className="hidden md:block sticky top-0 z-20 px-4 sm:px-6 md:px-8 py-4 bg-[#000000]/90 backdrop-blur-xl border-b border-[#1a1a1a]">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex flex-col justify-center">
             <h1 className="text-headline-md sm:text-headline-lg font-bold text-white tracking-tight">
@@ -257,7 +266,7 @@ export default function HomeView() {
           </div>
         </div>
 
-        {/* ── Search Tabs ───────────────────────────────────────── */}
+        {/* Desktop Search Tabs */}
         {showSearch && (
           <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1 no-scrollbar">
             {SEARCH_TABS.map((tab) => (
@@ -277,7 +286,26 @@ export default function HomeView() {
         )}
       </header>
 
-      {/* ── Content ─────────────────────────────────────────────── */}
+      {/* ── Mobile filter chips (YT Music style — md:hidden, sticky below MobileHeader) ── */}
+      {!showSearch && (
+        <div className="md:hidden sticky top-[56px] z-20 bg-black/95 backdrop-blur-xl border-b border-[#111] px-4 py-2.5 flex gap-2 overflow-x-auto no-scrollbar flex-shrink-0">
+          {HOME_CHIPS.map((chip) => (
+            <button
+              key={chip.id}
+              onClick={() => setMobileChip(chip.id)}
+              className={`px-4 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                mobileChip === chip.id
+                  ? 'bg-white text-black font-semibold'
+                  : 'bg-[#1a1a1a] text-[#aaaaaa] border border-[#2a2a2a] hover:border-[#555] hover:text-white'
+              }`}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Content ── */}
       <main className="flex-1 px-4 sm:px-6 md:px-8 py-5 sm:py-6 pb-36">
         {showSearch ? (
           renderResults()
@@ -388,12 +416,12 @@ function ShelfHeader({ title, subtitle, icon, onPrev, onNext, children }) {
       </div>
       <div className="flex items-center gap-2 flex-shrink-0 ml-3">
         {children}
-        <div className="flex items-center gap-1.5 ml-1">
+        {/* Desktop-only carousel nav arrows — hidden on touch screens */}
+        <div className="hidden md:flex items-center gap-1.5 ml-1">
           <button
             onClick={onPrev}
             className="w-10 h-10 rounded-full border border-[#2a2a2a] hover:border-white bg-[#0d0d0d] hover:bg-white/10 text-[#888888] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Previous"
-            title="Previous"
           >
             <span className="material-symbols-outlined text-[18px]">chevron_left</span>
           </button>
@@ -401,7 +429,6 @@ function ShelfHeader({ title, subtitle, icon, onPrev, onNext, children }) {
             onClick={onNext}
             className="w-10 h-10 rounded-full border border-[#2a2a2a] hover:border-white bg-[#0d0d0d] hover:bg-white/10 text-[#888888] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Next"
-            title="Next"
           >
             <span className="material-symbols-outlined text-[18px]">chevron_right</span>
           </button>

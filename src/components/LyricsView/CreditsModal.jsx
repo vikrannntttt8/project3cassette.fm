@@ -177,7 +177,7 @@ export default function CreditsModal({ isOpen, onClose, currentSong }) {
         {/* Footer */}
         <div className="pt-3 border-t border-[#1a1a1a] flex items-center justify-between">
           <p className="text-[11px] text-[#555555]">
-            Powered by Spotify Web API & Pulse Audio Engine
+            Powered by Spotify Web API &amp; cassette.fm Audio Engine
           </p>
           <button
             onClick={onClose}

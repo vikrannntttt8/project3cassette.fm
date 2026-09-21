@@ -58,9 +58,9 @@ export default function LibraryView({ initialSection = 'playlists' }) {
   const currentItem = pl || alb;
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto">
+    <div className="h-full flex flex-col overflow-y-auto pt-14 md:pt-0">
       {/* ── Header ──────────────────────────────────────────── */}
-      <header className="sticky top-0 z-20 px-4 sm:px-6 md:px-8 pl-14 md:pl-8 py-4 bg-[#09090B]/80 backdrop-blur-xl border-b border-white/5">
+      <header className="sticky top-14 md:top-0 z-20 px-4 sm:px-6 md:px-8 py-4 bg-[#09090B]/80 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center gap-4">
           {(activePlaylist || activeAlbum) && (
             <button

@@ -32,10 +32,10 @@ export default function LyricsPanel() {
   }
 
   return (
-    <section className="lg:col-span-6 h-full flex flex-col justify-center overflow-hidden relative">
+    <section className="lg:col-span-7 h-full flex flex-col justify-center overflow-hidden relative">
       {/* Gradient fade masks */}
-      <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-[#09090B] to-transparent pointer-events-none z-10" />
-      <div className="absolute bottom-0 inset-x-0 h-28 bg-gradient-to-t from-[#09090B] to-transparent pointer-events-none z-10" />
+      <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-[#09090B] to-transparent pointer-events-none z-10" />
+      <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-[#09090B] to-transparent pointer-events-none z-10" />
 
       {/* Lyrics scroll */}
       <div ref={containerRef} className="overflow-y-auto py-20 space-y-7 lg:space-y-9 px-1"

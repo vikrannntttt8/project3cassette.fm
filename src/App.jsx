@@ -11,14 +11,15 @@ import AlbumView        from './components/AlbumView/AlbumView.jsx';
 import SingleView       from './components/SingleView/SingleView.jsx';
 import SettingsModal    from './components/shared/SettingsModal.jsx';
 import MobileBottomNav  from './components/shared/MobileBottomNav.jsx';
+import MobileHeader     from './components/shared/MobileHeader.jsx';
 
 function AppShell() {
   const { view, navState, currentSong, isSettingsOpen, setIsSettingsOpen, streamToast } = usePlayer();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
-  // Close mobile drawer on view change
+  // Close mobile search on view change
   useEffect(() => {
-    setMobileMenuOpen(false);
+    setMobileSearchOpen(false);
   }, [view]);
 
   return (
@@ -40,39 +41,29 @@ function AppShell() {
         <div className="absolute inset-0 bg-black/80" />
       </div>
 
-      {/* ── Mobile Hamburger Toggle (Tablet only — bottom nav handles phone) ── */}
+      {/* ── Mobile Branded Header (< md — hidden on desktop & LyricsView) ── */}
       {view !== 'lyrics' && !isSettingsOpen && (
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="hidden fixed top-4 left-4 z-40 w-11 h-11 rounded-xl bg-black text-white hover:bg-white/10 items-center justify-center shadow-lg border border-[#2a2a2a] cursor-pointer"
-          aria-label="Toggle Navigation"
-        >
-          <span className="material-symbols-outlined text-[22px]">
-            {mobileMenuOpen ? 'close' : 'menu'}
-          </span>
-        </button>
+        <MobileHeader onSearchClick={() => setMobileSearchOpen(!mobileSearchOpen)} />
       )}
 
-      {/* ── Mobile Drawer Backdrop ────────────────────────────── */}
-      {mobileMenuOpen && (
+      {/* ── Mobile Drawer Backdrop — desktop-only sidebar drawer (hidden on phones) ── */}
+      {false && (
         <div
           className="md:hidden fixed inset-0 z-30 bg-black/80 backdrop-blur-sm transition-opacity"
-          onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      {/* ── Sidebar ───────────────────────────────────────────── */}
-      {/* On desktop: fixed left bar. On mobile: slide-over drawer */}
+      {/* ── Sidebar — desktop only (md+). Mobile uses MobileHeader + MobileBottomNav ── */}
       <div className={`
-        fixed inset-y-0 left-0 z-40 md:static md:z-20 transition-all duration-300 flex-shrink-0 bg-black
-        ${view === 'lyrics' || isSettingsOpen ? 'hidden md:w-0 md:overflow-hidden md:opacity-0' : ''}
-        ${mobileMenuOpen ? 'translate-x-0 w-64 shadow-2xl' : '-translate-x-full md:translate-x-0 md:w-60'}
+        hidden md:block md:static md:z-20 flex-shrink-0 bg-black
+        ${view === 'lyrics' || isSettingsOpen ? 'md:w-0 md:overflow-hidden md:opacity-0' : 'md:w-60'}
       `}>
         <Sidebar />
       </div>
 
       {/* ── Main content with smooth transitions ─────────────── */}
-      <div className="flex-1 relative z-10 overflow-hidden bg-black">
+      {/* Main content — on desktop, views use pb-20 or pb-36 to clear footer; on mobile, pb-36 clears mini-player+nav */}
+      <div className="flex-1 relative z-10 overflow-hidden bg-black md:pb-20">
         <div key={`${view}-${navState.currentId || ''}`} className="h-full w-full animate-page-slide">
           {(view === 'home' || view === 'search') && <HomeView />}
           {view === 'artist'  && <ArtistView browseId={navState.currentId} artistName={navState.extra?.name} />}

@@ -9,17 +9,17 @@ export default function SeekBar({ currentTime, duration, onSeek }) {
         {formatTime(currentTime)}
       </span>
 
-      {/* Track bar */}
-      <div className="relative flex-1 h-1 group cursor-pointer flex items-center">
+      {/* Track bar — visual is slim but touch area is full 44px */}
+      <div className="relative flex-1 min-h-[44px] group cursor-pointer flex items-center">
         {/* Background track */}
-        <div className="absolute inset-0 bg-[#262626] rounded-full overflow-hidden">
+        <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-[#262626] rounded-full overflow-hidden">
           {/* Fill pure white */}
           <div
             className="h-full bg-white rounded-full transition-all duration-150"
             style={{ width: `${progress}%` }}
           />
         </div>
-        {/* Range input overlay (invisible, handles interaction) */}
+        {/* Range input overlay (44px hit area, invisible) */}
         <input
           type="range"
           min={0}

@@ -9,7 +9,7 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
 
   return (
     <div
-      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer ${
+      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 cursor-pointer min-h-[56px] ${
         isActive ? 'bg-white/10 border border-white/20' : 'hover:bg-white/[0.04] border border-transparent'
       }`}
       onClick={onPlay}
@@ -81,12 +81,12 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
       )}
 
       {/* Actions */}
-      <div className={`flex items-center gap-1.5 flex-shrink-0 transition-opacity ${
+      <div className={`flex items-center gap-0.5 flex-shrink-0 transition-opacity ${
         liked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
       }`}>
         <button
           onClick={e => { e.stopPropagation(); toggleLike(song); }}
-          className={`p-1.5 rounded-full transition-transform active:scale-90 ${
+          className={`p-2 rounded-full transition-transform active:scale-90 min-w-[40px] min-h-[40px] flex items-center justify-center ${
             liked ? 'text-white' : 'text-[#888888] hover:text-white'
           }`}
           title={liked ? 'Unlike' : 'Like'}

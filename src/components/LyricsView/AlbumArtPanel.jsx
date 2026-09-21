@@ -19,9 +19,9 @@ export default function AlbumArtPanel() {
 
   return (
     <>
-      <section className="lg:col-span-6 flex flex-col justify-center items-center lg:items-start w-full max-w-[360px] sm:max-w-[380px] mx-auto lg:mx-0 select-none">
+      <section className="lg:col-span-6 flex flex-col justify-center items-center lg:items-start w-full max-w-[320px] sm:max-w-[380px] mx-auto lg:mx-0 select-none">
         {/* Album Artwork — Scaled down for balanced vertical fit */}
-        <div className="relative group w-full aspect-square max-w-[260px] sm:max-w-[290px] lg:max-w-[320px] mb-4 sm:mb-5">
+        <div className="relative group w-full aspect-square max-w-[200px] sm:max-w-[260px] lg:max-w-[320px] mb-3 sm:mb-5">
           {/* Ambient glow */}
           <div className="absolute -inset-2 rounded-[24px] bg-white/5 opacity-20 blur-xl group-hover:opacity-30 transition-all duration-700 pointer-events-none" />
           {/* Art */}
@@ -92,10 +92,10 @@ export default function AlbumArtPanel() {
 
           {currentSong && (
             <div className="flex items-center gap-1 flex-shrink-0">
-              {/* Heart / Like button */}
+              {/* Heart / Like button — 44×44px */}
               <button
                 onClick={() => toggleLike(currentSong)}
-                className={`p-2 rounded-full transition-transform active:scale-90 hover:bg-white/5 ${
+                className={`p-2 rounded-full transition-transform active:scale-90 hover:bg-white/5 min-w-[44px] min-h-[44px] flex items-center justify-center ${
                   liked ? 'text-white' : 'text-neutral-400 hover:text-white'
                 }`}
                 title={liked ? 'Unlike' : 'Like'}
@@ -106,10 +106,10 @@ export default function AlbumArtPanel() {
                 </span>
               </button>
 
-              {/* TASK 3: Add to Playlist button */}
+              {/* Add to Playlist button — 44×44px */}
               <button
                 onClick={() => setAddMenuSong(currentSong)}
-                className="p-2 rounded-full text-on-surface-variant hover:text-white hover:bg-white/5 transition-colors"
+                className="p-2 rounded-full text-on-surface-variant hover:text-white hover:bg-white/5 transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                 title="Add to playlist"
               >
                 <span className="material-symbols-outlined text-[24px]">
@@ -122,8 +122,8 @@ export default function AlbumArtPanel() {
 
         {/* Seek bar with clean aligned timers */}
         <div className="w-full mb-4">
-          <div className="relative w-full flex items-center group cursor-pointer h-2">
-            <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+          <div className="relative w-full flex items-center group cursor-pointer min-h-[44px]">
+            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-white/10 rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full seek-fill transition-all duration-150"
                 style={{ width: `${progress}%` }}
@@ -146,22 +146,22 @@ export default function AlbumArtPanel() {
           </div>
         </div>
 
-        {/* Scaled-down Playback Controls (compact and balanced) */}
-        <div className="w-full flex items-center justify-between px-2 mb-4">
-          <button className="text-on-surface-variant hover:text-white transition-colors p-1.5">
+        {/* Playback Controls — all buttons 44×44px touch targets */}
+        <div className="w-full flex items-center justify-between px-1 mb-4">
+          <button className="text-on-surface-variant hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-white/5">
             <span className="material-symbols-outlined text-[20px]">shuffle</span>
           </button>
 
           <button
             onClick={playPrev}
             disabled={!currentSong}
-            className="text-on-surface-variant hover:text-white transition-colors disabled:opacity-30 p-1.5"
+            className="text-on-surface-variant hover:text-white transition-colors disabled:opacity-30 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-white/5"
             title="Previous"
           >
             <span className="material-symbols-outlined text-[26px]">skip_previous</span>
           </button>
 
-          {/* Main play/pause button (scaled from 14x14 down to 12x12) */}
+          {/* Main play/pause */}
           <button
             onClick={togglePlay}
             disabled={!currentSong}
@@ -176,22 +176,22 @@ export default function AlbumArtPanel() {
           <button
             onClick={playNext}
             disabled={!currentSong}
-            className="text-on-surface-variant hover:text-white transition-colors disabled:opacity-30 p-1.5"
+            className="text-on-surface-variant hover:text-white transition-colors disabled:opacity-30 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-white/5"
             title="Next"
           >
             <span className="material-symbols-outlined text-[26px]">skip_next</span>
           </button>
 
-          <button className="text-on-surface-variant hover:text-white transition-colors p-1.5">
+          <button className="text-on-surface-variant hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-white/5">
             <span className="material-symbols-outlined text-[20px]">repeat</span>
           </button>
         </div>
 
-        {/* Compact Volume slider */}
+        {/* Volume slider — 44px touch height */}
         <div className="w-full flex items-center gap-2.5 px-1">
-          <span className="material-symbols-outlined text-on-surface-variant text-[16px]">volume_down</span>
-          <div className="relative flex-1">
-            <div className="w-full h-[3px] bg-white/10 rounded-full overflow-hidden">
+          <span className="material-symbols-outlined text-on-surface-variant text-[16px] flex-shrink-0">volume_down</span>
+          <div className="relative flex-1 min-h-[44px] flex items-center">
+            <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[3px] bg-white/10 rounded-full overflow-hidden">
               <div className="bg-on-surface-variant h-full rounded-full" style={{ width: `${volume * 100}%` }} />
             </div>
             <input
@@ -202,7 +202,7 @@ export default function AlbumArtPanel() {
               className="volume-slider absolute inset-0 w-full opacity-0 cursor-pointer h-full"
             />
           </div>
-          <span className="material-symbols-outlined text-on-surface-variant text-[16px]">volume_up</span>
+          <span className="material-symbols-outlined text-on-surface-variant text-[16px] flex-shrink-0">volume_up</span>
         </div>
       </section>
 

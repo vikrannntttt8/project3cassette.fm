@@ -4,10 +4,10 @@ export default function ArtistCard({ artist, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-white/[0.04] transition-all duration-200 w-24 text-center"
+      className="group flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-white/[0.04] transition-all duration-200 w-20 sm:w-24 text-center"
     >
       {/* Circular avatar */}
-      <div className="relative w-16 h-16 aspect-square rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#333333] group-hover:ring-white transition-all">
+      <div className="relative w-14 h-14 sm:w-16 sm:h-16 aspect-square rounded-full overflow-hidden bg-[#141414] ring-1 ring-[#333333] group-hover:ring-white transition-all">
         {artist.thumbnail ? (
           <img
             src={getHighResImage(artist.thumbnail)}

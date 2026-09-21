@@ -14,22 +14,39 @@
 @layer base {
   *, *::before, *::after {
     box-sizing: border-box;
+    /* Prevent accidental double-tap zoom on all interactive elements */
+    touch-action: manipulation;
   }
 
-  html, body, #root {
-    height: 100%;
+  html {
+    /* Dynamic viewport height — shrinks/grows with mobile browser chrome (URL bar) */
+    height: 100dvh;
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    /* Prevent rubber-band horizontal scroll bleed on iOS */
+    overflow-x: hidden;
+    overscroll-behavior: none;
   }
 
   body {
+    /* Fill the dynamic viewport; no extra height */
+    min-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background: #000000;
     color: #ffffff;
     overscroll-behavior: none;
+    /* Prevent iOS text size auto-adjustment on rotation */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  #root {
+    height: 100dvh;
+    overflow: hidden;
   }
 
   /* Hide scrollbars globally for immersive UI */
@@ -201,58 +218,105 @@ input[type='range'].volume-slider::-webkit-slider-thumb {
   animation: pageFadeSlide 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* TASK 3: Mobile Responsive Optimization (@media max-width: 768px) */
-@media (max-width: 768px) {
+/* ── Mobile Responsive Optimization ────────────────────────────────────── */
+
+/* Bottom nav height token — used for player dock offset calc */
+:root {
+  --mobile-nav-h: 56px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (max-width: 767px) {
+  /* Player dock: account for bottom-nav + safe area on mobile */
   .player-dock-wrap {
     left: 0.5rem !important;
     right: 0.5rem !important;
-    bottom: 0.5rem !important;
+    /* Stack above mobile bottom nav + iOS home indicator */
+    bottom: calc(var(--mobile-nav-h) + var(--safe-bottom) + 0.5rem) !important;
   }
 
-  /* Compact dock height between 60px and 70px */
-  .player-dock-inner,
-  .glass-dock {
-    height: 64px !important;
-    min-height: 60px !important;
-    max-height: 70px !important;
-    padding: 0.35rem 0.65rem !important;
+  /* Compact dock height between 60px–70px */
+  .player-dock-inner {
+    padding: 0.375rem 0.625rem !important;
     border-radius: 1rem !important;
-    gap: 0.5rem !important;
+    gap: 0.375rem !important;
   }
 
   .player-dock-thumb {
     width: 2.5rem !important;
     height: 2.5rem !important;
     border-radius: 0.5rem !important;
+    flex-shrink: 0 !important;
   }
 
   .player-dock-title {
     font-size: 12.5px !important;
-    line-height: 1.15 !important;
+    line-height: 1.2 !important;
   }
 
   .player-dock-artist {
     font-size: 10.5px !important;
   }
 
-  /* Touch targets easy to tap on smaller screens */
+  /* ── 44×44px touch targets (iOS HIG / Material Design standard) ── */
   .player-dock-btn {
-    min-width: 38px !important;
-    min-height: 38px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     touch-action: manipulation;
   }
 
-  /* Touch-accessible, properly padded Settings button */
+  /* Settings button */
   .sidebar-settings-btn {
     min-height: 48px !important;
     padding: 0.75rem 1rem !important;
     touch-action: manipulation;
-    font-size: 15px !important;
+  }
+
+  /* Mobile bottom navigation bar safe-area padding */
+  .mobile-bottom-nav {
+    padding-bottom: var(--safe-bottom);
+  }
+
+  /* Lyrics view footer safe-area */
+  .lyrics-footer {
+    padding-bottom: calc(0.75rem + var(--safe-bottom));
   }
 }
 
+/* ── Coarse pointer (touch screens): larger range slider thumb ───────── */
+@media (pointer: coarse) {
+  input[type='range'] {
+    /* Taller invisible hit area for finger accuracy */
+    height: 44px;
+    cursor: pointer;
+  }
 
+  input[type='range']::-webkit-slider-thumb {
+    width: 20px;
+    height: 20px;
+    margin-top: -8.5px;
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.7);
+  }
 
+  input[type='range']::-webkit-slider-runnable-track {
+    height: 4px;
+  }
+
+  input[type='range'].volume-slider::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+    margin-top: -7px;
+  }
+}
+
+/* Safe-area padding utility class */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}

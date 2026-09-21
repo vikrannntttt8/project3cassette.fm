@@ -10,12 +10,12 @@ export default function LyricsView() {
 
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
-      {/* ── Minimal header ──────────────────────────────────────── */}
-      <header className="flex-shrink-0 flex items-center justify-between px-10 py-5 h-14">
+      {/* ── Minimal header ─────────────────────────────────────────── */}
+      <header className="flex-shrink-0 flex items-center justify-between px-4 sm:px-8 lg:px-10 py-3 sm:py-5 h-12 sm:h-14">
         {/* Back to home */}
         <button
           onClick={toggleView}
-          className="flex items-center gap-2 text-on-surface-variant hover:text-white transition-colors group focus:outline-none"
+          className="flex items-center gap-2 text-on-surface-variant hover:text-white transition-colors group focus:outline-none min-w-[44px] min-h-[44px] -ml-2 px-2"
         >
           <svg className="w-5 h-5 transition-transform group-hover:-translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
@@ -41,14 +41,14 @@ export default function LyricsView() {
         </div>
       </header>
 
-      {/* ── 2-Column content ────────────────────────────────────── */}
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center min-h-0 py-2 px-10 lg:px-16 max-w-7xl mx-auto w-full">
+      {/* ── 2-Column content ─────────────────────────────────── */}
+      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-16 items-center min-h-0 overflow-y-auto py-2 px-4 sm:px-8 lg:px-16 max-w-7xl mx-auto w-full">
         <AlbumArtPanel />
         <LyricsPanel />
       </main>
 
-      {/* ── Footer ──────────────────────────────────────────────── */}
-      <footer className="flex-shrink-0 flex items-center justify-between text-label-sm text-[#888888] px-10 py-3 border-t border-[#1a1a1a]/50">
+      {/* ── Footer ────────────────────────────────────────────── */}
+      <footer className="lyrics-footer flex-shrink-0 flex items-center justify-between text-label-sm text-[#888888] px-4 sm:px-10 py-3 border-t border-[#1a1a1a]/50">
         <span className="tracking-wide text-[12px] font-mono">
           {currentSong?.album || 'Pulse Studio'}
         </span>

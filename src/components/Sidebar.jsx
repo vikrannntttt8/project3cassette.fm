@@ -10,7 +10,7 @@ export default function Sidebar() {
   const { view, setView, playlists, liked, playCollection, customAlbums = [], setIsSettingsOpen } = usePlayer();
 
   return (
-    <aside className="h-full w-60 bg-black flex flex-col justify-between py-4 px-3 border-r border-[#1a1a1a] select-none overflow-hidden">
+    <aside className="h-full w-full bg-black flex flex-col justify-between py-4 px-3 border-r border-[#1a1a1a] select-none overflow-hidden">
       <div className="flex flex-col gap-4 min-h-0">
         {/* Logo — cassette.fm */}
         <div
@@ -31,7 +31,7 @@ export default function Sidebar() {
               <button
                 key={item.view}
                 onClick={() => setView(item.view)}
-                className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-all duration-150 w-full text-left cursor-pointer ${
+                className={`flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg transition-all duration-150 w-full text-left cursor-pointer min-h-[44px] ${
                   isActive
                     ? 'bg-white text-black font-semibold shadow-sm'
                     : 'text-[#888888] hover:bg-white/[0.05] hover:text-white'
@@ -81,7 +81,7 @@ export default function Sidebar() {
                 onClick={() => {
                   if (pl.songs.length) playCollection(pl.songs, 0);
                 }}
-                className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-[#888888] hover:bg-white/[0.05] hover:text-white transition-colors text-left w-full group cursor-pointer"
+                className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-[#888888] hover:bg-white/[0.05] hover:text-white transition-colors text-left w-full group cursor-pointer min-h-[44px]"
               >
                 <div className="w-7 h-7 rounded-md bg-[#141414] border border-[#222222] flex-shrink-0 overflow-hidden flex items-center justify-center">
                   {pl.thumbnail
@@ -104,7 +104,7 @@ export default function Sidebar() {
                 onClick={() => {
                   if (album.songs.length) playCollection(album.songs, 0);
                 }}
-                className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-[#888888] hover:bg-white/[0.05] hover:text-white transition-colors text-left w-full group cursor-pointer"
+                className="flex items-center gap-2.5 px-2 py-2 rounded-lg text-[#888888] hover:bg-white/[0.05] hover:text-white transition-colors text-left w-full group cursor-pointer min-h-[44px]"
               >
                 <div className="w-7 h-7 rounded-md bg-[#141414] border border-[#222222] flex-shrink-0 overflow-hidden flex items-center justify-center">
                   {album.thumbnail

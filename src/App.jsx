@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { PlayerProvider, usePlayer } from './context/PlayerContext.jsx';
-import HomeView      from './components/HomeView/HomeView.jsx';
-import LyricsView    from './components/LyricsView/LyricsView.jsx';
-import LibraryView   from './components/LibraryView/LibraryView.jsx';
-import PlayerDock    from './components/PlayerDock/PlayerDock.jsx';
-import Sidebar       from './components/Sidebar.jsx';
-import ArtistView    from './components/ArtistView/ArtistView.jsx';
-import AlbumView     from './components/AlbumView/AlbumView.jsx';
-import SingleView    from './components/SingleView/SingleView.jsx';
-import SettingsModal from './components/shared/SettingsModal.jsx';
+import HomeView         from './components/HomeView/HomeView.jsx';
+import LyricsView       from './components/LyricsView/LyricsView.jsx';
+import LibraryView      from './components/LibraryView/LibraryView.jsx';
+import PlayerDock       from './components/PlayerDock/PlayerDock.jsx';
+import Sidebar          from './components/Sidebar.jsx';
+import ArtistView       from './components/ArtistView/ArtistView.jsx';
+import AlbumView        from './components/AlbumView/AlbumView.jsx';
+import SingleView       from './components/SingleView/SingleView.jsx';
+import SettingsModal    from './components/shared/SettingsModal.jsx';
+import MobileBottomNav  from './components/shared/MobileBottomNav.jsx';
 
 function AppShell() {
   const { view, navState, currentSong, isSettingsOpen, setIsSettingsOpen, streamToast } = usePlayer();
@@ -21,7 +22,7 @@ function AppShell() {
   }, [view]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-black text-white relative">
+    <div className="flex h-[100dvh] w-screen overflow-hidden bg-black text-white relative">
       {/* ── Minimalist Background Engine (Album art is only ambient color) ────────── */}
       <div aria-hidden="true" className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-black">
         {currentSong?.cover || currentSong?.thumbnail ? (
@@ -39,11 +40,11 @@ function AppShell() {
         <div className="absolute inset-0 bg-black/80" />
       </div>
 
-      {/* ── Mobile Hamburger Toggle (Visible only on mobile when not in lyrics) ── */}
+      {/* ── Mobile Hamburger Toggle (Tablet only — bottom nav handles phone) ── */}
       {view !== 'lyrics' && !isSettingsOpen && (
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden fixed top-4 left-4 z-40 p-2 rounded-xl bg-black text-white hover:bg-white/10 flex items-center justify-center shadow-lg border border-[#2a2a2a]"
+          className="hidden fixed top-4 left-4 z-40 w-11 h-11 rounded-xl bg-black text-white hover:bg-white/10 items-center justify-center shadow-lg border border-[#2a2a2a] cursor-pointer"
           aria-label="Toggle Navigation"
         >
           <span className="material-symbols-outlined text-[22px]">
@@ -98,6 +99,9 @@ function AppShell() {
 
       {/* ── Persistent Glass Player Dock (hidden in expanded lyrics view or full-screen settings) ── */}
       {view !== 'lyrics' && !isSettingsOpen && <PlayerDock />}
+
+      {/* ── Mobile Bottom Navigation Bar (< md, replaces hamburger on phones) ── */}
+      {view !== 'lyrics' && !isSettingsOpen && <MobileBottomNav />}
 
       {/* ── Full-Screen Settings Overlay ── */}
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />

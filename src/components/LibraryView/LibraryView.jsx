@@ -65,7 +65,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
           {(activePlaylist || activeAlbum) && (
             <button
               onClick={() => { setActivePlaylist(null); setActiveAlbum(null); }}
-              className="text-on-surface-variant hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/5"
+              className="text-on-surface-variant hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-white/5 -ml-1"
             >
               <span className="material-symbols-outlined text-[24px]">arrow_back</span>
             </button>
@@ -74,7 +74,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
             <span className="text-label-sm uppercase tracking-widest text-on-surface-variant">
               {currentItem ? (pl ? 'Playlist' : 'Custom Album') : 'Collection'}
             </span>
-            <h1 className="text-headline-lg font-bold text-white tracking-tight">
+            <h1 className="text-headline-md sm:text-headline-lg font-bold text-white tracking-tight truncate">
               {currentItem ? currentItem.title : 'My Library'}
             </h1>
           </div>
@@ -84,7 +84,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
           <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1">
             <button
               onClick={() => setActiveSection('playlists')}
-              className={`px-4 py-1.5 rounded-full text-label-md font-medium transition-all ${
+              className={`px-4 py-2 rounded-full text-label-md font-medium transition-all whitespace-nowrap min-h-[40px] ${
                 activeSection === 'playlists'
                   ? 'bg-white text-black'
                   : 'bg-white/8 text-on-surface-variant hover:bg-white/12 hover:text-white'
@@ -95,7 +95,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
 
             <button
               onClick={() => setActiveSection('liked')}
-              className={`px-4 py-1.5 rounded-full text-label-md font-medium transition-all flex items-center gap-1.5 ${
+              className={`px-4 py-2 rounded-full text-label-md font-medium transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[40px] ${
                 activeSection === 'liked'
                   ? 'bg-white text-black font-semibold'
                   : 'bg-white/8 text-on-surface-variant hover:bg-white/12 hover:text-white'
@@ -107,7 +107,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
 
             <button
               onClick={() => setActiveSection('albums')}
-              className={`px-4 py-1.5 rounded-full text-label-md font-medium transition-all ${
+              className={`px-4 py-2 rounded-full text-label-md font-medium transition-all whitespace-nowrap min-h-[40px] ${
                 activeSection === 'albums'
                   ? 'bg-white text-black'
                   : 'bg-white/8 text-on-surface-variant hover:bg-white/12 hover:text-white'
@@ -180,7 +180,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
             ) : (
               <button
                 onClick={() => setCreatingPlaylist(true)}
-                className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#0a0a0a] border border-dashed border-white/20 hover:border-white/50 transition-all group"
+                className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#0a0a0a] border border-dashed border-white/20 hover:border-white/50 transition-all group min-h-[48px]"
               >
                 <span className="material-symbols-outlined text-[22px] text-white">add_circle</span>
                 <span className="text-body-lg text-on-surface-variant group-hover:text-white transition-colors">Create New Playlist</span>

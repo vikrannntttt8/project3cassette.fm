@@ -391,7 +391,7 @@ function ShelfHeader({ title, subtitle, icon, onPrev, onNext, children }) {
         <div className="flex items-center gap-1.5 ml-1">
           <button
             onClick={onPrev}
-            className="w-8 h-8 rounded-full border border-[#2a2a2a] hover:border-white bg-[#0d0d0d] hover:bg-white/10 text-[#888888] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-full border border-[#2a2a2a] hover:border-white bg-[#0d0d0d] hover:bg-white/10 text-[#888888] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Previous"
             title="Previous"
           >
@@ -399,7 +399,7 @@ function ShelfHeader({ title, subtitle, icon, onPrev, onNext, children }) {
           </button>
           <button
             onClick={onNext}
-            className="w-8 h-8 rounded-full border border-[#2a2a2a] hover:border-white bg-[#0d0d0d] hover:bg-white/10 text-[#888888] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-10 h-10 rounded-full border border-[#2a2a2a] hover:border-white bg-[#0d0d0d] hover:bg-white/10 text-[#888888] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
             aria-label="Next"
             title="Next"
           >
@@ -669,7 +669,7 @@ function HomeDefault({ onPlaySong, onAlbumClick, onArtistClick, onAddToPlaylist 
             {quickPickColumns.map((col, colIdx) => (
               <div
                 key={colIdx}
-                className="flex flex-col gap-2 min-w-[320px] max-w-[380px] w-[340px] flex-shrink-0 snap-start"
+                className="flex flex-col gap-2 min-w-[280px] max-w-[360px] w-[300px] flex-shrink-0 snap-start"
               >
                 {col.map((s) => (
                   <QuickPickRow
@@ -706,7 +706,7 @@ function HomeDefault({ onPlaySong, onAlbumClick, onArtistClick, onAddToPlaylist 
               <button
                 key={mix.id}
                 onClick={() => playMix(mix)}
-                className="group flex flex-col gap-2 rounded-xl p-3 bg-[#0a0a0a] hover:bg-[#111111] border border-[#222222] hover:border-white transition-all duration-200 text-left w-44 sm:w-48 flex-shrink-0 snap-start cursor-pointer relative"
+                className="group flex flex-col gap-2 rounded-xl p-3 bg-[#0a0a0a] hover:bg-[#111111] border border-[#222222] hover:border-white transition-all duration-200 text-left w-40 sm:w-44 flex-shrink-0 snap-start cursor-pointer relative"
               >
                 {loadingMixId === mix.id && (
                   <div className="absolute inset-0 bg-black/80 rounded-xl flex items-center justify-center z-10">
@@ -768,7 +768,7 @@ function HomeDefault({ onPlaySong, onAlbumClick, onArtistClick, onAddToPlaylist 
             className="flex flex-row gap-4 overflow-x-auto no-scrollbar snap-x scroll-smooth pb-2"
           >
             {trendingAlbums.map((album) => (
-              <div key={album.id} className="w-44 sm:w-48 flex-shrink-0 snap-start">
+              <div key={album.id} className="w-40 sm:w-44 flex-shrink-0 snap-start">
                 <AlbumCard item={album} onClick={() => onAlbumClick(album)} />
               </div>
             ))}
@@ -797,7 +797,7 @@ function HomeDefault({ onPlaySong, onAlbumClick, onArtistClick, onAddToPlaylist 
                   if (it.type === 'album') onAlbumClick(it);
                   else playMix(it);
                 }}
-                className="group flex flex-col gap-2 rounded-xl p-3 bg-[#0a0a0a] hover:bg-[#111111] border border-[#222222] hover:border-white transition-all duration-200 text-left w-44 sm:w-48 flex-shrink-0 snap-start cursor-pointer"
+                className="group flex flex-col gap-2 rounded-xl p-3 bg-[#0a0a0a] hover:bg-[#111111] border border-[#222222] hover:border-white transition-all duration-200 text-left w-40 sm:w-44 flex-shrink-0 snap-start cursor-pointer"
               >
                 <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-[#141414] border border-[#262626]">
                   {it.thumbnail ? (

@@ -1,3 +1,5 @@
+import { apiUrl } from './apiConfig.js';
+
 /**
  * Dynamic YouTube Engine & Video ID Resolver
  * ─────────────────────────────────────────────────────────────────────
@@ -10,18 +12,13 @@
  * Helper to fetch YouTube search HTML via local proxy or CORS fallbacks.
  */
 async function fetchYouTubeHtml(query) {
-  const isBrowser = typeof window !== 'undefined';
   const encodedQuery = encodeURIComponent(query);
   const targetUrl = `https://www.youtube.com/results?search_query=${encodedQuery}`;
 
   const candidates = [];
 
-  // In browser, Vite proxy handles /api/yt
-  if (isBrowser) {
-    candidates.push(`/api/yt/results?search_query=${encodedQuery}`);
-  } else {
-    candidates.push(`http://localhost:5173/api/yt/results?search_query=${encodedQuery}`);
-  }
+  // Relative API proxy
+  candidates.push(apiUrl(`/api/yt/results?search_query=${encodedQuery}`));
 
   // CORS proxies as robust fallbacks
   candidates.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`);

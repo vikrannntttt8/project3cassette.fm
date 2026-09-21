@@ -5,6 +5,7 @@ import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ImageWithFallback from '../shared/ImageWithFallback.jsx';
 import BackButton from '../shared/BackButton.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
+import { apiUrl } from '../../utils/apiConfig.js';
 
 export default function AlbumView({ browseId, initialData }) {
   const {
@@ -33,7 +34,7 @@ export default function AlbumView({ browseId, initialData }) {
 
     const fetchAlbum = async () => {
       try {
-        const res = await fetch(`/api/album/${browseId}`);
+        const res = await fetch(apiUrl(`/api/album/${browseId}`));
         if (!res.ok) throw new Error(`Failed to load album details (${res.status})`);
         const json = await res.json();
         if (mounted) setData(json);

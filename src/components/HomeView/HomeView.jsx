@@ -11,6 +11,7 @@ import TrackContextMenu from '../shared/TrackContextMenu.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ArtistModal from '../ArtistView/ArtistModal.jsx';
+import { apiUrl } from '../../utils/apiConfig.js';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -566,7 +567,7 @@ function HomeDefault({ onPlaySong, onAlbumClick, onArtistClick, onAddToPlaylist 
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
-    fetch('/api/home/feed')
+    fetch(apiUrl('/api/home/feed'))
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load YouTube Music live feed');
         return res.json();
@@ -592,7 +593,7 @@ function HomeDefault({ onPlaySong, onAlbumClick, onArtistClick, onAddToPlaylist 
   const playMix = async (mix) => {
     setLoadingMixId(mix.id);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(mix.title + ' songs')}&type=songs`);
+      const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(mix.title + ' songs')}&type=songs`));
       if (res.ok) {
         const songs = await res.json();
         if (Array.isArray(songs) && songs.length > 0) {

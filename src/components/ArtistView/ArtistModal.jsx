@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { formatDuration } from '../../utils/timeFormat.js';
 import ImageWithFallback from '../shared/ImageWithFallback.jsx';
+import { apiUrl } from '../../utils/apiConfig.js';
 
 /**
  * ArtistModal — Dedicated artist view with discography, top songs, and albums
@@ -24,10 +25,10 @@ export default function ArtistModal({ artistId, artistName, onClose, onSelectTra
           throw new Error('Artist ID not found');
         }
 
-        const res = await fetch(`/api/artist/${encodeURIComponent(targetId)}`);
+        const res = await fetch(apiUrl(`/api/artist/${encodeURIComponent(targetId)}`));
         if (!res.ok) {
           const query = artistName || targetId;
-          const searchRes = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+          const searchRes = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(query)}`));
           if (searchRes.ok) {
             const tracks = await searchRes.json();
             if (Array.isArray(tracks) && tracks.length > 0) {

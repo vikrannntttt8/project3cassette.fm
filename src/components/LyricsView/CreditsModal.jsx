@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiUrl } from '../../utils/apiConfig.js';
 
 export default function CreditsModal({ isOpen, onClose, currentSong }) {
   const [credits, setCredits] = useState(null);
@@ -15,7 +16,7 @@ export default function CreditsModal({ isOpen, onClose, currentSong }) {
     const title = currentSong.title || '';
     const artist = currentSong.artist || '';
 
-    fetch(`/api/spotify/credits?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`)
+    fetch(apiUrl(`/api/spotify/credits?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`))
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load track credits');
         return res.json();

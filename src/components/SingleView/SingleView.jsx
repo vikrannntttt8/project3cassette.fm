@@ -5,6 +5,7 @@ import BackButton from '../shared/BackButton.jsx';
 import ImageWithFallback from '../shared/ImageWithFallback.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
+import { apiUrl } from '../../utils/apiConfig.js';
 
 /**
  * SingleView — Dedicated view for Standalone Singles, Music Videos, and Remixes
@@ -37,7 +38,7 @@ export default function SingleView({ videoId, track: initialTrack }) {
     let mounted = true;
     setLoading(true);
 
-    fetch(`/api/search?q=${encodeURIComponent(videoId)}&type=song`)
+    fetch(apiUrl(`/api/search?q=${encodeURIComponent(videoId)}&type=song`))
       .then((res) => (res.ok ? res.json() : []))
       .then((results) => {
         if (!mounted) return;

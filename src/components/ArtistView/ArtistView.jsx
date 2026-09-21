@@ -5,6 +5,7 @@ import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ImageWithFallback from '../shared/ImageWithFallback.jsx';
 import BackButton from '../shared/BackButton.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
+import { apiUrl } from '../../utils/apiConfig.js';
 
 export default function ArtistView({ browseId, artistName }) {
   const {
@@ -42,11 +43,11 @@ export default function ArtistView({ browseId, artistName }) {
           throw new Error('Artist ID could not be resolved');
         }
 
-        const res = await fetch(`/api/artist/${encodeURIComponent(targetId)}`);
+        const res = await fetch(apiUrl(`/api/artist/${encodeURIComponent(targetId)}`));
         if (!res.ok) {
           // Fallback: search for artist tracks if the specific endpoint returned non-200
           const query = artistName || targetId;
-          const searchRes = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+          const searchRes = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(query)}`));
           if (searchRes.ok) {
             const tracks = await searchRes.json();
             if (Array.isArray(tracks) && tracks.length > 0) {

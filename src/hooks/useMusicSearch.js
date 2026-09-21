@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { apiUrl } from '../utils/apiConfig.js';
 
 export const SEARCH_TABS = ['all', 'songs', 'albums', 'artists'];
 
@@ -27,7 +28,7 @@ export function useMusicSearch() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&type=${tab}`);
+      const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(q.trim())}&type=${tab}`));
       if (!res.ok) throw new Error(`Search failed (${res.status})`);
       const data = await res.json();
       if (Array.isArray(data)) {

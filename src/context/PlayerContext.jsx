@@ -3,6 +3,7 @@ import { fetchSongLyrics } from '../utils/saavn.js';
 import { resolveYouTubeVideoId } from '../utils/youtubeEngine.js';
 import { DEMO_LRC } from '../utils/lrcParser.js';
 import { useLibrary } from '../hooks/useLibrary.js';
+import { apiUrl } from '../utils/apiConfig.js';
 
 const PlayerContext = createContext(null);
 
@@ -194,7 +195,7 @@ export function PlayerProvider({ children }) {
     const targetVideoId = currentSongRef.current?.videoId || currentSongRef.current?.id;
     if (targetVideoId) {
       try {
-        const res = await fetch(`/api/stream/${targetVideoId}?format=json&quality=${norm}`);
+        const res = await fetch(apiUrl(`/api/stream/${targetVideoId}?format=json&quality=${norm}`));
         if (res.ok) {
           const meta = await res.json();
           setActiveStreamMeta(meta);
@@ -440,7 +441,7 @@ export function PlayerProvider({ children }) {
     const targetVid = track?.videoId || track?.youtubeId || track?.id;
     if (!targetVid) return;
     try {
-      const res = await fetch(`/api/next/${targetVid}`);
+      const res = await fetch(apiUrl(`/api/next/${targetVid}`));
       if (res.ok) {
         const recommendations = await res.json();
         if (Array.isArray(recommendations) && recommendations.length > 0) {
@@ -655,7 +656,7 @@ export function PlayerProvider({ children }) {
         if (targetVid) {
           isFetchingNextRef.current = true;
           try {
-            const res = await fetch(`/api/next/${targetVid}`);
+            const res = await fetch(apiUrl(`/api/next/${targetVid}`));
             if (res.ok) {
               const recs = await res.json();
               if (Array.isArray(recs) && recs.length > 0) {
@@ -680,7 +681,7 @@ export function PlayerProvider({ children }) {
       if (targetVid && !isFetchingNextRef.current) {
         isFetchingNextRef.current = true;
         try {
-          const res = await fetch(`/api/next/${targetVid}`);
+          const res = await fetch(apiUrl(`/api/next/${targetVid}`));
           if (res.ok) {
             const recs = await res.json();
             if (Array.isArray(recs) && recs.length > 0) {

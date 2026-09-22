@@ -81,13 +81,13 @@ export default function LibraryView({ initialSection = 'playlists' }) {
         </div>
 
         {!activePlaylist && !activeAlbum && (
-          <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1">
+          <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1 scrollbar-none">
             <button
               onClick={() => setActiveSection('playlists')}
-              className={`px-4 py-2 rounded-full text-label-md font-medium transition-all whitespace-nowrap min-h-[40px] ${
+              className={`px-4 py-2 rounded-full text-label-md font-medium transition-all whitespace-nowrap min-h-[40px] cursor-pointer ${
                 activeSection === 'playlists'
-                  ? 'bg-white text-black'
-                  : 'bg-white/8 text-on-surface-variant hover:bg-white/12 hover:text-white'
+                  ? 'bg-amber-500 text-black font-bold shadow-md shadow-amber-500/20'
+                  : 'bg-[#18181a] text-neutral-400 hover:bg-[#222225] hover:text-white'
               }`}
             >
               Playlists ({playlists.length})
@@ -95,10 +95,10 @@ export default function LibraryView({ initialSection = 'playlists' }) {
 
             <button
               onClick={() => setActiveSection('liked')}
-              className={`px-4 py-2 rounded-full text-label-md font-medium transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[40px] ${
+              className={`px-4 py-2 rounded-full text-label-md font-medium transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[40px] cursor-pointer ${
                 activeSection === 'liked'
-                  ? 'bg-white text-black font-semibold'
-                  : 'bg-white/8 text-on-surface-variant hover:bg-white/12 hover:text-white'
+                  ? 'bg-amber-500 text-black font-bold shadow-md shadow-amber-500/20'
+                  : 'bg-[#18181a] text-neutral-400 hover:bg-[#222225] hover:text-white'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]" style={{fontVariationSettings:"'FILL' 1"}}>favorite</span>
@@ -107,10 +107,10 @@ export default function LibraryView({ initialSection = 'playlists' }) {
 
             <button
               onClick={() => setActiveSection('albums')}
-              className={`px-4 py-2 rounded-full text-label-md font-medium transition-all whitespace-nowrap min-h-[40px] ${
+              className={`px-4 py-2 rounded-full text-label-md font-medium transition-all whitespace-nowrap min-h-[40px] cursor-pointer ${
                 activeSection === 'albums'
-                  ? 'bg-white text-black'
-                  : 'bg-white/8 text-on-surface-variant hover:bg-white/12 hover:text-white'
+                  ? 'bg-amber-500 text-black font-bold shadow-md shadow-amber-500/20'
+                  : 'bg-[#18181a] text-neutral-400 hover:bg-[#222225] hover:text-white'
               }`}
             >
               Custom Albums ({customAlbums.length})
@@ -231,12 +231,12 @@ export default function LibraryView({ initialSection = 'playlists' }) {
           <div className="flex flex-col gap-4">
             {liked.length > 0 && (
               <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                <span className="text-body-md text-on-surface-variant font-medium">
+                <span className="text-body-md text-neutral-400 font-medium">
                   {liked.length} {liked.length === 1 ? 'song' : 'songs'} saved
                 </span>
                 <button
                   onClick={() => playCollection(liked, 0)}
-                  className="flex items-center gap-2 px-5 py-2 rounded-full bg-white text-black font-semibold text-label-md hover:scale-105 active:scale-95 transition-all shadow-lg"
+                  className="flex items-center gap-2 px-5 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-bold text-label-md hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
                   Play All Liked

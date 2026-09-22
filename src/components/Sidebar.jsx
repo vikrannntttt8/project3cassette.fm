@@ -3,11 +3,10 @@ import { usePlayer } from '../context/PlayerContext.jsx';
 const NAV_ITEMS = [
   { icon: 'home',          label: 'Home',     view: 'home'    },
   { icon: 'local_library', label: 'Library',  view: 'library' },
-  { icon: 'favorite',      label: 'Liked',    view: 'liked'   },
 ];
 
 export default function Sidebar() {
-  const { view, setView, playlists, liked, playCollection, customAlbums = [], setIsSettingsOpen } = usePlayer();
+  const { view, setView, playlists, playCollection, customAlbums = [], setIsSettingsOpen } = usePlayer();
 
   return (
     <aside className="h-full w-full bg-[#0e0e0e] flex flex-col justify-between py-4 px-3.5 border-r border-white/5 select-none overflow-hidden">
@@ -24,7 +23,7 @@ export default function Sidebar() {
           <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" />
         </div>
 
-        {/* Navigation items */}
+        {/* Navigation items (Home & Library) */}
         <nav className="flex flex-col gap-1.5 flex-shrink-0">
           {NAV_ITEMS.map(item => {
             const isActive = view === item.view;
@@ -38,20 +37,10 @@ export default function Sidebar() {
                     : 'text-neutral-400 hover:bg-white/[0.05] hover:text-white'
                 }`}
               >
-                <span
-                  className="material-symbols-outlined text-[21px]"
-                  style={{ fontVariationSettings: item.view === 'liked' && liked.length > 0 ? "'FILL' 1" : undefined }}
-                >
+                <span className="material-symbols-outlined text-[21px]">
                   {item.icon}
                 </span>
                 <span className="text-body-md font-semibold">{item.label}</span>
-                {item.view === 'liked' && liked.length > 0 && (
-                  <span className={`ml-auto text-[11px] font-mono font-bold px-2 py-0.5 rounded-full ${
-                    isActive ? 'bg-black/20 text-black' : 'bg-[#18181a] border border-white/10 text-amber-400'
-                  }`}>
-                    {liked.length}
-                  </span>
-                )}
               </button>
             );
           })}
@@ -66,7 +55,7 @@ export default function Sidebar() {
             <span className="text-[11px] font-mono uppercase tracking-widest text-neutral-500">Playlists & Albums</span>
             <button
               onClick={() => setView('library')}
-              className="text-neutral-500 hover:text-white transition-colors p-1"
+              className="text-neutral-500 hover:text-white transition-colors p-1 cursor-pointer"
               title="Manage playlists & albums"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>

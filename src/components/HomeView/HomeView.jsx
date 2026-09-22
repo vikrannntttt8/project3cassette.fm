@@ -11,6 +11,7 @@ import TrackContextMenu from '../shared/TrackContextMenu.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ArtistModal from '../ArtistView/ArtistModal.jsx';
+import MarqueeText from '../shared/MarqueeText.jsx';
 import { apiUrl } from '../../utils/apiConfig.js';
 
 function getGreeting() {
@@ -452,24 +453,24 @@ function ShelfHeader({ title, subtitle, icon, onPrev, onNext, children }) {
 }
 
 function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
-  const { isLiked, toggleLike, routeToSongEntity } = usePlayer();
+  const { isLiked, toggleLike } = usePlayer();
   const liked = isLiked(song.id);
 
   return (
     <div
       onClick={onPlay}
-      className={`group flex items-center gap-3 p-2.5 rounded-2xl transition-all duration-150 cursor-pointer ${
+      className={`group flex items-center gap-3 px-3 py-2 rounded-2xl transition-all duration-150 cursor-pointer min-h-[50px] select-none ${
         isActive
-          ? 'bg-amber-500/15 border border-amber-500/30'
-          : 'bg-[#18181a] hover:bg-[#222225] border border-white/5'
+          ? 'bg-amber-500/15 text-amber-300'
+          : 'bg-[#18181a]/55 hover:bg-[#18181a] text-white'
       }`}
     >
-      <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-[#222225] border border-white/5">
+      <div className="relative w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-[#222225]">
         {song.thumbnail ? (
           <img src={song.thumbnail} alt={song.title} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="material-symbols-outlined text-white/30 text-[20px]">music_note</span>
+            <span className="material-symbols-outlined text-white/30 text-[18px]">music_note</span>
           </div>
         )}
         <div
@@ -478,12 +479,12 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
           }`}
         >
           {isActive && isPlaying ? (
-            <span className="material-symbols-outlined text-amber-400 text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <span className="material-symbols-outlined text-amber-400 text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
               graphic_eq
             </span>
           ) : (
             <span
-              className="material-symbols-outlined text-white text-[20px]"
+              className="material-symbols-outlined text-white text-[18px]"
               style={{ fontVariationSettings: "'FILL' 1" }}
             >
               play_arrow
@@ -493,38 +494,28 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
       </div>
 
       <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <span
-          onClick={(e) => {
-            e.stopPropagation();
-            routeToSongEntity(song);
-          }}
-          className={`font-semibold text-white truncate text-[13.5px] hover:underline cursor-pointer ${
+        <MarqueeText
+          text={song.title}
+          className={`font-semibold text-white text-[13.5px] leading-tight ${
             isActive ? 'text-amber-300 font-bold' : ''
           }`}
-          title={song.title}
-        >
-          {song.title}
-          {song.explicit && (
-            <span className="ml-1.5 text-[10px] bg-white/10 text-neutral-400 px-1 py-0.2 rounded align-middle">
-              E
-            </span>
-          )}
-        </span>
+        />
         <ArtistLinks
           artists={song.artists}
           artist={song.artist}
           artistId={song.artistId}
-          className="text-[11.5px] text-neutral-400 truncate mt-0.5"
+          className="text-[11px] text-neutral-400 truncate mt-0.5"
         />
       </div>
 
-      <div className="flex items-center gap-1.5 flex-shrink-0">
+      <div className="flex items-center gap-1 flex-shrink-0">
         <div
           className={`flex items-center gap-0.5 transition-opacity ${
             liked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
           }`}
         >
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               toggleLike(song);
@@ -543,7 +534,7 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
           </button>
           <TrackContextMenu track={song} onAddToPlaylist={onAddToPlaylist} />
         </div>
-        <span className="text-[11px] text-neutral-400 font-mono min-w-[34px] text-right">
+        <span className="text-[11px] text-neutral-500 font-mono min-w-[32px] text-right">
           {formatTime(song.duration)}
         </span>
       </div>

@@ -3,6 +3,7 @@ import { usePlayer } from '../../context/PlayerContext.jsx';
 import { formatTime } from '../../utils/timeFormat.js';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
+import MarqueeText from '../shared/MarqueeText.jsx';
 
 export default function MobilePlayerSheet({ isOpen, onClose }) {
   const {
@@ -23,9 +24,12 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
     queueIndex,
     loadSong,
     lrcString,
-    activeStreamMeta,
     audioQuality,
     setAudioQuality,
+    isShuffled,
+    toggleShuffle,
+    isRepeat,
+    toggleRepeat,
   } = usePlayer();
 
   const [activeTab, setActiveTab] = useState('player'); // 'player' | 'lyrics' | 'queue'
@@ -42,53 +46,64 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
       <div className="flex flex-col items-center pt-2 pb-1 px-4 flex-shrink-0 pt-safe">
         <button
           onClick={onClose}
-          className="w-12 h-1.5 rounded-full bg-white/25 hover:bg-white/40 transition-colors my-1 cursor-pointer"
+          className="w-10 h-1 rounded-full bg-white/30 hover:bg-white/50 transition-colors my-1 cursor-pointer"
           aria-label="Dismiss player sheet"
         />
 
         <div className="w-full flex items-center justify-between mt-2">
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-neutral-400 hover:text-white"
+            className="w-9 h-9 rounded-full bg-[#18181a] border border-white/5 flex items-center justify-center text-neutral-400 hover:text-white"
           >
             <span className="material-symbols-outlined text-[22px]">keyboard_arrow_down</span>
           </button>
 
-          {/* Segmented View Switcher: Player | Lyrics | Queue */}
+          {/* Segmented View Switcher: Track | Lyrics | Queue */}
           <div className="flex items-center gap-1 p-1 rounded-full bg-[#18181a] border border-white/10">
             <button
               onClick={() => setActiveTab('player')}
-              className={`px-3 py-1 rounded-full text-[12px] font-semibold transition-all ${
-                activeTab === 'player' ? 'bg-amber-500 text-black shadow' : 'text-neutral-400 hover:text-white'
+              className={`px-3.5 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
+                activeTab === 'player'
+                  ? 'bg-amber-500 text-black shadow-sm'
+                  : 'text-neutral-400 hover:text-white'
               }`}
             >
               Track
             </button>
             <button
               onClick={() => setActiveTab('lyrics')}
-              className={`px-3 py-1 rounded-full text-[12px] font-semibold transition-all ${
-                activeTab === 'lyrics' ? 'bg-amber-500 text-black shadow' : 'text-neutral-400 hover:text-white'
+              className={`px-3.5 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
+                activeTab === 'lyrics'
+                  ? 'bg-amber-500 text-black shadow-sm'
+                  : 'text-neutral-400 hover:text-white'
               }`}
             >
               Lyrics
             </button>
             <button
               onClick={() => setActiveTab('queue')}
-              className={`px-3 py-1 rounded-full text-[12px] font-semibold transition-all ${
-                activeTab === 'queue' ? 'bg-amber-500 text-black shadow' : 'text-neutral-400 hover:text-white'
+              className={`px-3.5 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
+                activeTab === 'queue'
+                  ? 'bg-amber-500 text-black shadow-sm'
+                  : 'text-neutral-400 hover:text-white'
               }`}
             >
               Queue
             </button>
           </div>
 
-          {/* Bitrate Badge */}
+          {/* Bitrate Badge Switcher */}
           <button
             onClick={() => {
-              const nextQ = audioQuality === 'max' ? 'standard' : audioQuality === 'standard' ? 'datasaver' : 'max';
+              const nextQ =
+                audioQuality === 'max'
+                  ? 'standard'
+                  : audioQuality === 'standard'
+                  ? 'datasaver'
+                  : 'max';
               setAudioQuality(nextQ);
             }}
-            className="px-2.5 py-1 rounded-full bg-[#18181a] border border-white/10 text-[10px] font-mono text-amber-400 font-bold"
+            className="px-2.5 py-1 rounded-full bg-[#18181a] border border-white/10 text-[10px] font-mono text-amber-400 font-bold active:scale-95 transition-transform"
           >
             {audioQuality.toUpperCase()}
           </button>
@@ -100,8 +115,8 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
         {/* ── Mode 1: Main Player View ─────────────────────────────── */}
         {activeTab === 'player' && (
           <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-2">
-            {/* Album Artwork with Soft Warm Shadow */}
-            <div className="relative aspect-square w-full max-h-[330px] mx-auto rounded-3xl overflow-hidden bg-[#18181a] border border-white/10 shadow-2xl my-auto">
+            {/* Album Artwork without messy glowing halo */}
+            <div className="relative aspect-square w-full max-h-[320px] mx-auto rounded-3xl overflow-hidden bg-[#18181a] border border-white/10 my-auto shadow-xl">
               <img
                 src={currentSong.cover || currentSong.thumbnail}
                 alt={currentSong.title}
@@ -114,12 +129,13 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               )}
             </div>
 
-            {/* Song Meta + Actions */}
+            {/* Song Meta + Actions with Marquee Title */}
             <div className="flex items-center justify-between gap-4 mt-6">
-              <div className="min-w-0 flex-1">
-                <h3 className="text-headline-sm font-bold text-white truncate tracking-tight">
-                  {currentSong.title}
-                </h3>
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <MarqueeText
+                  text={currentSong.title}
+                  className="text-headline-sm font-bold text-white tracking-tight"
+                />
                 <ArtistLinks
                   artists={currentSong.artists}
                   artist={currentSong.artist}
@@ -131,7 +147,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               <div className="flex items-center gap-2 flex-shrink-0">
                 <button
                   onClick={() => toggleLike(currentSong)}
-                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-transform active:scale-90 ${
+                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-transform active:scale-90 cursor-pointer ${
                     liked
                       ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
                       : 'bg-[#18181a] text-neutral-400 border border-white/10 hover:text-white'
@@ -148,7 +164,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
 
                 <button
                   onClick={() => setAddMenuSong(currentSong)}
-                  className="w-11 h-11 rounded-full bg-[#18181a] border border-white/10 text-neutral-400 hover:text-white flex items-center justify-center"
+                  className="w-11 h-11 rounded-full bg-[#18181a] border border-white/10 text-neutral-400 hover:text-white flex items-center justify-center cursor-pointer"
                   aria-label="Add to playlist"
                 >
                   <span className="material-symbols-outlined text-[22px]">playlist_add</span>
@@ -156,7 +172,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               </div>
             </div>
 
-            {/* Progress Slider (iOS Apple Music Style) */}
+            {/* Progress Slider (iOS Clean Scrubber without halo blob) */}
             <div className="space-y-1.5 mt-5">
               <input
                 type="range"
@@ -172,24 +188,30 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               </div>
             </div>
 
-            {/* Transport Controls */}
+            {/* Transport Controls with Working Shuffle & Repeat */}
             <div className="flex items-center justify-between px-2 mt-4">
-              <button className="text-neutral-400 hover:text-white p-2">
-                <span className="material-symbols-outlined text-[20px]">shuffle</span>
+              <button
+                onClick={toggleShuffle}
+                className={`p-2 transition-colors cursor-pointer ${
+                  isShuffled ? 'text-amber-400' : 'text-neutral-400 hover:text-white'
+                }`}
+                title="Toggle Shuffle"
+              >
+                <span className="material-symbols-outlined text-[22px]">shuffle</span>
               </button>
 
               <button
                 onClick={playPrev}
-                className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer"
                 aria-label="Previous track"
               >
                 <span className="material-symbols-outlined text-[32px]">skip_previous</span>
               </button>
 
-              {/* Big Amber Play/Pause */}
+              {/* Clean Solid Amber Play/Pause (No drop shadow halo blob) */}
               <button
                 onClick={togglePlay}
-                className="w-16 h-16 rounded-full bg-amber-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl shadow-amber-500/25 cursor-pointer"
+                className="w-16 h-16 rounded-full bg-amber-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-none border border-amber-400/50 cursor-pointer"
                 aria-label={isPlaying ? 'Pause' : 'Play'}
               >
                 {isLoading ? (
@@ -206,14 +228,20 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
 
               <button
                 onClick={playNext}
-                className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer"
                 aria-label="Next track"
               >
                 <span className="material-symbols-outlined text-[32px]">skip_next</span>
               </button>
 
-              <button className="text-neutral-400 hover:text-white p-2">
-                <span className="material-symbols-outlined text-[20px]">repeat</span>
+              <button
+                onClick={toggleRepeat}
+                className={`p-2 transition-colors cursor-pointer ${
+                  isRepeat ? 'text-amber-400' : 'text-neutral-400 hover:text-white'
+                }`}
+                title="Toggle Repeat"
+              >
+                <span className="material-symbols-outlined text-[22px]">repeat</span>
               </button>
             </div>
 
@@ -241,11 +269,13 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               Synced Lyrics
             </p>
             <div className="space-y-4 my-auto">
-              <p className="text-headline-md font-extrabold text-amber-400 lyric-active-glow">
+              <p className="text-headline-md font-extrabold text-amber-400">
                 {currentSong.title}
               </p>
               <p className="text-body-lg text-neutral-400 max-w-xs mx-auto leading-relaxed">
-                {lrcString ? 'Live synchronized lyrics streaming with YouTube Audio...' : 'Instrumental or lyric data loading...'}
+                {lrcString
+                  ? 'Live synchronized lyrics streaming with YouTube Audio...'
+                  : 'Instrumental or lyric data loading...'}
               </p>
             </div>
           </div>
@@ -254,17 +284,28 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
         {/* ── Mode 3: Up Next Queue ─────────────────────────────────── */}
         {activeTab === 'queue' && (
           <div className="flex-1 flex flex-col overflow-y-auto space-y-2 no-scrollbar">
-            <p className="text-[11px] font-mono uppercase tracking-widest text-amber-500 font-bold mb-2">
-              Playing Next ({queue.length} tracks)
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-mono uppercase tracking-widest text-amber-500 font-bold">
+                Playing Next ({queue.length} tracks)
+              </p>
+              <button
+                onClick={toggleShuffle}
+                className={`text-[12px] font-semibold flex items-center gap-1 cursor-pointer ${
+                  isShuffled ? 'text-amber-400' : 'text-neutral-400'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[15px]">shuffle</span>
+                {isShuffled ? 'Shuffled' : 'Shuffle Queue'}
+              </button>
+            </div>
             {queue.map((track, i) => (
               <div
                 key={`${track.id}-${i}`}
                 onClick={() => loadSong(track, queue, i)}
-                className={`flex items-center gap-3 p-2.5 rounded-2xl cursor-pointer ${
+                className={`flex items-center gap-3 p-2.5 rounded-2xl cursor-pointer transition-all ${
                   i === queueIndex
-                    ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300'
-                    : 'bg-[#18181a] border border-white/5 text-white hover:bg-[#222225]'
+                    ? 'bg-amber-500/15 border border-amber-500/30 text-amber-300'
+                    : 'bg-[#18181a]/55 hover:bg-[#18181a] text-white'
                 }`}
               >
                 <img src={track.thumbnail} alt="" className="w-10 h-10 rounded-xl object-cover" />

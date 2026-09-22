@@ -27,7 +27,10 @@ export function PlayerProvider({ children }) {
   const [queue,       setQueue]       = useState([]);
   const [queueIndex,  setQueueIndex]  = useState(0);
   const [history,     setHistory]     = useState([]);
+  const [isShuffled,  setIsShuffled]  = useState(false);
+  const [isRepeat,    setIsRepeat]    = useState(false);
 
+  const originalQueueRef = useRef([]);
   const queueRef = useRef([]);
   const queueIndexRef = useRef(0);
   const isFetchingNextRef = useRef(false);
@@ -749,10 +752,36 @@ export function PlayerProvider({ children }) {
     });
   }, []);
 
+  const toggleShuffle = useCallback(() => {
+    setIsShuffled((prev) => {
+      const next = !prev;
+      if (next && queueRef.current.length > 1) {
+        const currentQ = [...queueRef.current];
+        const currentIdx = queueIndexRef.current;
+        const currentTrack = currentQ[currentIdx];
+        const remaining = currentQ.filter((_, i) => i !== currentIdx);
+        // Fisher-Yates shuffle
+        for (let i = remaining.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
+        }
+        const newQueue = [currentTrack, ...remaining];
+        setQueue(newQueue);
+        setQueueIndex(0);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleRepeat = useCallback(() => {
+    setIsRepeat((prev) => !prev);
+  }, []);
+
   const value = {
     ytPlayerRef,
     isPlaying, currentTime, duration, volume, isMuted, isLoading,
     currentSong, queue, queueIndex, history,
+    isShuffled, toggleShuffle, isRepeat, toggleRepeat,
     lrcString, lyricsSource, lyricsLoading,
     view, setView,
     navState, setNavState, navigateTo, goBack, canGoBack, navHistory, playAlbum,

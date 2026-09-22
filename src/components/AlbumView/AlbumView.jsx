@@ -183,20 +183,20 @@ export default function AlbumView({ browseId, initialData }) {
                     <div
                       key={track.id || idx}
                       onClick={() => handleTrackClick(track, idx)}
-                      className={`group flex items-center justify-between p-3.5 hover:bg-white/[0.04] transition-colors cursor-pointer ${
-                        isCurrent ? 'bg-white/10' : ''
+                      className={`group flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer min-h-[50px] select-none ${
+                        isCurrent ? 'bg-amber-500/15 text-amber-300' : 'bg-[#18181a]/55 hover:bg-[#18181a] text-white'
                       }`}
                     >
                       <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        <div className="w-8 text-center text-label-md font-mono text-[#888888] flex-shrink-0 flex items-center justify-center">
+                        <div className="w-7 text-center text-label-md font-mono text-neutral-500 flex-shrink-0 flex items-center justify-center">
                           {isCurrent && isPlaying ? (
-                            <span className="material-symbols-outlined text-white text-[20px] animate-pulse">
-                              volume_up
+                            <span className="material-symbols-outlined text-amber-400 text-[18px]">
+                              graphic_eq
                             </span>
                           ) : (
                             <>
                               <span className="group-hover:hidden">{track.trackNumber || idx + 1}</span>
-                              <span className="hidden group-hover:inline text-white material-symbols-outlined text-[20px]">
+                              <span className="hidden group-hover:inline text-white material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                                 play_arrow
                               </span>
                             </>
@@ -205,14 +205,10 @@ export default function AlbumView({ browseId, initialData }) {
 
                         <div className="min-w-0 flex-1">
                           <p
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              routeToSongEntity(track);
-                            }}
-                            className={`text-label-md font-medium truncate transition-colors hover:underline cursor-pointer ${
-                              isCurrent ? 'text-white font-bold' : 'text-white'
+                            className={`text-label-md font-semibold truncate transition-colors ${
+                              isCurrent ? 'text-amber-300 font-bold' : 'text-white'
                             }`}
-                            title={`View "${track.title}"`}
+                            title={track.title}
                           >
                             {track.title}
                           </p>
@@ -220,8 +216,7 @@ export default function AlbumView({ browseId, initialData }) {
                             artists={track.artists}
                             artist={track.artist || data.artist}
                             artistId={track.artistId || data.artistId}
-                            className="text-label-sm text-[#888888] truncate block"
-                            linkClassName="hover:text-white hover:underline cursor-pointer"
+                            className="text-[11px] text-neutral-400 truncate block mt-0.5"
                           />
                         </div>
                       </div>
@@ -234,12 +229,12 @@ export default function AlbumView({ browseId, initialData }) {
                             e.stopPropagation();
                             toggleLike(track);
                           }}
-                          className={`p-1.5 rounded-full transition-transform active:scale-90 ${
-                            isLiked(track.id) ? 'text-white' : 'text-[#888888] hover:text-white'
+                          className={`p-1.5 rounded-full transition-transform active:scale-90 cursor-pointer ${
+                            isLiked(track.id) ? 'text-amber-500' : 'text-neutral-500 hover:text-white'
                           }`}
                           title={isLiked(track.id) ? 'Unlike' : 'Like'}
                         >
-                          <span className="material-symbols-outlined text-[19px]" style={{ fontVariationSettings: `'FILL' ${isLiked(track.id) ? 1 : 0}` }}>
+                          <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: `'FILL' ${isLiked(track.id) ? 1 : 0}` }}>
                             favorite
                           </span>
                         </button>
@@ -251,16 +246,16 @@ export default function AlbumView({ browseId, initialData }) {
                             e.stopPropagation();
                             setAddMenuSong(track);
                           }}
-                          className="p-1.5 rounded-full text-[#888888] hover:text-white transition-colors"
+                          className="p-1.5 rounded-full text-neutral-500 hover:text-white transition-colors cursor-pointer"
                           title="Add to playlist"
                         >
-                          <span className="material-symbols-outlined text-[19px]">
+                          <span className="material-symbols-outlined text-[18px]">
                             playlist_add
                           </span>
                         </button>
 
                         {/* Duration */}
-                        <span className="text-label-sm text-[#888888] font-mono min-w-[36px] text-right hidden sm:inline-block">
+                        <span className="text-[11px] text-neutral-500 font-mono min-w-[34px] text-right hidden sm:inline-block">
                           {formatDuration(track.duration)}
                         </span>
                       </div>

@@ -5,6 +5,7 @@ import VolumeSlider from './VolumeSlider.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
 import MobilePlayerSheet from './MobilePlayerSheet.jsx';
+import MarqueeText from '../shared/MarqueeText.jsx';
 
 export default function PlayerDock() {
   const {
@@ -27,6 +28,10 @@ export default function PlayerDock() {
     audioQuality,
     setAudioQuality,
     activeStreamMeta,
+    isShuffled,
+    toggleShuffle,
+    isRepeat,
+    toggleRepeat,
   } = usePlayer();
 
   const [addMenuSong, setAddMenuSong] = useState(null);
@@ -41,7 +46,6 @@ export default function PlayerDock() {
 
   const handleDockClick = () => {
     if (!currentSong) return;
-    // On mobile screens (<768px), open full-height iOS slide-up player sheet
     if (window.innerWidth < 768) {
       setMobileSheetOpen(true);
     } else {
@@ -51,17 +55,17 @@ export default function PlayerDock() {
 
   return (
     <>
-      <div className="player-dock-wrap fixed z-50 pointer-events-auto transition-all duration-300 left-3 right-3 bottom-3 md:left-[16.5rem] md:right-5 md:bottom-4 select-none">
+      <div className="player-dock-wrap fixed z-50 pointer-events-auto transition-all duration-300 left-3 right-3 bottom-3 md:left-[17rem] md:right-5 md:bottom-4 select-none">
         <div
           onClick={handleDockClick}
-          className="player-dock-inner cursor-pointer rounded-2xl md:rounded-3xl px-3.5 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between gap-3 sm:gap-6 max-w-5xl mx-auto shadow-2xl border border-white/10 bg-[#18181a]/92 backdrop-blur-2xl hover:border-white/20 transition-colors"
+          className="player-dock-inner cursor-pointer rounded-2xl md:rounded-3xl px-3.5 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between gap-3 sm:gap-6 max-w-5xl mx-auto border border-white/10 bg-[#18181a]/95 backdrop-blur-2xl hover:border-white/20 transition-colors shadow-none"
           title={currentSong ? 'Click to expand Now Playing & Lyrics' : ''}
         >
           {/* ── Left: Track info + Actions ────────────────────── */}
           <div className="flex items-center gap-3 min-w-0 max-w-[180px] xs:max-w-[220px] sm:max-w-[260px] md:max-w-[280px] flex-shrink-0">
             {/* Album Art: clicking triggers dock expand */}
             <div
-              className={`player-dock-thumb relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 bg-[#222225] border border-white/10 ${
+              className={`player-dock-thumb relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 bg-[#222225] border border-white/5 ${
                 isPlaying ? 'ring-1.5 ring-amber-500' : ''
               }`}
             >
@@ -83,13 +87,17 @@ export default function PlayerDock() {
               )}
             </div>
 
-            <div className="flex flex-col min-w-0 flex-1">
-              <span
-                className="player-dock-title text-label-md font-semibold text-white truncate text-[13px] sm:text-[14px]"
-                title={currentSong?.title || ''}
-              >
-                {currentSong?.title || 'Nothing playing'}
-              </span>
+            <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
+              {currentSong?.title ? (
+                <MarqueeText
+                  text={currentSong.title}
+                  className="player-dock-title text-label-md font-semibold text-white text-[13px] sm:text-[14px]"
+                />
+              ) : (
+                <span className="player-dock-title text-label-md font-semibold text-white truncate text-[13px] sm:text-[14px]">
+                  Nothing playing
+                </span>
+              )}
 
               {/* Individual Multi-Artist routing */}
               {currentSong ? (
@@ -155,7 +163,10 @@ export default function PlayerDock() {
             <div className="flex items-center gap-3 sm:gap-5">
               <button
                 type="button"
-                className="text-neutral-400 hover:text-white transition-colors cursor-pointer p-1"
+                onClick={toggleShuffle}
+                className={`p-1 transition-colors cursor-pointer ${
+                  isShuffled ? 'text-amber-400' : 'text-neutral-400 hover:text-white'
+                }`}
                 title="Shuffle"
               >
                 <span className="material-symbols-outlined text-[18px]">shuffle</span>
@@ -172,12 +183,12 @@ export default function PlayerDock() {
                 <span className="material-symbols-outlined text-[24px]">skip_previous</span>
               </button>
 
-              {/* Play / Pause with Amber Accent */}
+              {/* Play / Pause with Clean Solid Amber Accent (no messy halo blob) */}
               <button
                 type="button"
                 onClick={togglePlay}
                 disabled={!currentSong}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-amber-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 shadow-lg shadow-amber-500/20 disabled:opacity-40 cursor-pointer"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-amber-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 disabled:opacity-40 cursor-pointer shadow-none border border-amber-400/50"
                 aria-label={isPlaying ? 'Pause' : 'Play'}
                 title={isPlaying ? 'Pause' : 'Play'}
               >
@@ -206,7 +217,10 @@ export default function PlayerDock() {
 
               <button
                 type="button"
-                className="text-neutral-400 hover:text-white transition-colors cursor-pointer p-1"
+                onClick={toggleRepeat}
+                className={`p-1 transition-colors cursor-pointer ${
+                  isRepeat ? 'text-amber-400' : 'text-neutral-400 hover:text-white'
+                }`}
                 title="Repeat"
               >
                 <span className="material-symbols-outlined text-[18px]">repeat</span>
@@ -240,7 +254,7 @@ export default function PlayerDock() {
                 type="button"
                 onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                 disabled={!currentSong}
-                className="w-9 h-9 rounded-full bg-amber-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 shadow-md shadow-amber-500/25 disabled:opacity-40 cursor-pointer"
+                className="w-9 h-9 rounded-full bg-amber-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 disabled:opacity-40 cursor-pointer shadow-none border border-amber-400/50"
                 aria-label={isPlaying ? 'Pause' : 'Play'}
               >
                 {isLoading ? (

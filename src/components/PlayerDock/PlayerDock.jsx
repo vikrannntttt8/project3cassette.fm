@@ -4,6 +4,7 @@ import SeekBar from './SeekBar.jsx';
 import VolumeSlider from './VolumeSlider.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
+import MobilePlayerSheet from './MobilePlayerSheet.jsx';
 
 export default function PlayerDock() {
   const {
@@ -29,6 +30,7 @@ export default function PlayerDock() {
   } = usePlayer();
 
   const [addMenuSong, setAddMenuSong] = useState(null);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   // Auto-unmount/hide mini-player dock when full-screen expanded views open (lyrics or settings)
   if (view === 'lyrics' || isSettingsOpen) {
@@ -37,20 +39,30 @@ export default function PlayerDock() {
 
   const liked = currentSong ? isLiked(currentSong.id) : false;
 
+  const handleDockClick = () => {
+    if (!currentSong) return;
+    // On mobile screens (<768px), open full-height iOS slide-up player sheet
+    if (window.innerWidth < 768) {
+      setMobileSheetOpen(true);
+    } else {
+      toggleView();
+    }
+  };
+
   return (
     <>
-      <div className="player-dock-wrap fixed z-50 pointer-events-auto transition-all duration-300 left-3 right-3 bottom-3 md:left-[16rem] md:right-4 md:bottom-4 select-none">
+      <div className="player-dock-wrap fixed z-50 pointer-events-auto transition-all duration-300 left-3 right-3 bottom-3 md:left-[16.5rem] md:right-5 md:bottom-4 select-none">
         <div
-          onClick={() => currentSong && toggleView()}
-          className="player-dock-inner cursor-pointer rounded-2xl px-3 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between gap-3 sm:gap-6 max-w-5xl mx-auto shadow-2xl border border-[#222222] bg-[#050505]/95 backdrop-blur-2xl hover:border-[#333333] transition-colors"
+          onClick={handleDockClick}
+          className="player-dock-inner cursor-pointer rounded-2xl md:rounded-3xl px-3.5 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between gap-3 sm:gap-6 max-w-5xl mx-auto shadow-2xl border border-white/10 bg-[#18181a]/92 backdrop-blur-2xl hover:border-white/20 transition-colors"
           title={currentSong ? 'Click to expand Now Playing & Lyrics' : ''}
         >
           {/* ── Left: Track info + Actions ────────────────────── */}
           <div className="flex items-center gap-3 min-w-0 max-w-[180px] xs:max-w-[220px] sm:max-w-[260px] md:max-w-[280px] flex-shrink-0">
             {/* Album Art: clicking triggers dock expand */}
             <div
-              className={`player-dock-thumb relative w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-900 border border-[#222222] ${
-                isPlaying ? 'ring-1 ring-white' : ''
+              className={`player-dock-thumb relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 bg-[#222225] border border-white/10 ${
+                isPlaying ? 'ring-1.5 ring-amber-500' : ''
               }`}
             >
               {currentSong?.thumbnail ? (
@@ -60,13 +72,13 @@ export default function PlayerDock() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-[#111111] flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[#888888] text-[20px]">album</span>
+                <div className="w-full h-full bg-[#18181a] flex items-center justify-center">
+                  <span className="material-symbols-outlined text-neutral-500 text-[20px]">album</span>
                 </div>
               )}
               {isLoading && (
                 <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </div>
@@ -79,16 +91,16 @@ export default function PlayerDock() {
                 {currentSong?.title || 'Nothing playing'}
               </span>
 
-              {/* Individual Multi-Artist routing with e.stopPropagation */}
+              {/* Individual Multi-Artist routing */}
               {currentSong ? (
                 <ArtistLinks
                   artists={currentSong.artists}
                   artist={currentSong.artist}
                   artistId={currentSong.artistId}
-                  className="player-dock-artist text-body-sm text-[#888888] truncate text-[11px] sm:text-[12px] block"
+                  className="player-dock-artist text-body-sm text-neutral-400 truncate text-[11px] sm:text-[12px] block"
                 />
               ) : (
-                <span className="player-dock-artist text-body-sm text-[#888888] truncate text-[11px] sm:text-[12px]">
+                <span className="player-dock-artist text-body-sm text-neutral-500 truncate text-[11px] sm:text-[12px]">
                   Search for a song
                 </span>
               )}
@@ -104,7 +116,7 @@ export default function PlayerDock() {
                     toggleLike(currentSong);
                   }}
                   className={`p-1.5 rounded-full transition-transform active:scale-90 cursor-pointer ${
-                    liked ? 'text-white' : 'text-[#888888] hover:text-white'
+                    liked ? 'text-amber-500' : 'text-neutral-500 hover:text-white'
                   }`}
                   title={liked ? 'Unlike' : 'Like'}
                 >
@@ -123,7 +135,7 @@ export default function PlayerDock() {
                     e.stopPropagation();
                     setAddMenuSong(currentSong);
                   }}
-                  className="p-1.5 rounded-full text-[#888888] hover:text-white transition-colors cursor-pointer"
+                  className="p-1.5 rounded-full text-neutral-500 hover:text-white transition-colors cursor-pointer"
                   title="Add to playlist"
                 >
                   <span className="material-symbols-outlined text-[19px] sm:text-[20px]">
@@ -134,7 +146,7 @@ export default function PlayerDock() {
             )}
           </div>
 
-          {/* ── Center: Transport Controls + Seekbar ────────────── */}
+          {/* ── Center: Transport Controls + Seekbar (Desktop) ── */}
           <div
             className="hidden sm:flex flex-col items-center gap-1.5 flex-1 min-w-0 max-w-xl mx-2"
             onClick={(e) => e.stopPropagation()}
@@ -143,8 +155,7 @@ export default function PlayerDock() {
             <div className="flex items-center gap-3 sm:gap-5">
               <button
                 type="button"
-                onClick={(e) => e.stopPropagation()}
-                className="text-[#888888] hover:text-white transition-colors cursor-pointer p-1"
+                className="text-neutral-400 hover:text-white transition-colors cursor-pointer p-1"
                 title="Shuffle"
               >
                 <span className="material-symbols-outlined text-[18px]">shuffle</span>
@@ -152,29 +163,21 @@ export default function PlayerDock() {
 
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  playPrev();
-                }}
-                className="text-[#888888] hover:text-white transition-colors disabled:opacity-30 p-1 cursor-pointer"
+                onClick={playPrev}
+                className="text-neutral-400 hover:text-white transition-colors disabled:opacity-30 p-1 cursor-pointer"
                 disabled={!currentSong}
                 aria-label="Previous track"
                 title="Previous"
               >
-                <span className="material-symbols-outlined text-[24px]">
-                  skip_previous
-                </span>
+                <span className="material-symbols-outlined text-[24px]">skip_previous</span>
               </button>
 
-              {/* Play / Pause */}
+              {/* Play / Pause with Amber Accent */}
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  togglePlay();
-                }}
+                onClick={togglePlay}
                 disabled={!currentSong}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 shadow-lg shadow-white/10 disabled:opacity-40 cursor-pointer"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-amber-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 shadow-lg shadow-amber-500/20 disabled:opacity-40 cursor-pointer"
                 aria-label={isPlaying ? 'Pause' : 'Play'}
                 title={isPlaying ? 'Pause' : 'Play'}
               >
@@ -192,24 +195,18 @@ export default function PlayerDock() {
 
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  playNext();
-                }}
-                className="text-[#888888] hover:text-white transition-colors disabled:opacity-30 p-1 cursor-pointer"
+                onClick={playNext}
+                className="text-neutral-400 hover:text-white transition-colors disabled:opacity-30 p-1 cursor-pointer"
                 disabled={!currentSong}
                 aria-label="Next track"
                 title="Next"
               >
-                <span className="material-symbols-outlined text-[24px]">
-                  skip_next
-                </span>
+                <span className="material-symbols-outlined text-[24px]">skip_next</span>
               </button>
 
               <button
                 type="button"
-                onClick={(e) => e.stopPropagation()}
-                className="text-[#888888] hover:text-white transition-colors cursor-pointer p-1"
+                className="text-neutral-400 hover:text-white transition-colors cursor-pointer p-1"
                 title="Repeat"
               >
                 <span className="material-symbols-outlined text-[18px]">repeat</span>
@@ -222,7 +219,7 @@ export default function PlayerDock() {
             </div>
           </div>
 
-          {/* ── Right: Mobile play controls or Desktop Volume + Lyrics + Bitrate ── */}
+          {/* ── Right: Mobile play strip or Desktop Volume + Lyrics + Quality ── */}
           <div
             className="flex items-center gap-2 sm:gap-3 flex-shrink-0"
             onClick={(e) => e.stopPropagation()}
@@ -232,7 +229,7 @@ export default function PlayerDock() {
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); playPrev(); }}
-                className="text-[#888888] hover:text-white transition-colors disabled:opacity-30 p-1.5 cursor-pointer"
+                className="text-neutral-400 hover:text-white transition-colors disabled:opacity-30 p-1.5 cursor-pointer"
                 disabled={!currentSong}
                 aria-label="Previous track"
               >
@@ -243,7 +240,7 @@ export default function PlayerDock() {
                 type="button"
                 onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                 disabled={!currentSong}
-                className="w-9 h-9 rounded-full bg-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 shadow-lg shadow-white/10 disabled:opacity-40 cursor-pointer"
+                className="w-9 h-9 rounded-full bg-amber-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 shadow-md shadow-amber-500/25 disabled:opacity-40 cursor-pointer"
                 aria-label={isPlaying ? 'Pause' : 'Play'}
               >
                 {isLoading ? (
@@ -261,7 +258,7 @@ export default function PlayerDock() {
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); playNext(); }}
-                className="text-[#888888] hover:text-white transition-colors disabled:opacity-30 p-1.5 cursor-pointer"
+                className="text-neutral-400 hover:text-white transition-colors disabled:opacity-30 p-1.5 cursor-pointer"
                 disabled={!currentSong}
                 aria-label="Next track"
               >
@@ -283,34 +280,27 @@ export default function PlayerDock() {
                       : 'max';
                   setAudioQuality(nextQ);
                 }}
-                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#111111] hover:bg-[#1a1a1a] border border-[#2a2a2a] text-[10px] font-mono text-[#888888] hover:text-white transition-all cursor-pointer select-none"
+                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#121214] hover:bg-[#222225] border border-white/10 text-[10px] font-mono text-neutral-400 hover:text-white transition-all cursor-pointer select-none"
                 title={`Bitrate: ${
                   activeStreamMeta?.bitrate
                     ? Math.round(activeStreamMeta.bitrate / 1000) + ' kbps'
                     : audioQuality.toUpperCase()
-                } • Codec: ${
-                  activeStreamMeta?.mimeType
-                    ? activeStreamMeta.mimeType.split(';')[0].replace('audio/', '')
-                    : 'auto'
                 } • Click to cycle quality`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                <span className="font-semibold uppercase tracking-wider text-[9px] text-white/90">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <span className="font-bold uppercase tracking-wider text-[9px] text-amber-400">
                   {audioQuality}
                 </span>
-                <span className="text-[#555555]">•</span>
-                <span className="text-white/80">
+                <span className="text-neutral-600">•</span>
+                <span className="text-neutral-300">
                   {activeStreamMeta?.bitrate
                     ? `${Math.round(activeStreamMeta.bitrate / 1000)}k`
                     : audioQuality === 'max'
-                    ? '140k'
+                    ? '256k'
                     : audioQuality === 'standard'
-                    ? '131k'
-                    : '72k'}
+                    ? '160k'
+                    : '128k'}
                 </span>
-                {activeStreamMeta?.itag && (
-                  <span className="text-[#666666] text-[8px]">#{activeStreamMeta.itag}</span>
-                )}
               </button>
             )}
 
@@ -321,10 +311,10 @@ export default function PlayerDock() {
                 e.stopPropagation();
                 toggleView();
               }}
-              className="px-2.5 sm:px-3 py-1 rounded-full flex items-center gap-1.5 text-label-sm font-medium transition-all border border-[#333333] bg-transparent text-[#888888] hover:text-white hover:border-[#666666] cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 rounded-full flex items-center gap-1.5 text-label-sm font-medium transition-all border border-white/10 bg-transparent text-neutral-400 hover:text-white hover:border-white/30 cursor-pointer"
               title="Open full lyrics & now playing"
             >
-              <span className="material-symbols-outlined text-[16px]">lyrics</span>
+              <span className="material-symbols-outlined text-[16px] text-amber-400">lyrics</span>
               <span className="hidden sm:inline text-[12px]">Lyrics</span>
             </button>
 
@@ -335,6 +325,12 @@ export default function PlayerDock() {
           </div>
         </div>
       </div>
+
+      {/* Full-Height iOS / YT Music Slide-Up Sheet */}
+      <MobilePlayerSheet
+        isOpen={mobileSheetOpen}
+        onClose={() => setMobileSheetOpen(false)}
+      />
 
       {addMenuSong && (
         <AddToPlaylistMenu song={addMenuSong} onClose={() => setAddMenuSong(null)} />

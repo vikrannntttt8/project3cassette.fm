@@ -115,8 +115,15 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
         {/* ── Mode 1: Main Player View ─────────────────────────────── */}
         {activeTab === 'player' && (
           <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-2">
-            {/* Album Artwork without messy glowing halo */}
-            <div className="relative aspect-square w-full max-h-[320px] mx-auto rounded-3xl overflow-hidden bg-[#18181a] border border-white/10 my-auto shadow-xl">
+            {/* Album Artwork with click-to-open album entity */}
+            <div
+              onClick={() => {
+                routeToSongEntity(currentSong);
+                onClose();
+              }}
+              className="relative aspect-square w-full max-h-[320px] mx-auto rounded-3xl overflow-hidden bg-[#18181a] border border-white/10 my-auto shadow-xl cursor-pointer"
+              title="Open album / track details"
+            >
               <img
                 src={currentSong.cover || currentSong.thumbnail}
                 alt={currentSong.title}
@@ -129,19 +136,32 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               )}
             </div>
 
-            {/* Song Meta + Actions with Marquee Title */}
+            {/* Song Meta + Actions with Marquee Title & Clickable Artist/Album */}
             <div className="flex items-center justify-between gap-4 mt-6">
               <div className="min-w-0 flex-1 overflow-hidden">
-                <MarqueeText
-                  text={currentSong.title}
-                  className="text-headline-sm font-bold text-white tracking-tight"
-                />
-                <ArtistLinks
-                  artists={currentSong.artists}
-                  artist={currentSong.artist}
-                  artistId={currentSong.artistId}
-                  className="text-body-md text-neutral-400 truncate block mt-0.5"
-                />
+                <div
+                  onClick={() => {
+                    routeToSongEntity(currentSong);
+                    onClose();
+                  }}
+                  className="cursor-pointer group/title"
+                  title="View track release"
+                >
+                  <MarqueeText
+                    text={currentSong.title}
+                    className="text-headline-sm font-bold text-white tracking-tight group-hover/title:text-amber-300"
+                  />
+                </div>
+                <div
+                  onClick={() => {
+                    routeToArtistEntity(currentSong.artist, currentSong.artistId);
+                    onClose();
+                  }}
+                  className="text-body-md text-neutral-400 hover:text-amber-400 hover:underline truncate block mt-0.5 cursor-pointer"
+                  title="View artist discography"
+                >
+                  {currentSong.artist || 'Unknown Artist'}
+                </div>
               </div>
 
               <div className="flex items-center gap-2 flex-shrink-0">

@@ -1,17 +1,38 @@
 import { usePlayer } from '../../context/PlayerContext.jsx';
 
 /**
- * MobileBottomNav — 4-tab fixed bottom nav for mobile (md:hidden).
+ * MobileBottomNav — 3-tab clean fixed bottom nav for mobile (md:hidden).
  * ArchiveTune aesthetic with warm amber active states & charcoal background.
+ * Liked tracks live inside Library view.
  */
 export default function MobileBottomNav() {
-  const { view, setView, liked, isSettingsOpen, setIsSettingsOpen } = usePlayer();
+  const { view, setView, isSettingsOpen, setIsSettingsOpen } = usePlayer();
 
   const tabs = [
-    { icon: 'home',          label: 'Home',     action: () => setView('home'),    isActive: view === 'home' && !isSettingsOpen },
-    { icon: 'local_library', label: 'Library',  action: () => setView('library'), isActive: (view === 'library' || view === 'liked') && !isSettingsOpen },
-    { icon: 'favorite',      label: 'Liked',    action: () => setView('liked'),   isActive: view === 'liked' && !isSettingsOpen, badge: liked.length },
-    { icon: 'tune',          label: 'Settings', action: () => setIsSettingsOpen(true), isActive: isSettingsOpen },
+    {
+      icon: 'home',
+      label: 'Home',
+      action: () => {
+        setIsSettingsOpen(false);
+        setView('home');
+      },
+      isActive: view === 'home' && !isSettingsOpen,
+    },
+    {
+      icon: 'local_library',
+      label: 'Library',
+      action: () => {
+        setIsSettingsOpen(false);
+        setView('library');
+      },
+      isActive: (view === 'library' || view === 'liked') && !isSettingsOpen,
+    },
+    {
+      icon: 'tune',
+      label: 'Settings',
+      action: () => setIsSettingsOpen(true),
+      isActive: isSettingsOpen,
+    },
   ];
 
   return (
@@ -20,13 +41,13 @@ export default function MobileBottomNav() {
       style={{ paddingBottom: 'var(--safe-bottom, 0px)' }}
       aria-label="Mobile navigation"
     >
-      <div className="flex items-stretch" style={{ height: 'var(--mobile-nav-h, 56px)' }}>
+      <div className="flex items-stretch justify-around max-w-md mx-auto" style={{ height: 'var(--mobile-nav-h, 56px)' }}>
         {tabs.map((tab) => (
           <button
             key={tab.label}
             onClick={tab.action}
             className={`flex-1 flex flex-col items-center justify-center gap-0.5 relative transition-all duration-150 cursor-pointer ${
-              tab.isActive ? 'text-amber-400' : 'text-neutral-500 hover:text-neutral-300'
+              tab.isActive ? 'text-amber-400 font-bold' : 'text-neutral-500 hover:text-neutral-300'
             }`}
             aria-label={tab.label}
             aria-current={tab.isActive ? 'page' : undefined}
@@ -34,25 +55,17 @@ export default function MobileBottomNav() {
           >
             {/* Active top indicator pill in amber */}
             {tab.isActive && (
-              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2.5px] rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" />
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2.5px] rounded-full bg-amber-500" />
             )}
 
             <span
-              className="material-symbols-outlined text-[23px] leading-none relative"
+              className="material-symbols-outlined text-[24px] leading-none relative"
               style={{ fontVariationSettings: tab.isActive ? "'FILL' 1" : "'FILL' 0" }}
             >
               {tab.icon}
-              {/* Badge for liked count */}
-              {tab.badge > 0 && !tab.isActive && (
-                <span className="absolute -top-1 -right-2 w-3.5 h-3.5 rounded-full bg-amber-500 flex items-center justify-center">
-                  <span className="text-black font-extrabold" style={{ fontSize: '8px' }}>
-                    {tab.badge > 9 ? '9+' : tab.badge}
-                  </span>
-                </span>
-              )}
             </span>
 
-            <span className={`text-[10px] font-semibold leading-none mt-0.5 ${tab.isActive ? 'text-amber-400' : ''}`}>
+            <span className={`text-[10.5px] font-semibold leading-none mt-0.5 ${tab.isActive ? 'text-amber-400' : ''}`}>
               {tab.label}
             </span>
           </button>

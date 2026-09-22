@@ -299,14 +299,14 @@ export default function HomeView() {
         )}
       </header>
 
-      {/* ── Mobile Filter Chips (Sticky below mobile header) ── */}
+      {/* ── Mobile Filter Chips (Flush Non-Sticky Flow) ── */}
       {!showSearch && (
-        <div className="md:hidden sticky top-[56px] z-20 bg-[#0e0e0e]/95 backdrop-blur-xl border-b border-white/5 px-4 py-2.5 flex gap-2 overflow-x-auto no-scrollbar flex-shrink-0">
+        <div className="md:hidden bg-[#0e0e0e] border-b border-white/5 px-4 py-2.5 flex gap-2 overflow-x-auto no-scrollbar flex-shrink-0">
           {HOME_CHIPS.map((chip) => (
             <button
               key={chip.id}
               onClick={() => setActiveChip(chip.id)}
-              className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 flex-shrink-0 min-h-[38px] ${
+              className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 flex-shrink-0 min-h-[38px] cursor-pointer ${
                 activeChip === chip.id
                   ? 'bg-amber-500 text-black font-bold shadow-md shadow-amber-500/20'
                   : 'bg-[#18181a] text-neutral-400 border border-white/5 hover:text-white'
@@ -320,7 +320,7 @@ export default function HomeView() {
       )}
 
       {/* ── Main Content Area ── */}
-      <main className="flex-1 px-4 sm:px-6 md:px-8 py-5 sm:py-6 pb-36">
+      <main className="flex-1 px-4 sm:px-6 md:px-8 py-5 pb-28 md:pb-20">
         {showSearch ? (
           renderResults()
         ) : (

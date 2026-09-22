@@ -33,6 +33,12 @@ export default function MobileBottomNav() {
       action: () => setIsSettingsOpen(true),
       isActive: isSettingsOpen,
     },
+    {
+      icon: 'person',
+      label: 'Profile',
+      action: () => setIsSettingsOpen(true),
+      isActive: false,
+    },
   ];
 
   return (

@@ -63,7 +63,7 @@ export default function AlbumView({ browseId, initialData }) {
   };
 
   return (
-    <div className="h-full w-full overflow-y-auto pb-32 pt-4 px-4 sm:px-8 space-y-8 scroll-smooth bg-black text-white">
+    <div className="h-full w-full overflow-y-auto pt-16 md:pt-4 pb-28 md:pb-20 px-4 sm:px-8 space-y-8 scroll-smooth bg-[#0e0e0e] text-white no-scrollbar">
       {/* ── Top Navigation Bar ── */}
       <div className="flex items-center gap-4">
         <BackButton label="Back" />

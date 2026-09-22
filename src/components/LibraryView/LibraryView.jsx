@@ -58,20 +58,20 @@ export default function LibraryView({ initialSection = 'playlists' }) {
   const currentItem = pl || alb;
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto pt-14 md:pt-0">
-      {/* ── Header ──────────────────────────────────────────── */}
-      <header className="sticky top-14 md:top-0 z-20 px-4 sm:px-6 md:px-8 py-4 bg-[#09090B]/80 backdrop-blur-xl border-b border-white/5">
+    <div className="h-full flex flex-col overflow-y-auto pt-14 md:pt-0 no-scrollbar bg-[#0e0e0e]">
+      {/* ── Header (Flush Non-Sticky) ───────────────────────── */}
+      <header className="px-4 sm:px-6 md:px-8 py-4 bg-[#0e0e0e] border-b border-white/5 flex-shrink-0">
         <div className="flex items-center gap-4">
           {(activePlaylist || activeAlbum) && (
             <button
               onClick={() => { setActivePlaylist(null); setActiveAlbum(null); }}
-              className="text-on-surface-variant hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-white/5 -ml-1"
+              className="text-neutral-400 hover:text-white transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-white/5 -ml-1 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[24px]">arrow_back</span>
             </button>
           )}
           <div className="flex flex-col">
-            <span className="text-label-sm uppercase tracking-widest text-on-surface-variant">
+            <span className="text-label-sm uppercase tracking-widest text-neutral-400">
               {currentItem ? (pl ? 'Playlist' : 'Custom Album') : 'Collection'}
             </span>
             <h1 className="text-headline-md sm:text-headline-lg font-bold text-white tracking-tight truncate">
@@ -120,7 +120,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
       </header>
 
       {/* ── Main content ─────────────────────────────────────── */}
-      <main className="flex-1 px-4 sm:px-6 md:px-8 py-6 pb-36">
+      <main className="flex-1 px-4 sm:px-6 md:px-8 py-5 pb-28 md:pb-20">
         {/* Detail view for Playlist */}
         {activePlaylist && pl && (
           <CollectionDetail

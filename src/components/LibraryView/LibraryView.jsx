@@ -10,6 +10,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
     removeFromPlaylist,
     createAlbum, deleteAlbum, renameAlbum, removeFromAlbum,
     loadSong, playCollection, currentSong, isPlaying,
+    importPlaylistFromUrl,
   } = usePlayer();
 
   const [activeSection, setActiveSection]   = useState(initialSection);
@@ -22,6 +23,12 @@ export default function LibraryView({ initialSection = 'playlists' }) {
   const [creatingAlbum, setCreatingAlbum]       = useState(false);
   const [newAlbumTitle, setNewAlbumTitle]       = useState('');
   const [newAlbumArtist, setNewAlbumArtist]     = useState('');
+
+  // YouTube Playlist URL Importer
+  const [importingUrlModal, setImportingUrlModal] = useState(false);
+  const [importUrlInput, setImportUrlInput]       = useState('');
+  const [importLoading, setImportLoading]         = useState(false);
+  const [importMsg, setImportMsg]                 = useState(null);
 
   const [addMenuSong, setAddMenuSong] = useState(null);
 
@@ -37,6 +44,33 @@ export default function LibraryView({ initialSection = 'playlists' }) {
     createPlaylist(newPlaylistTitle.trim());
     setNewPlaylistTitle('');
     setCreatingPlaylist(false);
+  };
+
+  const handleImportPlaylist = async (targetType = 'playlist') => {
+    if (!importUrlInput.trim()) return;
+    setImportLoading(true);
+    setImportMsg(null);
+    try {
+      const res = await importPlaylistFromUrl(importUrlInput.trim(), targetType);
+      setImportMsg({
+        type: 'success',
+        text: targetType === 'liked'
+          ? `Imported ${res.count} songs into Liked!`
+          : `Imported "${res.playlist.title}" (${res.count} tracks)!`,
+      });
+      setImportUrlInput('');
+      setTimeout(() => {
+        setImportingUrlModal(false);
+        setImportMsg(null);
+      }, 2500);
+    } catch (err) {
+      setImportMsg({
+        type: 'error',
+        text: err.message || 'Failed to import playlist.',
+      });
+    } finally {
+      setImportLoading(false);
+    }
   };
 
   const handleCreateAlbum = () => {
@@ -156,36 +190,90 @@ export default function LibraryView({ initialSection = 'playlists' }) {
         {/* ── Playlists Section ──────────────────────────────── */}
         {!activePlaylist && !activeAlbum && activeSection === 'playlists' && (
           <div className="flex flex-col gap-6">
-            {creatingPlaylist ? (
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-[#111111] border border-white/10">
-                <span className="material-symbols-outlined text-white text-[22px]">queue_music</span>
-                <input
-                  autoFocus
-                  value={newPlaylistTitle}
-                  onChange={e => setNewPlaylistTitle(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleCreatePlaylist()}
-                  placeholder="Playlist name…"
-                  className="flex-1 bg-transparent border-none outline-none text-white text-body-lg placeholder:text-outline"
-                />
+            <div className="flex flex-col sm:flex-row gap-3">
+              {creatingPlaylist ? (
+                <div className="flex-1 flex items-center gap-3 p-4 rounded-2xl bg-[#18181a] border border-white/10">
+                  <span className="material-symbols-outlined text-white text-[22px]">queue_music</span>
+                  <input
+                    autoFocus
+                    value={newPlaylistTitle}
+                    onChange={e => setNewPlaylistTitle(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleCreatePlaylist()}
+                    placeholder="Playlist name…"
+                    className="flex-1 bg-transparent border-none outline-none text-white text-body-md placeholder:text-neutral-500"
+                  />
+                  <button
+                    onClick={handleCreatePlaylist}
+                    className="px-4 py-1.5 rounded-full bg-amber-500 text-black text-label-sm font-bold hover:bg-amber-400 transition-colors cursor-pointer"
+                  >
+                    Create
+                  </button>
+                  <button onClick={() => setCreatingPlaylist(false)} className="text-neutral-400 hover:text-white transition-colors cursor-pointer">
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                  </button>
+                </div>
+              ) : (
                 <button
-                  onClick={handleCreatePlaylist}
-                  className="px-4 py-1.5 rounded-full bg-white text-black text-label-md font-semibold hover:bg-white/90 transition-colors"
+                  onClick={() => setCreatingPlaylist(true)}
+                  className="flex-1 flex items-center justify-center gap-3 px-4 py-3 rounded-2xl bg-[#141416] border border-white/10 hover:border-amber-500/50 hover:bg-[#18181a] transition-all group min-h-[48px] cursor-pointer"
                 >
-                  Create
+                  <span className="material-symbols-outlined text-[22px] text-amber-500">add_circle</span>
+                  <span className="text-body-md font-semibold text-neutral-300 group-hover:text-white transition-colors">Create Playlist</span>
                 </button>
-                <button onClick={() => setCreatingPlaylist(false)} className="text-on-surface-variant hover:text-white transition-colors">
-                  <span className="material-symbols-outlined text-[20px]">close</span>
+              )}
+
+              {importingUrlModal ? (
+                <div className="flex-1 p-4 rounded-2xl bg-[#18181a] border border-amber-500/30 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-label-sm font-bold text-amber-400 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[18px]">download</span>
+                      Import YouTube Playlist URL
+                    </span>
+                    <button onClick={() => setImportingUrlModal(false)} className="text-neutral-400 hover:text-white cursor-pointer">
+                      <span className="material-symbols-outlined text-[18px]">close</span>
+                    </button>
+                  </div>
+                  <input
+                    autoFocus
+                    value={importUrlInput}
+                    onChange={e => setImportUrlInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleImportPlaylist('playlist')}
+                    placeholder="https://music.youtube.com/playlist?list=..."
+                    className="w-full px-3 py-2 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-body-xs focus:border-amber-500 focus:outline-none placeholder:text-neutral-600"
+                  />
+                  {importMsg && (
+                    <p className={`text-body-xs font-medium ${importMsg.type === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {importMsg.text}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={() => handleImportPlaylist('playlist')}
+                      disabled={importLoading || !importUrlInput.trim()}
+                      className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-label-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                    >
+                      {importLoading && <span className="material-symbols-outlined text-[14px] animate-spin">sync</span>}
+                      {importLoading ? 'Importing...' : 'Import Playlist'}
+                    </button>
+                    <button
+                      onClick={() => handleImportPlaylist('liked')}
+                      disabled={importLoading || !importUrlInput.trim()}
+                      className="px-3.5 py-1.5 rounded-xl bg-[#222225] hover:bg-[#2c2c30] text-neutral-300 text-label-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      Merge Liked
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setImportingUrlModal(true)}
+                  className="flex-1 flex items-center justify-center gap-3 px-4 py-3 rounded-2xl bg-[#141416] border border-white/10 hover:border-amber-500/50 hover:bg-[#18181a] transition-all group min-h-[48px] cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[22px] text-amber-400">download</span>
+                  <span className="text-body-md font-semibold text-neutral-300 group-hover:text-white transition-colors">Import YouTube URL</span>
                 </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setCreatingPlaylist(true)}
-                className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#0a0a0a] border border-dashed border-white/20 hover:border-white/50 transition-all group min-h-[48px]"
-              >
-                <span className="material-symbols-outlined text-[22px] text-white">add_circle</span>
-                <span className="text-body-lg text-on-surface-variant group-hover:text-white transition-colors">Create New Playlist</span>
-              </button>
-            )}
+              )}
+            </div>
 
             {playlists.length === 0 && !creatingPlaylist && (
               <div className="flex flex-col items-center gap-3 py-16 text-center">

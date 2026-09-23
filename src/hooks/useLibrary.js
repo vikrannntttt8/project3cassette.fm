@@ -330,6 +330,81 @@ export function useLibrary() {
     };
   }, [user?.id, history, performFullSync]);
 
+  // ── 3c. Public/Unlisted YouTube Playlist URL Importer ───────────────
+  const importPlaylistFromUrl = useCallback(async (urlOrId, targetType = 'playlist') => {
+    if (!urlOrId || !urlOrId.trim()) {
+      throw new Error('Please enter a valid YouTube or YouTube Music playlist link.');
+    }
+
+    const res = await fetch(`/api/playlist/import?url=${encodeURIComponent(urlOrId.trim())}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: urlOrId.trim() }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Import failed with status ${res.status}`);
+    }
+
+    const data = await res.json();
+    if (!data.success || !data.playlist) {
+      throw new Error(data.error || 'Failed to parse playlist.');
+    }
+
+    const importedPl = data.playlist;
+    const importedSongs = importedPl.songs || [];
+
+    if (targetType === 'liked') {
+      let newLiked = [];
+      setLiked((prevLiked) => {
+        const map = new Map();
+        (prevLiked || []).forEach((s) => {
+          const k = String(s.id || s.videoId || '');
+          if (k) map.set(k, s);
+        });
+        importedSongs.forEach((s) => {
+          const k = String(s.id || s.videoId || '');
+          if (k && !map.has(k)) {
+            map.set(k, { ...s, likedAt: new Date().toISOString() });
+          }
+        });
+        newLiked = Array.from(map.values());
+        saveLiked(newLiked);
+        return newLiked;
+      });
+
+      if (user?.id) {
+        performFullSync({ liked: newLiked, playlists, history }).catch(console.warn);
+      }
+
+      return {
+        type: 'liked',
+        count: importedSongs.length,
+        title: importedPl.title,
+        totalLiked: newLiked.length,
+      };
+    } else {
+      let newPlaylists = [];
+      setPlaylists((prevPlaylists) => {
+        newPlaylists = [importedPl, ...(prevPlaylists || [])];
+        savePlaylists(newPlaylists);
+        return newPlaylists;
+      });
+
+      if (user?.id) {
+        performFullSync({ liked, playlists: newPlaylists, history }).catch(console.warn);
+      }
+
+      return {
+        type: 'playlist',
+        count: importedSongs.length,
+        playlist: importedPl,
+        totalPlaylists: newPlaylists.length,
+      };
+    }
+  }, [user?.id, liked, playlists, history, performFullSync]);
+
   // ── 4. Liked tracks ──────────────────────────────────────────────────
   const isLiked = useCallback((target) => {
     if (!target) return false;
@@ -574,5 +649,6 @@ export function useLibrary() {
     // Cloud & YouTube Music Sync
     syncAllWithCloud,
     syncYouTubeMusicLibrary,
+    importPlaylistFromUrl,
   };
 }

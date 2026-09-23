@@ -1210,34 +1210,135 @@ export async function getYouTubeMusicLibrary({ cookie = '', visitorData = '', sa
 }
 
 /**
- * 8. testYouTubeMusicAuth({ cookie, visitorData, sapisid })
+ * 9. extractPlaylistId(urlOrId: string)
+ * Parses playlist ID from YouTube / YouTube Music URLs or bare IDs.
  */
-export async function testYouTubeMusicAuth({ cookie = '', visitorData = '', sapisid = '' } = {}) {
-  try {
-    let cookieHeader = '';
-    if (cookie && typeof cookie === 'string' && cookie.trim()) {
-      cookieHeader = cookie.trim();
-    } else if (sapisid && typeof sapisid === 'string' && sapisid.trim()) {
-      const clean = sapisid.trim();
-      cookieHeader = `SAPISID=${clean}; __Secure-3PAPISID=${clean};`;
-    }
+export function extractPlaylistId(urlOrId) {
+  if (!urlOrId || typeof urlOrId !== 'string') return '';
+  const trimmed = urlOrId.trim();
 
-    const yt = await Innertube.create({
-      cache: new UniversalCache(false),
-      client_type: ClientType.MUSIC,
-      cookie: cookieHeader || undefined,
-      visitor_data: visitorData || undefined,
-    });
-
-    const res = await yt.actions.execute('/browse', { browseId: 'FEmusic_liked' }).catch(() => null);
-    if (res) {
-      return { success: true, accountName: 'YouTube Music Connected' };
-    }
-    return { success: true, accountName: 'YouTube Music Session Active' };
-  } catch (err) {
-    console.error('[testYouTubeMusicAuth] Error:', err);
-    return { success: false, message: err.message || 'Failed to authenticate YouTube Music session' };
+  // If already a clean ID
+  if (/^[a-zA-Z0-9_-]{10,}$/.test(trimmed) && !trimmed.includes('/')) {
+    return trimmed;
   }
+
+  try {
+    const url = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    const listParam = url.searchParams.get('list');
+    if (listParam) return listParam;
+
+    const match = url.pathname.match(/\/playlist\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) return match[1];
+  } catch {
+    const match = trimmed.match(/[?&]list=([a-zA-Z0-9_-]+)/i);
+    if (match && match[1]) return match[1];
+  }
+
+  return trimmed;
 }
+
+/**
+ * 10. importPlaylistByUrl(urlOrId: string)
+ * Fetches public or unlisted YouTube / YouTube Music playlist tracks and metadata.
+ */
+export async function importPlaylistByUrl(urlOrId) {
+  const playlistId = extractPlaylistId(urlOrId);
+  if (!playlistId) {
+    throw new Error('Invalid YouTube playlist URL or ID provided.');
+  }
+
+  const yt = await getInnertube();
+  let title = 'Imported Playlist';
+  let description = 'Imported from YouTube';
+  let thumbnail = '';
+  const songs = [];
+
+  try {
+    const plData = await yt.music.getPlaylist(playlistId).catch(() => null)
+                || await yt.getPlaylist(playlistId).catch(() => null);
+
+    if (plData) {
+      title = plData.header?.title?.text 
+           || plData.title?.text 
+           || (typeof plData.title === 'string' ? plData.title : 'Imported Playlist');
+      
+      description = plData.header?.description?.text 
+                 || plData.description?.text 
+                 || (typeof plData.description === 'string' ? plData.description : 'Imported from YouTube');
+      
+      thumbnail = resolveThumbnail(plData.header?.thumbnail || plData.thumbnails || plData.thumbnail || plData);
+
+      const items = plData.items || plData.videos || plData.contents || [];
+      for (const item of items) {
+        const parsed = parseSongItem(item);
+        if (parsed.id && !songs.some((s) => s.id === parsed.id)) {
+          songs.push(parsed);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Innertube] Direct playlist fetch error:', err.message);
+  }
+
+  // Fallback: Browse VL + playlistId
+  if (songs.length === 0) {
+    try {
+      const browseId = playlistId.startsWith('VL') ? playlistId : `VL${playlistId}`;
+      const browseData = await yt.actions.execute('/browse', { browseId }).catch(() => null);
+      if (browseData?.data) {
+        const header = browseData.data.header?.musicResponsiveHeaderRenderer || browseData.data.header?.musicHeaderRenderer;
+        if (header) {
+          if (header.title?.runs?.[0]?.text) title = header.title.runs[0].text;
+          thumbnail = resolveThumbnail(header.thumbnail);
+        }
+
+        const traverseSongs = (node) => {
+          if (!node || typeof node !== 'object') return;
+          if (node.type === 'MusicResponsiveListItem' || node.videoId) {
+            const parsed = parseSongItem(node);
+            if (parsed.id && !songs.some((s) => s.id === parsed.id)) {
+              songs.push(parsed);
+            }
+          }
+          for (const key of Object.keys(node)) {
+            if (Array.isArray(node[key])) {
+              node[key].forEach(traverseSongs);
+            } else if (typeof node[key] === 'object') {
+              traverseSongs(node[key]);
+            }
+          }
+        };
+        traverseSongs(browseData.data.contents);
+      }
+    } catch (e) {
+      console.warn('[Innertube] Browse playlist fallback error:', e.message);
+    }
+  }
+
+  if (songs.length === 0) {
+    throw new Error('Unable to find any public songs in this playlist. Please ensure the playlist is Public or Unlisted.');
+  }
+
+  if (!thumbnail && songs[0]?.thumbnail) {
+    thumbnail = songs[0].thumbnail;
+  }
+
+  return {
+    success: true,
+    playlist: {
+      id: `imported_${playlistId}_${Date.now()}`,
+      playlistId,
+      title: title || 'Imported Playlist',
+      description: `${songs.length} tracks · Imported from YouTube`,
+      thumbnail,
+      cover: thumbnail,
+      songs,
+      source: 'youtube_url_import',
+      createdAt: new Date().toISOString(),
+    },
+    count: songs.length,
+  };
+}
+
 
 

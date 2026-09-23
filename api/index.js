@@ -7,6 +7,7 @@ import {
   resolveAudioStream,
   getYouTubeMusicLibrary,
   testYouTubeMusicAuth,
+  importPlaylistByUrl,
 } from '../src/services/innertube.js';
 
 export default async function handler(req, res) {
@@ -26,6 +27,30 @@ export default async function handler(req, res) {
   const pathname = url.pathname;
 
   try {
+    // ── 0. POST/GET /api/playlist/import ─────────────────────────
+    if (pathname === '/api/playlist/import') {
+      try {
+        let body = {};
+        if (req.body) {
+          body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        }
+
+        const urlOrId = body.url || body.playlistId || url.searchParams.get('url') || url.searchParams.get('list') || url.searchParams.get('id') || '';
+        if (!urlOrId) {
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          return res.status(400).json({ error: 'Missing "url" or "playlistId" parameter' });
+        }
+
+        const result = await importPlaylistByUrl(urlOrId);
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return res.status(200).json(result);
+      } catch (err) {
+        console.error('[API /api/playlist/import] Error:', err);
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return res.status(500).json({ success: false, error: err.message || 'Failed to import playlist' });
+      }
+    }
+
     // ── 0a. POST/GET /api/ytmusic/library ─────────────────────────
     if (pathname === '/api/ytmusic/library') {
       try {

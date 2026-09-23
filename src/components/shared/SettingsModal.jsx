@@ -1,13 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
-import {
-  getAuthConfig,
-  saveAuthConfig,
-  extractSapisid,
-  formatYTMAuthCookie,
-  testSyncConnection,
-} from '../../utils/authSync.js';
 
 export default function SettingsModal({ isOpen, onClose }) {
   const {
@@ -15,7 +8,7 @@ export default function SettingsModal({ isOpen, onClose }) {
     playlists,
     history,
     syncAllWithCloud,
-    syncYouTubeMusicLibrary,
+    importPlaylistFromUrl,
     audioQuality,
     setAudioQuality,
     activeStreamMeta,
@@ -78,15 +71,10 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [authError, setAuthError] = useState(null);
   const [importStatus, setImportStatus] = useState(null);
 
-  // ── YouTube Music Session & Sync States ────────────────────────────
-  const [ytmCookie, setYtmCookie] = useState('');
-  const [ytmVisitorData, setYtmVisitorData] = useState('');
-  const [ytmSapisid, setYtmSapisid] = useState('');
-  const [ytmTesting, setYtmTesting] = useState(false);
-  const [ytmTestResult, setYtmTestResult] = useState(null);
-  const [ytmSyncing, setYtmSyncing] = useState(false);
-  const [ytmSyncResult, setYtmSyncResult] = useState(null);
-  const [showYtmGuide, setShowYtmGuide] = useState(false);
+  // ── Public Playlist URL Importer State ─────────────────────────────
+  const [importUrl, setImportUrl] = useState('');
+  const [importingUrl, setImportingUrl] = useState(false);
+  const [importUrlStatus, setImportUrlStatus] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -94,13 +82,7 @@ export default function SettingsModal({ isOpen, onClose }) {
       setSupabaseKey(credentials.anonKey || '');
       setAuthError(null);
       setSyncStatus(null);
-
-      const authConf = getAuthConfig();
-      setYtmCookie(authConf.ytmusicCookie || '');
-      setYtmVisitorData(authConf.visitorData || '');
-      setYtmSapisid(authConf.sapisid || '');
-      setYtmTestResult(null);
-      setYtmSyncResult(null);
+      setImportUrlStatus(null);
     }
   }, [isOpen, credentials]);
 
@@ -212,73 +194,35 @@ export default function SettingsModal({ isOpen, onClose }) {
     reader.readAsText(file);
   };
 
-  // ── YouTube Music Auth & Library Handlers ──────────────────────────
-  const handleSaveYtmSession = () => {
-    const cleanCookie = formatYTMAuthCookie(ytmCookie);
-    const cleanSapisid = ytmSapisid ? extractSapisid(ytmSapisid) : extractSapisid(cleanCookie);
-    const updated = {
-      ...getAuthConfig(),
-      ytmusicCookie: cleanCookie,
-      sapisid: cleanSapisid,
-      visitorData: ytmVisitorData.trim(),
-    };
-    saveAuthConfig(updated);
-    setYtmCookie(cleanCookie);
-    setYtmSapisid(cleanSapisid);
-    setYtmTestResult({ success: true, text: 'YouTube Music session saved in local vault.' });
-    setTimeout(() => setYtmTestResult(null), 4000);
-  };
-
-  const handleTestYtmSession = async () => {
-    setYtmTesting(true);
-    setYtmTestResult(null);
-    const cleanCookie = formatYTMAuthCookie(ytmCookie);
-    const cleanSapisid = ytmSapisid ? extractSapisid(ytmSapisid) : extractSapisid(cleanCookie);
-    const updated = {
-      ...getAuthConfig(),
-      ytmusicCookie: cleanCookie,
-      sapisid: cleanSapisid,
-      visitorData: ytmVisitorData.trim(),
-    };
-    saveAuthConfig(updated);
-
-    const res = await testSyncConnection(updated);
-    setYtmTesting(false);
-    if (res.success) {
-      setYtmTestResult({ success: true, text: `Session Active: ${res.accountName || 'Connected'}` });
-    } else {
-      setYtmTestResult({ success: false, text: res.message || 'Session verification failed.' });
-    }
-  };
-
-  const handleFetchYtmLibrary = async () => {
-    setYtmSyncing(true);
-    setYtmSyncResult(null);
-    const cleanCookie = formatYTMAuthCookie(ytmCookie);
-    const cleanSapisid = ytmSapisid ? extractSapisid(ytmSapisid) : extractSapisid(cleanCookie);
-    const config = {
-      ...getAuthConfig(),
-      ytmusicCookie: cleanCookie,
-      sapisid: cleanSapisid,
-      visitorData: ytmVisitorData.trim(),
-    };
-    saveAuthConfig(config);
+  // ── Public YouTube Playlist URL Importer Handler ──────────────────
+  const handleImportPlaylistUrl = async (targetType = 'playlist') => {
+    if (!importUrl.trim()) return;
+    setImportingUrl(true);
+    setImportUrlStatus(null);
 
     try {
-      const res = await syncYouTubeMusicLibrary(config);
-      setYtmSyncResult({
-        success: true,
-        text: `Merged ${res.importedLiked} liked tracks & ${res.importedPlaylists} playlists from YouTube Music! (Total: ${res.totalLiked} liked, ${res.totalPlaylists} playlists)`,
-      });
-      setTimeout(() => setYtmSyncResult(null), 8000);
+      const res = await importPlaylistFromUrl(importUrl.trim(), targetType);
+      if (targetType === 'liked') {
+        setImportUrlStatus({
+          type: 'success',
+          text: `Imported ${res.count} tracks directly into your Liked Songs!`,
+        });
+      } else {
+        setImportUrlStatus({
+          type: 'success',
+          text: `Imported playlist "${res.playlist.title}" with ${res.count} tracks into your Library!`,
+        });
+      }
+      setImportUrl('');
+      setTimeout(() => setImportUrlStatus(null), 8000);
     } catch (err) {
-      console.error('[YTM Sync Error]:', err);
-      setYtmSyncResult({
-        success: false,
-        text: err.message || 'Failed to fetch YouTube Music library.',
+      console.error('[Playlist Import Error]:', err);
+      setImportUrlStatus({
+        type: 'error',
+        text: err.message || 'Failed to import playlist. Please check if the link is Public or Unlisted.',
       });
     } finally {
-      setYtmSyncing(false);
+      setImportingUrl(false);
     }
   };
 
@@ -413,155 +357,103 @@ export default function SettingsModal({ isOpen, onClose }) {
     </div>
   );
 
-  // ── YouTube Music Library Sync & Auth Component ────────────────────
-  function renderYouTubeMusicSyncSection() {
-    const isConnected = ytmTestResult?.success || (getAuthConfig().status === 'connected' && (ytmCookie || ytmSapisid));
-
+  // ── Public YouTube Playlist / Track Importer Component ─────────────
+  function renderPlaylistUrlImporterSection() {
     return (
       <div className="rounded-2xl border border-white/10 bg-[#18181a] p-5 shadow-lg space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <p className="text-[11px] uppercase tracking-widest text-amber-500 font-mono font-semibold">
-                YouTube Music · Account Library Sync
+                Library Importer · YouTube & YT Music
               </p>
-              {isConnected ? (
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold">
-                  Connected
-                </span>
-              ) : (
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-400 border border-white/10">
-                  Session Token Required
-                </span>
-              )}
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-semibold">
+                No Cookies Needed
+              </span>
             </div>
             <h3 className="text-headline-sm font-semibold text-white mt-1">
-              Fetch & Sync YouTube Music Library
+              Import YouTube Playlist or Album
             </h3>
             <p className="text-body-sm text-neutral-400 mt-1 max-w-md">
-              Fetch your YouTube Music liked songs (LM playlist) & cloud playlists directly and merge them into your local cassette library.
+              Paste any public or unlisted YouTube / YouTube Music playlist URL to seamlessly import tracks into your library or merge into Liked Songs.
             </p>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0">
-            <span className="material-symbols-outlined text-[24px]">library_music</span>
+            <span className="material-symbols-outlined text-[24px]">download</span>
           </div>
         </div>
 
-        {ytmSyncResult && (
+        {importUrlStatus && (
           <div
             className={`p-3.5 rounded-xl text-body-sm font-medium flex items-center gap-2.5 ${
-              ytmSyncResult.success
+              importUrlStatus.type === 'success'
                 ? 'bg-emerald-950/40 border border-emerald-800/60 text-emerald-300'
                 : 'bg-red-950/40 border border-red-800/60 text-red-300'
             }`}
           >
             <span className="material-symbols-outlined text-[18px] flex-shrink-0">
-              {ytmSyncResult.success ? 'check_circle' : 'error'}
+              {importUrlStatus.type === 'success' ? 'check_circle' : 'error'}
             </span>
-            <span className="flex-1">{ytmSyncResult.text}</span>
+            <span className="flex-1">{importUrlStatus.text}</span>
           </div>
         )}
 
-        {ytmTestResult && (
-          <div
-            className={`p-3 rounded-xl text-body-sm font-medium flex items-center gap-2.5 ${
-              ytmTestResult.success
-                ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300'
-                : 'bg-red-950/40 border border-red-800/60 text-red-300'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[18px] flex-shrink-0">
-              {ytmTestResult.success ? 'verified' : 'cancel'}
-            </span>
-            <span className="flex-1">{ytmTestResult.text}</span>
-          </div>
-        )}
-
-        {/* Input Controls */}
+        {/* URL Input */}
         <div className="space-y-3 pt-1">
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[11px] font-mono uppercase text-neutral-400">
-                YouTube Music Session Cookie / SAPISID Token
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowYtmGuide(!showYtmGuide)}
-                className="text-[11px] font-mono text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[13px]">help</span>
-                {showYtmGuide ? 'Hide Guide' : 'How to get cookie?'}
-              </button>
-            </div>
-
-            <textarea
-              rows="2"
-              value={ytmCookie}
-              onChange={(e) => setYtmCookie(e.target.value)}
-              placeholder="Paste SAPISID token or full cookie string (e.g. SAPISID=xxx; __Secure-3PAPISID=yyy; ...)"
-              className="w-full px-3 py-2 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-body-xs focus:border-amber-500 focus:outline-none resize-none placeholder:text-neutral-600"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-mono uppercase text-neutral-400 mb-1">
-              InnerTube Visitor Data (Optional)
+            <label className="block text-[11px] font-mono uppercase text-neutral-400 mb-1.5">
+              YouTube / YouTube Music Playlist URL or ID
             </label>
-            <input
-              type="text"
-              value={ytmVisitorData}
-              onChange={(e) => setYtmVisitorData(e.target.value)}
-              placeholder="e.g. Cgt2Ym1... (leave empty if using standard cookie)"
-              className="w-full px-3 py-2 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-body-xs focus:border-amber-500 focus:outline-none placeholder:text-neutral-600"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={importUrl}
+                onChange={(e) => setImportUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && importUrl.trim() && !importingUrl) {
+                    handleImportPlaylistUrl('playlist');
+                  }
+                }}
+                placeholder="https://music.youtube.com/playlist?list=... or PL..."
+                className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-body-sm focus:border-amber-500 focus:outline-none placeholder:text-neutral-600"
+              />
+              {importUrl && (
+                <button
+                  type="button"
+                  onClick={() => setImportUrl('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-neutral-500 mt-1">
+              Supports playlists (`?list=...`), albums, and mix URLs. Make sure the playlist is set to Public or Unlisted on YouTube.
+            </p>
           </div>
 
-          {/* Quick Step-by-Step Guide */}
-          {showYtmGuide && (
-            <div className="p-3.5 rounded-xl bg-[#111114] border border-amber-500/20 text-neutral-300 text-body-xs space-y-2">
-              <p className="font-bold text-amber-400 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px]">info</span>
-                How to get your YouTube Music session cookie:
-              </p>
-              <ol className="list-decimal list-inside space-y-1 text-neutral-400 font-mono text-[11px]">
-                <li>Open <strong className="text-white">music.youtube.com</strong> in your desktop browser.</li>
-                <li>Press <strong className="text-white">F12</strong> (Developer Tools) &rarr; Go to <strong className="text-white">Application</strong> / <strong className="text-white">Storage</strong>.</li>
-                <li>Under <strong className="text-white">Cookies</strong> &rarr; <strong className="text-white">https://music.youtube.com</strong>, copy the value of <strong className="text-white">SAPISID</strong> (or the entire Cookie header).</li>
-                <li>Paste it above and click <strong className="text-amber-400">Fetch & Merge YTM Library</strong>.</li>
-              </ol>
-            </div>
-          )}
-
-          {/* Actions */}
+          {/* Action Buttons */}
           <div className="pt-2 flex flex-wrap items-center gap-2.5">
             <button
-              onClick={handleFetchYtmLibrary}
-              disabled={ytmSyncing || (!ytmCookie.trim() && !ytmSapisid.trim())}
+              onClick={() => handleImportPlaylistUrl('playlist')}
+              disabled={importingUrl || !importUrl.trim()}
               className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-label-sm transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className={`material-symbols-outlined text-[17px] ${ytmSyncing ? 'animate-spin' : ''}`}>
-                {ytmSyncing ? 'sync' : 'cloud_download'}
+              <span className={`material-symbols-outlined text-[17px] ${importingUrl ? 'animate-spin' : ''}`}>
+                {importingUrl ? 'sync' : 'playlist_add'}
               </span>
-              {ytmSyncing ? 'Fetching YTM Library...' : 'Fetch & Merge YTM Library'}
+              {importingUrl ? 'Importing Tracks...' : 'Import as Playlist'}
             </button>
 
             <button
-              onClick={handleTestYtmSession}
-              disabled={ytmTesting || (!ytmCookie.trim() && !ytmSapisid.trim())}
-              className="px-3.5 py-2.5 rounded-xl bg-[#222225] hover:bg-[#2c2c30] text-neutral-300 hover:text-white text-label-sm font-semibold transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              onClick={() => handleImportPlaylistUrl('liked')}
+              disabled={importingUrl || !importUrl.trim()}
+              className="px-3.5 py-2.5 rounded-xl bg-[#222225] hover:bg-[#2c2c30] text-neutral-200 hover:text-white text-label-sm font-semibold transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              <span className={`material-symbols-outlined text-[16px] ${ytmTesting ? 'animate-spin' : ''}`}>
-                {ytmTesting ? 'hourglass_top' : 'check_circle'}
+              <span className="material-symbols-outlined text-[16px] text-rose-400" style={{ fontVariationSettings: "'FILL' 1" }}>
+                favorite
               </span>
-              {ytmTesting ? 'Testing...' : 'Test Session'}
-            </button>
-
-            <button
-              onClick={handleSaveYtmSession}
-              disabled={!ytmCookie.trim() && !ytmVisitorData.trim()}
-              className="px-3.5 py-2.5 rounded-xl border border-white/10 hover:border-white/30 text-neutral-400 hover:text-white text-label-sm transition-colors cursor-pointer disabled:opacity-50"
-            >
-              Save Session
+              Merge into Liked Songs
             </button>
           </div>
         </div>
@@ -576,7 +468,7 @@ export default function SettingsModal({ isOpen, onClose }) {
       case 'account':
         return (
           <div className="space-y-4 animate-fade-in">
-            {renderYouTubeMusicSyncSection()}
+            {renderPlaylistUrlImporterSection()}
 
             <div className="rounded-2xl border border-white/10 bg-[#18181a] p-5 shadow-lg">
               <div className="flex items-start justify-between gap-4">
@@ -1088,7 +980,7 @@ export default function SettingsModal({ isOpen, onClose }) {
       case 'integration':
         return (
           <div className="space-y-4 animate-fade-in">
-            {renderYouTubeMusicSyncSection()}
+            {renderPlaylistUrlImporterSection()}
 
             <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-3">
               <h4 className="text-headline-sm font-bold text-white flex items-center gap-2">

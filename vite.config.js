@@ -16,6 +16,64 @@ function innertubeApiPlugin() {
         const parsedUrl = new URL(req.url, 'http://localhost');
         const pathname = parsedUrl.pathname;
 
+        const readJson = () => new Promise((resolve) => {
+          let data = '';
+          req.on('data', (c) => { data += c; });
+          req.on('end', () => {
+            try { resolve(data ? JSON.parse(data) : {}); } catch { resolve({}); }
+          });
+        });
+
+        // ── 0a. POST/GET /api/ytmusic/library ─────────────────────────────
+        if (pathname === '/api/ytmusic/library') {
+          try {
+            const body = req.method === 'POST' ? await readJson() : {};
+            const cookie = body.cookie || req.headers['x-ytmusic-cookie'] || parsedUrl.searchParams.get('cookie') || '';
+            const visitorData = body.visitorData || req.headers['x-visitor-data'] || parsedUrl.searchParams.get('visitorData') || '';
+            const sapisid = body.sapisid || parsedUrl.searchParams.get('sapisid') || '';
+
+            const { getYouTubeMusicLibrary } = await import('./src/services/innertube.js');
+            const libraryData = await getYouTubeMusicLibrary({ cookie, visitorData, sapisid });
+
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify(libraryData));
+            return;
+          } catch (err) {
+            console.error('[API /api/ytmusic/library] Error:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: false, error: err.message, liked: [], playlists: [] }));
+            return;
+          }
+        }
+
+        // ── 0b. POST /api/sync/test ───────────────────────────────────────
+        if (pathname === '/api/sync/test') {
+          try {
+            const body = req.method === 'POST' ? await readJson() : {};
+            const cookie = body.cookie || req.headers['x-ytmusic-cookie'] || body.sapisid || '';
+            const visitorData = body.visitorData || req.headers['x-visitor-data'] || '';
+            const sapisid = body.sapisid || '';
+
+            const { testYouTubeMusicAuth } = await import('./src/services/innertube.js');
+            const testResult = await testYouTubeMusicAuth({ cookie, visitorData, sapisid });
+
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = testResult.success ? 200 : 401;
+            res.end(JSON.stringify(testResult));
+            return;
+          } catch (err) {
+            console.error('[API /api/sync/test] Error:', err);
+            res.statusCode = 401;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: false, message: err.message }));
+            return;
+          }
+        }
+
         // ── 1. GET /api/search?q=:query ───────────────────────────────────
         // ── 1. GET /api/search?q=:query&type=:type ───────────────────────
         if (pathname === '/api/search' && req.method === 'GET') {

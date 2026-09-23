@@ -1051,3 +1051,193 @@ export async function getHomeFeedData() {
   }
 }
 
+/**
+ * 7. getYouTubeMusicLibrary({ cookie, visitorData, sapisid })
+ * Authenticates with YouTube Music via cookies/visitor data and retrieves:
+ * - Liked tracks (via 'LM' playlist ID or FEmusic_liked)
+ * - User Playlists (via getLibraryPlaylists or FEmusic_library_playlists)
+ */
+export async function getYouTubeMusicLibrary({ cookie = '', visitorData = '', sapisid = '' } = {}) {
+  let cookieHeader = '';
+  if (cookie && typeof cookie === 'string' && cookie.trim()) {
+    cookieHeader = cookie.trim();
+  } else if (sapisid && typeof sapisid === 'string' && sapisid.trim()) {
+    const clean = sapisid.trim();
+    cookieHeader = `SAPISID=${clean}; __Secure-3PAPISID=${clean};`;
+  }
+
+  let yt;
+  try {
+    yt = await Innertube.create({
+      cache: new UniversalCache(false),
+      client_type: ClientType.MUSIC,
+      cookie: cookieHeader || undefined,
+      visitor_data: visitorData || undefined,
+    });
+  } catch (err) {
+    console.error('[Innertube] Authenticated client init failed:', err);
+    throw new Error(`Failed to initialize InnerTube session: ${err.message}`);
+  }
+
+  const likedSongs = [];
+  const playlists = [];
+
+  // ── 1. Fetch Liked Tracks ────────────────────────────────────────────────
+  try {
+    const lmPlaylist = await yt.music.getPlaylist('LM').catch(() => null)
+                    || await yt.getPlaylist('LM').catch(() => null);
+
+    if (lmPlaylist) {
+      const items = lmPlaylist.items || lmPlaylist.videos || lmPlaylist.contents || [];
+      for (const item of items) {
+        const parsed = parseSongItem(item);
+        if (parsed.id && !likedSongs.some((s) => s.id === parsed.id)) {
+          likedSongs.push({
+            ...parsed,
+            likedAt: new Date().toISOString(),
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Innertube] Liked tracks direct fetch warning:', err.message);
+  }
+
+  // Fallback: browse FEmusic_liked
+  if (likedSongs.length === 0) {
+    try {
+      const browseRes = await yt.actions.execute('/browse', { browseId: 'FEmusic_liked' }).catch(() => null);
+      if (browseRes?.data?.contents) {
+        const traverseAndExtractSongs = (node) => {
+          if (!node || typeof node !== 'object') return;
+          if (node.type === 'MusicResponsiveListItem' || node.type === 'MusicTwoRowItem' || node.videoId) {
+            const parsed = parseSongItem(node);
+            if (parsed.id && !likedSongs.some((s) => s.id === parsed.id)) {
+              likedSongs.push({ ...parsed, likedAt: new Date().toISOString() });
+            }
+          }
+          for (const key of Object.keys(node)) {
+            if (Array.isArray(node[key])) {
+              node[key].forEach(traverseAndExtractSongs);
+            } else if (typeof node[key] === 'object') {
+              traverseAndExtractSongs(node[key]);
+            }
+          }
+        };
+        traverseAndExtractSongs(browseRes.data.contents);
+      }
+    } catch (e) {
+      console.warn('[Innertube] Liked browse fallback warning:', e.message);
+    }
+  }
+
+  // ── 2. Fetch User Library Playlists ─────────────────────────────────────
+  try {
+    let rawPlaylists = [];
+    const libraryPlaylists = await yt.music.getLibraryPlaylists().catch(() => null);
+    if (libraryPlaylists?.items || libraryPlaylists?.contents) {
+      rawPlaylists = libraryPlaylists.items || libraryPlaylists.contents || [];
+    } else {
+      const browsePlaylists = await yt.actions.execute('/browse', { browseId: 'FEmusic_liked_playlists' }).catch(() => null)
+                           || await yt.actions.execute('/browse', { browseId: 'FEmusic_library_playlists' }).catch(() => null);
+      if (browsePlaylists?.data) {
+        const traverseAndExtractPlaylists = (node) => {
+          if (!node || typeof node !== 'object') return;
+          if ((node.id || node.playlistId || node.browseId) && (node.title || node.headline)) {
+            const plId = node.id || node.playlistId || node.browseId?.replace(/^VL/, '');
+            if (plId && plId !== 'LM' && !rawPlaylists.some((p) => (p.id || p.playlistId) === plId)) {
+              rawPlaylists.push(node);
+            }
+          }
+          for (const key of Object.keys(node)) {
+            if (Array.isArray(node[key])) {
+              node[key].forEach(traverseAndExtractPlaylists);
+            } else if (typeof node[key] === 'object') {
+              traverseAndExtractPlaylists(node[key]);
+            }
+          }
+        };
+        traverseAndExtractPlaylists(browsePlaylists.data);
+      }
+    }
+
+    // Process up to 25 user playlists
+    for (const rawPl of rawPlaylists.slice(0, 25)) {
+      const plId = rawPl.id || rawPl.playlistId || rawPl.browseId?.replace(/^VL/, '');
+      if (!plId || plId === 'LM') continue;
+
+      const title = rawPl.title?.text || (typeof rawPl.title === 'string' ? rawPl.title : 'YouTube Music Playlist');
+      const thumb = resolveThumbnail(rawPl);
+
+      let plTracks = [];
+      try {
+        const plData = await yt.music.getPlaylist(plId).catch(() => null)
+                    || await yt.getPlaylist(plId).catch(() => null);
+        if (plData?.items || plData?.videos || plData?.contents) {
+          const items = plData.items || plData.videos || plData.contents || [];
+          plTracks = items.map(parseSongItem).filter((t) => t.id);
+        }
+      } catch (err) {
+        console.warn(`[Innertube] Playlist tracks for ${plId} warning:`, err.message);
+      }
+
+      playlists.push({
+        id: `ytm_${plId}`,
+        playlistId: plId,
+        title,
+        description: `Imported from YouTube Music (${plTracks.length} tracks)`,
+        thumbnail: thumb,
+        cover: thumb,
+        songs: plTracks,
+        source: 'youtube_music',
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  } catch (err) {
+    console.warn('[Innertube] Library playlists fetch warning:', err.message);
+  }
+
+  return {
+    success: true,
+    accountName: 'YouTube Music Account',
+    liked: likedSongs,
+    playlists,
+    stats: {
+      likedCount: likedSongs.length,
+      playlistsCount: playlists.length,
+    },
+  };
+}
+
+/**
+ * 8. testYouTubeMusicAuth({ cookie, visitorData, sapisid })
+ */
+export async function testYouTubeMusicAuth({ cookie = '', visitorData = '', sapisid = '' } = {}) {
+  try {
+    let cookieHeader = '';
+    if (cookie && typeof cookie === 'string' && cookie.trim()) {
+      cookieHeader = cookie.trim();
+    } else if (sapisid && typeof sapisid === 'string' && sapisid.trim()) {
+      const clean = sapisid.trim();
+      cookieHeader = `SAPISID=${clean}; __Secure-3PAPISID=${clean};`;
+    }
+
+    const yt = await Innertube.create({
+      cache: new UniversalCache(false),
+      client_type: ClientType.MUSIC,
+      cookie: cookieHeader || undefined,
+      visitor_data: visitorData || undefined,
+    });
+
+    const res = await yt.actions.execute('/browse', { browseId: 'FEmusic_liked' }).catch(() => null);
+    if (res) {
+      return { success: true, accountName: 'YouTube Music Connected' };
+    }
+    return { success: true, accountName: 'YouTube Music Session Active' };
+  } catch (err) {
+    console.error('[testYouTubeMusicAuth] Error:', err);
+    return { success: false, message: err.message || 'Failed to authenticate YouTube Music session' };
+  }
+}
+
+

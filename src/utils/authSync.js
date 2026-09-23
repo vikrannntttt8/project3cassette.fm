@@ -2,8 +2,9 @@
  * authSync.js — Multi-Mode Authentication & InnerTube Account Sync Manager
  * ──────────────────────────────────────────────────────────────────────────
  * Supports:
- *   - Mode A: SAPISID Cookie / Session String (with dynamic SAPISIDHASH calculation)
+ *   - Mode A: SAPISID / YouTube Music Cookie String (with auto-extraction & header generation)
  *   - Mode B: OAuth 2.0 Credentials JSON Blob (with access_token validation)
+ *   - Mode C: InnerTube Visitor Data Token
  * ──────────────────────────────────────────────────────────────────────────
  */
 
@@ -17,6 +18,8 @@ export const AUTH_STORAGE_KEY = 'pulse_auth_config';
 export const DEFAULT_AUTH_CONFIG = {
   mode: 'sapisid', // 'sapisid' | 'oauth'
   sapisid: '',
+  ytmusicCookie: '',
+  visitorData: '',
   oauthJson: '',
   oauthData: null,
   status: 'unconfigured', // 'unconfigured' | 'connected' | 'error' | 'expired'
@@ -32,20 +35,27 @@ export function getAuthConfig() {
   if (typeof window === 'undefined') return { ...DEFAULT_AUTH_CONFIG };
   try {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    const legacyCookie = localStorage.getItem('pulse_yt_cookie') || '';
+    const legacyVisitor = localStorage.getItem('pulse_visitor_data') || '';
+    const legacyToken = localStorage.getItem('pulse_yt_token') || '';
+
     if (!raw) {
-      // Legacy fallback check
-      const legacyToken = localStorage.getItem('pulse_yt_token');
-      if (legacyToken) {
-        return {
-          ...DEFAULT_AUTH_CONFIG,
-          mode: 'sapisid',
-          sapisid: legacyToken.trim(),
-        };
-      }
-      return { ...DEFAULT_AUTH_CONFIG };
+      return {
+        ...DEFAULT_AUTH_CONFIG,
+        mode: 'sapisid',
+        sapisid: legacyToken.trim() || extractSapisid(legacyCookie),
+        ytmusicCookie: legacyCookie.trim(),
+        visitorData: legacyVisitor.trim(),
+      };
     }
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_AUTH_CONFIG, ...parsed };
+    return {
+      ...DEFAULT_AUTH_CONFIG,
+      ...parsed,
+      ytmusicCookie: parsed.ytmusicCookie || legacyCookie || '',
+      visitorData: parsed.visitorData || legacyVisitor || '',
+      sapisid: parsed.sapisid || legacyToken || extractSapisid(parsed.ytmusicCookie || legacyCookie),
+    };
   } catch (err) {
     console.warn('[AuthSync] Error parsing stored auth config:', err);
     return { ...DEFAULT_AUTH_CONFIG };
@@ -59,7 +69,12 @@ export function saveAuthConfig(config) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(config));
-    // Also keep legacy token updated for backward compatibility
+    if (config.ytmusicCookie) {
+      localStorage.setItem('pulse_yt_cookie', config.ytmusicCookie);
+    }
+    if (config.visitorData) {
+      localStorage.setItem('pulse_visitor_data', config.visitorData);
+    }
     if (config.sapisid) {
       localStorage.setItem('pulse_yt_token', config.sapisid);
     }
@@ -69,18 +84,38 @@ export function saveAuthConfig(config) {
 }
 
 /**
- * Extract SAPISID from a full cookie header string or return raw if only token provided
+ * Extract SAPISID or clean cookie string from cURL commands, header strings, or raw tokens
  */
 export function extractSapisid(cookieStr) {
   if (!cookieStr || typeof cookieStr !== 'string') return '';
   const trimmed = cookieStr.trim();
-  
-  // If user pasted "SAPISID=xxx;" or "__Secure-3PAPISID=xxx;"
-  const match = trimmed.match(/(?:SAPISID|__Secure-3PAPISID)=([^;]+)/i);
+
+  // If user pasted a full cURL command or header line: -H 'cookie: ...'
+  const curlMatch = trimmed.match(/cookie:\s*([^\r\n"']+)/i);
+  const target = curlMatch ? curlMatch[1] : trimmed;
+
+  // Match SAPISID or __Secure-3PAPISID or __Secure-1PAPISID
+  const match = target.match(/(?:SAPISID|__Secure-3PAPISID|__Secure-1PAPISID)=([^;]+)/i);
   if (match && match[1]) {
     return match[1].trim();
   }
-  return trimmed;
+  return target;
+}
+
+/**
+ * Clean and format full cookie string for InnerTube
+ */
+export function formatYTMAuthCookie(inputStr) {
+  if (!inputStr || typeof inputStr !== 'string') return '';
+  let str = inputStr.trim();
+
+  // Extract from cURL header if copied as cURL
+  const curlMatch = str.match(/cookie:\s*['"]?([^'"]+)['"]?/i);
+  if (curlMatch && curlMatch[1]) {
+    str = curlMatch[1].trim();
+  }
+
+  return str;
 }
 
 /**
@@ -98,7 +133,6 @@ export function generateSapisidHash(sapisid, origin = 'https://music.youtube.com
 
 /**
  * Validate and parse OAuth JSON blob
- * Requires at least access_token
  */
 export function parseAndValidateOAuthJson(jsonString) {
   if (!jsonString || typeof jsonString !== 'string' || !jsonString.trim()) {
@@ -130,7 +164,7 @@ export function parseAndValidateOAuthJson(jsonString) {
 }
 
 /**
- * Get HTTP headers for authenticated InnerTube requests based on active configuration
+ * Get HTTP headers for authenticated InnerTube requests
  */
 export function getInnertubeAuthHeaders(origin = 'https://music.youtube.com') {
   const config = getAuthConfig();
@@ -141,14 +175,22 @@ export function getInnertubeAuthHeaders(origin = 'https://music.youtube.com') {
     'X-Origin': origin,
   };
 
+  if (config.ytmusicCookie) {
+    headers['x-ytmusic-cookie'] = config.ytmusicCookie;
+    headers['Cookie'] = config.ytmusicCookie;
+  }
+
+  if (config.visitorData) {
+    headers['x-visitor-data'] = config.visitorData;
+  }
+
   if (config.mode === 'oauth' && config.oauthData?.access_token) {
     headers['Authorization'] = `Bearer ${config.oauthData.access_token}`;
-  } else if (config.mode === 'sapisid' && config.sapisid) {
+  } else if (config.sapisid) {
     const sapisid = extractSapisid(config.sapisid);
     if (sapisid) {
       headers['Authorization'] = generateSapisidHash(sapisid, origin);
       headers['X-Goog-AuthUser'] = '0';
-      headers['Cookie'] = `SAPISID=${sapisid}; __Secure-3PAPISID=${sapisid};`;
     }
   }
 
@@ -156,51 +198,28 @@ export function getInnertubeAuthHeaders(origin = 'https://music.youtube.com') {
 }
 
 /**
- * Client-side fetch wrapper for InnerTube /youtubei/v1/* endpoints
- */
-export async function innertubeFetch(endpoint, options = {}) {
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  // Prefer local Vite gateway proxy (/youtubei/v1/...)
-  const targetUrl = cleanEndpoint.startsWith('/youtubei/v1')
-    ? cleanEndpoint
-    : `/youtubei/v1${cleanEndpoint}`;
-
-  const authHeaders = getInnertubeAuthHeaders();
-  const mergedHeaders = {
-    ...authHeaders,
-    ...(options.headers || {}),
-  };
-
-  const config = {
-    ...options,
-    headers: mergedHeaders,
-  };
-
-  return fetch(targetUrl, config);
-}
-
-/**
  * Test InnerTube authentication and sync connectivity
- * Pings /api/sync/test or /youtubei/v1/browse with browseId: 'FEmusic_liked'
  */
-export async function testSyncConnection() {
-  const config = getAuthConfig();
-  if (config.mode === 'sapisid' && !config.sapisid.trim()) {
-    return { success: false, message: 'Please enter a SAPISID token or cookie string first' };
-  }
-  if (config.mode === 'oauth' && !config.oauthData?.access_token) {
-    return { success: false, message: 'Please enter and validate a valid OAuth JSON blob first' };
+export async function testSyncConnection(customConfig = null) {
+  const config = customConfig || getAuthConfig();
+  const cookie = config.ytmusicCookie || config.sapisid || '';
+  const sapisid = config.sapisid ? extractSapisid(config.sapisid) : extractSapisid(config.ytmusicCookie);
+  const visitorData = config.visitorData || '';
+
+  if (!cookie && !sapisid && !config.oauthData?.access_token) {
+    return { success: false, message: 'Please enter a YouTube Music cookie, SAPISID token, or OAuth blob first' };
   }
 
   try {
-    // 1. Try local Vite test-sync endpoint first
     const testRes = await fetch('/api/sync/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         mode: config.mode,
-        sapisid: config.mode === 'sapisid' ? extractSapisid(config.sapisid) : '',
-        accessToken: config.mode === 'oauth' ? config.oauthData?.access_token : '',
+        cookie,
+        sapisid,
+        visitorData,
+        accessToken: config.oauthData?.access_token || '',
       }),
     });
 
@@ -210,63 +229,52 @@ export async function testSyncConnection() {
         ...config,
         status: 'connected',
         lastTested: Date.now(),
-        accountName: data.accountName || 'YouTube Music Account',
+        accountName: data.accountName || 'YouTube Music Connected',
         errorMessage: '',
       };
       saveAuthConfig(updated);
-      return { success: true, message: 'Connected / Sync Active', accountName: updated.accountName };
+      return { success: true, message: 'Connected / Session Verified', accountName: updated.accountName };
     }
 
-    if (testRes.status === 401 || testRes.status === 403) {
-      const errData = await testRes.json().catch(() => ({}));
-      const updated = {
-        ...config,
-        status: 'expired',
-        lastTested: Date.now(),
-        errorMessage: errData.message || 'Token or cookie expired (401/403)',
-      };
-      saveAuthConfig(updated);
-      return { success: false, message: 'Authentication expired or invalid credentials (401)', status: testRes.status };
-    }
-
-    // 2. Direct fallback ping through /youtubei/v1/browse
-    const fallbackRes = await innertubeFetch('/youtubei/v1/browse', {
-      method: 'POST',
-      body: JSON.stringify({
-        context: {
-          client: {
-            clientName: 'WEB_REMIX',
-            clientVersion: '1.20250101.01.00',
-            hl: 'en',
-            gl: 'US',
-          },
-        },
-        browseId: 'FEmusic_liked',
-      }),
-    });
-
-    if (fallbackRes.ok) {
-      const updated = {
-        ...config,
-        status: 'connected',
-        lastTested: Date.now(),
-        accountName: 'YouTube Music Account',
-        errorMessage: '',
-      };
-      saveAuthConfig(updated);
-      return { success: true, message: 'Connected / Sync Active' };
-    }
-
+    const errData = await testRes.json().catch(() => ({}));
     const updated = {
       ...config,
       status: 'error',
       lastTested: Date.now(),
-      errorMessage: `Status ${fallbackRes.status}`,
+      errorMessage: errData.message || `HTTP ${testRes.status}`,
     };
     saveAuthConfig(updated);
-    return { success: false, message: `Sync verification failed (${fallbackRes.status})` };
+    return { success: false, message: errData.message || `Verification failed (${testRes.status})` };
   } catch (err) {
     console.error('[AuthSync] Test error:', err);
-    return { success: false, message: err.message || 'Connection error. Check network or CORS proxy.' };
+    return { success: false, message: err.message || 'Connection error. Check network or server.' };
   }
 }
+
+/**
+ * Direct call to /api/ytmusic/library
+ */
+export async function fetchYouTubeMusicLibraryDirect(customConfig = null) {
+  const config = customConfig || getAuthConfig();
+  const cookie = config.ytmusicCookie || config.sapisid || '';
+  const sapisid = config.sapisid ? extractSapisid(config.sapisid) : extractSapisid(config.ytmusicCookie);
+  const visitorData = config.visitorData || '';
+
+  const res = await fetch('/api/ytmusic/library', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      cookie,
+      sapisid,
+      visitorData,
+    }),
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `Server responded with ${res.status}`);
+  }
+
+  return res.json();
+}
+

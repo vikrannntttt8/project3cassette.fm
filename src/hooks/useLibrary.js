@@ -15,6 +15,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { getAuthConfig, fetchYouTubeMusicLibraryDirect } from '../utils/authSync.js';
 
 const STORAGE_KEYS = {
   liked:         'likedSongs',
@@ -243,6 +244,91 @@ export function useLibrary() {
 
     return result;
   }, [user?.id, liked, playlists, history, performFullSync]);
+
+  // ── 3b. Native YouTube Music Account Library Fetch & Merge ──────────
+  const syncYouTubeMusicLibrary = useCallback(async (customConfig = null) => {
+    const config = customConfig || getAuthConfig();
+    const data = await fetchYouTubeMusicLibraryDirect(config);
+
+    const ytmLiked = Array.isArray(data.liked) ? data.liked : [];
+    const ytmPlaylists = Array.isArray(data.playlists) ? data.playlists : [];
+
+    if (ytmLiked.length === 0 && ytmPlaylists.length === 0 && !data.success) {
+      throw new Error(data.error || 'No tracks or playlists found in this YouTube Music session.');
+    }
+
+    // Unified Library Merge: Liked Tracks (deduplicate by id/videoId)
+    let mergedLiked = [];
+    setLiked((prevLiked) => {
+      const map = new Map();
+      // Keep existing local liked tracks
+      (prevLiked || []).forEach((s) => {
+        const k = String(s.id || s.videoId || s.browseId || '');
+        if (k) map.set(k, s);
+      });
+      // Merge remote YouTube Music liked songs
+      ytmLiked.forEach((s) => {
+        const k = String(s.id || s.videoId || s.browseId || '');
+        if (k && !map.has(k)) {
+          map.set(k, s);
+        }
+      });
+      mergedLiked = Array.from(map.values());
+      saveLiked(mergedLiked);
+      return mergedLiked;
+    });
+
+    // Unified Library Merge: Playlists (deduplicate by title or id)
+    let mergedPlaylists = [];
+    setPlaylists((prevPlaylists) => {
+      const plMap = new Map();
+      (prevPlaylists || []).forEach((p) => {
+        const k = p.id || p.title;
+        if (k) plMap.set(k, p);
+      });
+
+      ytmPlaylists.forEach((p) => {
+        const k = p.id || p.title;
+        if (plMap.has(k)) {
+          const existing = plMap.get(k);
+          const songMap = new Map();
+          (existing.songs || []).forEach((s) => songMap.set(String(s.id || s.videoId), s));
+          (p.songs || []).forEach((s) => songMap.set(String(s.id || s.videoId), s));
+          plMap.set(k, {
+            ...existing,
+            songs: Array.from(songMap.values()),
+          });
+        } else {
+          plMap.set(k, p);
+        }
+      });
+
+      mergedPlaylists = Array.from(plMap.values());
+      savePlaylists(mergedPlaylists);
+      return mergedPlaylists;
+    });
+
+    // If Supabase user is authenticated, sync new merged library to Cloud automatically
+    if (user?.id) {
+      try {
+        await performFullSync({
+          liked: mergedLiked,
+          playlists: mergedPlaylists,
+          history,
+        });
+      } catch (err) {
+        console.warn('[useLibrary] Auto cloud backup after YTM merge warning:', err);
+      }
+    }
+
+    return {
+      success: true,
+      importedLiked: ytmLiked.length,
+      importedPlaylists: ytmPlaylists.length,
+      totalLiked: mergedLiked.length,
+      totalPlaylists: mergedPlaylists.length,
+    };
+  }, [user?.id, history, performFullSync]);
 
   // ── 4. Liked tracks ──────────────────────────────────────────────────
   const isLiked = useCallback((target) => {
@@ -485,7 +571,8 @@ export function useLibrary() {
     recordPlayback,
     clearHistory,
     setHistory,
-    // Cloud Sync
+    // Cloud & YouTube Music Sync
     syncAllWithCloud,
+    syncYouTubeMusicLibrary,
   };
 }

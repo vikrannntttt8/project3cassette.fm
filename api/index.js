@@ -5,13 +5,15 @@ import {
   getHomeFeedData,
   getArtistDetails,
   resolveAudioStream,
+  getYouTubeMusicLibrary,
+  testYouTubeMusicAuth,
 } from '../src/services/innertube.js';
 
 export default async function handler(req, res) {
   // Explicit Global CORS & Streaming Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range, Authorization, Accept, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range, Authorization, Accept, X-Requested-With, x-ytmusic-cookie, x-visitor-data');
   res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges');
 
   if (req.method === 'OPTIONS') {
@@ -24,6 +26,55 @@ export default async function handler(req, res) {
   const pathname = url.pathname;
 
   try {
+    // ── 0a. POST/GET /api/ytmusic/library ─────────────────────────
+    if (pathname === '/api/ytmusic/library') {
+      try {
+        let body = {};
+        if (req.body) {
+          body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        }
+
+        const cookie = body.cookie || req.headers['x-ytmusic-cookie'] || url.searchParams.get('cookie') || '';
+        const visitorData = body.visitorData || req.headers['x-visitor-data'] || url.searchParams.get('visitorData') || '';
+        const sapisid = body.sapisid || url.searchParams.get('sapisid') || '';
+
+        const libraryData = await getYouTubeMusicLibrary({ cookie, visitorData, sapisid });
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return res.status(200).json(libraryData);
+      } catch (err) {
+        console.error('[API /api/ytmusic/library] Error:', err);
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return res.status(500).json({
+          success: false,
+          error: err.message || 'Failed to fetch YouTube Music library',
+          liked: [],
+          playlists: [],
+        });
+      }
+    }
+
+    // ── 0b. POST /api/sync/test ──────────────────────────────────
+    if (pathname === '/api/sync/test') {
+      try {
+        let body = {};
+        if (req.body) {
+          body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+        }
+
+        const cookie = body.cookie || req.headers['x-ytmusic-cookie'] || body.sapisid || '';
+        const visitorData = body.visitorData || req.headers['x-visitor-data'] || '';
+        const sapisid = body.sapisid || '';
+
+        const testResult = await testYouTubeMusicAuth({ cookie, visitorData, sapisid });
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return res.status(testResult.success ? 200 : 401).json(testResult);
+      } catch (err) {
+        console.error('[API /api/sync/test] Error:', err);
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return res.status(401).json({ success: false, message: err.message });
+      }
+    }
+
     // ── 1. GET /api/search?q=:query&type=:type ──────────────────
     if (pathname === '/api/search') {
       const query = url.searchParams.get('q') || url.searchParams.get('query') || '';

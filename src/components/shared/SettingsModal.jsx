@@ -245,53 +245,48 @@ export default function SettingsModal({ isOpen, onClose }) {
     }
   };
 
-  // ── 6 Categorized Settings Sections ────────────────────────────────
+  // ── 5 Categorized Settings Sections (Account is featured cleanly at top) ──
   const CATEGORIES = [
     {
       id: 'interface',
       label: 'Interface & Themes',
-      description: 'Accent colors, dynamic album art theming & synced lyric sizing',
+      description: 'Accent colors, dynamic album art theming & lyric sizing',
       icon: 'palette',
       badgeBg: 'bg-rose-500/15 text-rose-400 border border-rose-500/25',
     },
     {
       id: 'quality',
       label: 'Quality & Playback',
-      description: 'Streaming audio fidelity, volume normalization, crossfade & smart radio',
+      description: 'Audio streaming fidelity, volume normalize, crossfade & radio',
       icon: 'graphic_eq',
       badgeBg: 'bg-amber-500/15 text-amber-400 border border-amber-500/25',
     },
     {
       id: 'content',
       label: 'Content & Language',
-      description: 'Regional music charts, explicit lyrics filter & data saver',
+      description: 'Regional music charts, explicit filter & data saver mode',
       icon: 'tune',
       badgeBg: 'bg-sky-500/15 text-sky-400 border border-sky-500/25',
     },
     {
-      id: 'account',
-      label: 'Account & Cloud Sync',
-      description: 'Google sign-in, cloud library sync & custom Supabase backend',
-      icon: 'account_circle',
-      badgeBg: 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/25',
-    },
-    {
       id: 'backup',
       label: 'Backup & Import',
-      description: 'Import YouTube playlists/albums & export/restore JSON backups',
+      description: 'Import YouTube playlists & export/restore JSON backups',
       icon: 'cloud_sync',
       badgeBg: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25',
     },
     {
       id: 'devices',
-      label: 'About & System Engine',
-      description: 'OPUS audio pipeline diagnostics, browser cache & app build info',
+      label: 'About & Diagnostics',
+      description: 'OPUS stream pipeline diagnostics & browser cache cleaner',
       icon: 'info',
       badgeBg: 'bg-violet-500/15 text-violet-400 border border-violet-500/25',
     },
   ];
 
-  const activeCategoryObj = CATEGORIES.find((c) => c.id === currentSubPage);
+  const activeCategoryObj = currentSubPage === 'account'
+    ? { id: 'account', label: 'Account & Cloud Sync', icon: 'account_circle', badgeBg: 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/25' }
+    : CATEGORIES.find((c) => c.id === currentSubPage);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-xl animate-fade-in select-none">
@@ -299,7 +294,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         className="w-full sm:max-w-2xl bg-[#101012] sm:border sm:border-white/10 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col h-full sm:h-[90vh] sm:max-h-[820px] text-white"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Native Mobile / Desktop Header ── */}
+        {/* ── Native Mobile Header with Single Left Back Arrow (Zero Redundant Close Buttons) ── */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/5 bg-[#141416] flex-shrink-0 pt-safe">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -312,11 +307,12 @@ export default function SettingsModal({ isOpen, onClose }) {
                 }
               }}
               className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10 active:scale-95 flex-shrink-0"
-              aria-label={currentSubPage ? 'Back to Settings' : 'Close Settings'}
-              title={currentSubPage ? 'Back to Settings' : 'Close Settings'}
+              aria-label={currentSubPage ? 'Back to Settings' : 'Back'}
+              title={currentSubPage ? 'Back to Settings' : 'Back'}
             >
               <span className="material-symbols-outlined text-[20px]">arrow_back</span>
             </button>
+
             <div className="flex items-center gap-2.5 min-w-0">
               {currentSubPage && (
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${activeCategoryObj?.badgeBg || 'bg-accent/20 text-accent'}`}>
@@ -328,85 +324,77 @@ export default function SettingsModal({ isOpen, onClose }) {
               </h2>
             </div>
           </div>
-
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10 flex-shrink-0 ml-3"
-            aria-label="Close"
-          >
-            <span className="material-symbols-outlined text-[18px]">close</span>
-          </button>
         </div>
 
         {/* ── Main Body: Vertical Category List OR Drill-Down Sub-Page ── */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 bg-[#0e0e0e] no-scrollbar pb-safe">
           {currentSubPage ? (
             /* ── Drill-down Dedicated Sub-Page Controls ────────────── */
-            <div className="w-full max-w-xl mx-auto space-y-4 pb-10 animate-fade-in">
+            <div className="w-full max-w-xl mx-auto space-y-4 pb-12 animate-fade-in">
               {renderActiveCategory(currentSubPage)}
             </div>
           ) : (
             /* ── Main Settings Menu (Vertical Category List) ──────── */
-            <div className="w-full max-w-xl mx-auto space-y-4 pb-10 animate-fade-in">
-              {/* Account Quick Status Banner */}
-              <div
+            <div className="w-full max-w-xl mx-auto space-y-3.5 pb-12 animate-fade-in">
+              {/* Primary Account & Cloud Sync Row */}
+              <button
+                type="button"
                 onClick={() => setCurrentSubPage('account')}
-                className="p-4 rounded-2xl bg-[#161618] border border-white/10 hover:border-white/20 transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                className="w-full p-3.5 rounded-2xl bg-[#141416] hover:bg-[#1c1c1f] border border-white/10 hover:border-white/20 transition-all cursor-pointer flex items-center justify-between gap-3 text-left group active:scale-[0.99] shadow-sm"
               >
-                <div className="flex items-center gap-3.5 min-w-0">
+                <div className="flex items-center gap-3 min-w-0">
                   {user ? (
                     user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
                       <img
                         src={user.user_metadata.avatar_url || user.user_metadata?.picture}
                         alt="Avatar"
-                        className="w-11 h-11 rounded-full border border-accent/40 object-cover flex-shrink-0"
+                        className="w-10 h-10 rounded-full border border-accent/40 object-cover flex-shrink-0"
                       />
                     ) : (
-                      <div className="w-11 h-11 rounded-full bg-accent text-black font-bold flex items-center justify-center text-title-sm flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-accent text-black font-bold flex items-center justify-center text-label-md flex-shrink-0">
                         {(user.email || 'U')[0].toUpperCase()}
                       </div>
                     )
                   ) : (
-                    <div className="w-11 h-11 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-400 flex-shrink-0">
-                      <span className="material-symbols-outlined text-[22px]">account_circle</span>
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-400 flex-shrink-0">
+                      <span className="material-symbols-outlined text-[20px]">account_circle</span>
                     </div>
                   )}
 
                   <div className="min-w-0">
                     <p className="text-label-md font-bold text-white truncate group-hover:text-accent transition-colors">
-                      {user ? (user.user_metadata?.full_name || user.user_metadata?.name || user.email) : 'Cloud Sync & Account'}
+                      {user ? (user.user_metadata?.full_name || user.user_metadata?.name || user.email) : 'Account & Cloud Sync'}
                     </p>
                     <p className="text-body-xs text-neutral-400 truncate mt-0.5">
-                      {user ? 'Google Account Connected · Library Synced' : 'Sign in to sync your playlists and liked songs'}
+                      {user ? 'Google Connected · Library Synced' : 'Sign in to sync your playlists and liked songs'}
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1 text-neutral-500 group-hover:text-white transition-colors flex-shrink-0">
-                  <span className="text-[12px] font-medium hidden sm:inline text-neutral-400">Manage</span>
-                  <span className="material-symbols-outlined text-[20px]">chevron_right</span>
-                </div>
-              </div>
+                <span className="material-symbols-outlined text-[18px] text-neutral-500 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0">
+                  chevron_right
+                </span>
+              </button>
 
               {/* Section Header */}
               <div className="pt-2 px-1">
                 <p className="text-[11px] font-mono uppercase tracking-widest text-neutral-500 font-bold">
-                  PREFERENCES & SYSTEM
+                  PREFERENCES
                 </p>
               </div>
 
-              {/* Vertical Category Rows */}
-              <div className="space-y-2.5">
+              {/* Sleek Compact Vertical Category Rows */}
+              <div className="space-y-2">
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => setCurrentSubPage(cat.id)}
-                    className="w-full p-4 rounded-2xl bg-[#161618] hover:bg-[#1f1f22] border border-white/5 hover:border-white/15 transition-all text-left flex items-center justify-between gap-3.5 group cursor-pointer active:scale-[0.99] shadow-sm"
+                    className="w-full p-3.5 rounded-2xl bg-[#141416] hover:bg-[#1c1c1f] border border-white/5 hover:border-white/15 transition-all text-left flex items-center justify-between gap-3 group cursor-pointer active:scale-[0.99] shadow-sm"
                   >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${cat.badgeBg}`}>
-                        <span className="material-symbols-outlined text-[22px]">{cat.icon}</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${cat.badgeBg}`}>
+                        <span className="material-symbols-outlined text-[20px]">{cat.icon}</span>
                       </div>
                       <div className="min-w-0">
                         <h3 className="text-label-md font-bold text-white group-hover:text-accent transition-colors truncate">
@@ -418,7 +406,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                       </div>
                     </div>
 
-                    <span className="material-symbols-outlined text-[20px] text-neutral-500 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0">
+                    <span className="material-symbols-outlined text-[18px] text-neutral-500 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0">
                       chevron_right
                     </span>
                   </button>

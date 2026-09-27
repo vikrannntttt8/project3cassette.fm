@@ -114,7 +114,9 @@ function AppShell() {
       {view !== 'lyrics' && !isSettingsOpen && <PlayerDock />}
 
       {/* ── Mobile Bottom Navigation Bar (< md) ── */}
-      {view !== 'lyrics' && !isSettingsOpen && <MobileBottomNav />}
+      {view !== 'lyrics' && !isSettingsOpen && (
+        <MobileBottomNav onOpenSearch={() => setMobileSearchOpen(true)} />
+      )}
 
       {/* ── Full-Screen ArchiveTune Settings Overlay ── */}
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />

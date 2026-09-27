@@ -34,8 +34,8 @@ export default function SettingsModal({ isOpen, onClose }) {
     presetPalettes,
   } = useTheme();
 
-  // ── Active category tab (desktop sidebar / mobile accordion) ────────
-  const [activeCategory, setActiveCategory] = useState('account');
+  // ── Active category tab (SimpMusic categorized groups) ───────────
+  const [activeCategory, setActiveCategory] = useState('quality');
 
   // ── Settings Local States ──────────────────────────────────────────
   const [normalizeAudio, setNormalizeAudio] = useState(
@@ -238,22 +238,14 @@ export default function SettingsModal({ isOpen, onClose }) {
     }
   };
 
-  // ── 14 ArchiveTune Categories Metadata ──────────────────────────────
+  // ── 6 SimpMusic Categorized Groups Metadata ────────────────────────
   const CATEGORIES = [
-    { id: 'account',       label: 'Account',             icon: 'account_circle',    badgeBg: 'bg-amber-500' },
-    { id: 'stats',         label: 'Listening Stats',     icon: 'bar_chart',         badgeBg: 'bg-orange-500' },
-    { id: 'appearance',    label: 'Appearance',          icon: 'palette',           badgeBg: 'bg-rose-500' },
-    { id: 'playback',      label: 'Playback',            icon: 'graphic_eq',        badgeBg: 'bg-amber-600' },
-    { id: 'canvas',        label: 'ArchiveTune Canvas',  icon: 'wallpaper',         badgeBg: 'bg-violet-600' },
-    { id: 'lyrics',        label: 'Lyrics',              icon: 'lyrics',            badgeBg: 'bg-emerald-600' },
-    { id: 'content',       label: 'Content',             icon: 'explicit',          badgeBg: 'bg-sky-600' },
-    { id: 'behavior',      label: 'Behavior',            icon: 'touch_app',         badgeBg: 'bg-indigo-600' },
-    { id: 'integration',   label: 'Integration',         icon: 'extension',         badgeBg: 'bg-pink-600' },
-    { id: 'ai',            label: 'AI Integration',      icon: 'auto_awesome',      badgeBg: 'bg-amber-400 text-black' },
-    { id: 'internet',      label: 'Internet & Data',     icon: 'wifi_tethering',    badgeBg: 'bg-cyan-600' },
-    { id: 'storage',       label: 'Storage',             icon: 'folder_zip',        badgeBg: 'bg-teal-600' },
-    { id: 'backup',        label: 'Backup & Restore',    icon: 'cloud_sync',        badgeBg: 'bg-amber-500' },
-    { id: 'developer',     label: 'Developer Options',   icon: 'code',              badgeBg: 'bg-neutral-600' },
+    { id: 'quality',   label: 'Quality & Playback', icon: 'graphic_eq',    badgeBg: 'bg-amber-600' },
+    { id: 'interface', label: 'Interface & Themes', icon: 'palette',       badgeBg: 'bg-rose-500' },
+    { id: 'content',   label: 'Content & Language', icon: 'tune',          badgeBg: 'bg-sky-600' },
+    { id: 'account',   label: 'Account & Cloud',    icon: 'account_circle', badgeBg: 'bg-indigo-600' },
+    { id: 'backup',    label: 'Backup & Import',    icon: 'cloud_sync',    badgeBg: 'bg-emerald-600' },
+    { id: 'devices',   label: 'Devices & Engine',   icon: 'cast',          badgeBg: 'bg-violet-600' },
   ];
 
   return (
@@ -263,23 +255,23 @@ export default function SettingsModal({ isOpen, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Modal Top Header ────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-white/5 bg-[#18181a] flex-shrink-0 pt-safe">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/5 bg-[#18181a] flex-shrink-0 pt-safe">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center text-accent">
+            <div className="w-9 h-9 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center text-accent">
               <span className="material-symbols-outlined text-[20px]">tune</span>
             </div>
             <div>
-              <h2 className="text-headline-sm font-bold text-white tracking-tight flex items-center gap-2">
-                Settings Hub
-                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-accent/20 text-accent border border-accent/30">
-                  ArchiveTune
+              <h2 className="text-title-lg font-bold text-white tracking-tight flex items-center gap-2">
+                Settings
+                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-accent/20 text-accent border border-accent/30">
+                  SimpMusic
                 </span>
               </h2>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10"
+            className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10"
             aria-label="Close"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
@@ -289,9 +281,9 @@ export default function SettingsModal({ isOpen, onClose }) {
         {/* ── Main Layout: Categories Nav + Content Area ────────────── */}
         <div className="flex-1 flex min-h-0 overflow-hidden">
           {/* Left Categories Sidebar (Desktop + Tablet) */}
-          <aside className="w-56 sm:w-64 flex-shrink-0 border-r border-white/5 bg-[#141416] p-2.5 overflow-y-auto no-scrollbar hidden md:flex flex-col gap-1">
-            <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 px-3 py-1.5">
-              Categories
+          <aside className="w-60 sm:w-64 flex-shrink-0 border-r border-white/5 bg-[#141416] p-3 overflow-y-auto no-scrollbar hidden md:flex flex-col gap-1.5">
+            <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 px-3 py-1.5 font-bold">
+              PREFERENCES
             </p>
             {CATEGORIES.map((cat) => {
               const isActive = activeCategory === cat.id;
@@ -299,16 +291,16 @@ export default function SettingsModal({ isOpen, onClose }) {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-body-sm font-medium transition-all cursor-pointer ${
+                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-left text-body-sm font-medium transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-[#222225] text-white font-semibold shadow-sm border border-white/10'
+                      ? 'bg-[#222225] text-white font-bold shadow-md border border-white/10'
                       : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200 border border-transparent'
                   }`}
                 >
                   <div
-                    className={`w-6 h-6 rounded-lg flex items-center justify-center text-white flex-shrink-0 text-[14px] ${cat.badgeBg}`}
+                    className={`w-7 h-7 rounded-xl flex items-center justify-center text-white flex-shrink-0 text-[15px] shadow-sm ${cat.badgeBg}`}
                   >
-                    <span className="material-symbols-outlined text-[16px]">{cat.icon}</span>
+                    <span className="material-symbols-outlined text-[17px]">{cat.icon}</span>
                   </div>
                   <span className="truncate flex-1">{cat.label}</span>
                   {isActive && <span className="w-1.5 h-1.5 rounded-full bg-accent" />}
@@ -319,34 +311,34 @@ export default function SettingsModal({ isOpen, onClose }) {
 
           {/* Mobile Category Horizontal Pills Strip (< md) */}
           <div className="md:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="flex gap-1.5 px-3 py-2.5 bg-[#141416] border-b border-white/5 overflow-x-auto no-scrollbar flex-shrink-0">
+            <div className="flex gap-2 px-4 py-3 bg-[#141416] border-b border-white/5 overflow-x-auto no-scrollbar flex-shrink-0">
               {CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all flex-shrink-0 ${
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all flex-shrink-0 min-h-[38px] ${
                     activeCategory === cat.id
-                      ? 'bg-accent text-black font-semibold shadow-sm'
+                      ? 'bg-accent text-black font-bold shadow-md'
                       : 'bg-[#1e1e22] text-neutral-400 border border-white/5 hover:text-white'
                   }`}
                 >
-                  <span className="material-symbols-outlined text-[14px]">{cat.icon}</span>
+                  <span className="material-symbols-outlined text-[16px]">{cat.icon}</span>
                   <span>{cat.label}</span>
                 </button>
               ))}
             </div>
 
-            {/* Content Container (Constrained max-w-md for clean iOS style) */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-4 bg-[#0e0e0e] no-scrollbar">
-              <div className="w-full max-w-md mx-auto flex flex-col gap-3">
+            {/* Content Container (Spacious mobile preference list) */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5 space-y-4 bg-[#0e0e0e] no-scrollbar">
+              <div className="w-full max-w-lg mx-auto flex flex-col gap-4 pb-12">
                 {renderActiveCategory()}
               </div>
             </div>
           </div>
 
           {/* Desktop Content Panel (md+) */}
-          <div className="hidden md:block flex-1 overflow-y-auto p-6 space-y-6 bg-[#0e0e0e] no-scrollbar">
-            <div className="max-w-xl">
+          <div className="hidden md:block flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 bg-[#0e0e0e] no-scrollbar">
+            <div className="max-w-2xl">
               {renderActiveCategory()}
             </div>
           </div>
@@ -360,7 +352,7 @@ export default function SettingsModal({ isOpen, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-full bg-accent text-black text-label-sm font-bold hover:brightness-110 transition-all cursor-pointer shadow-md shadow-accent/20"
+            className="px-5 py-2 rounded-full bg-accent text-black text-label-sm font-bold hover:brightness-110 transition-all cursor-pointer shadow-md shadow-accent/20"
           >
             Done
           </button>
@@ -383,7 +375,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 No Cookies Needed
               </span>
             </div>
-            <h3 className="text-headline-sm font-semibold text-white mt-1">
+            <h3 className="text-title-md font-bold text-white mt-1">
               Import YouTube Playlist or Album
             </h3>
             <p className="text-body-sm text-neutral-400 mt-1 max-w-md">
@@ -473,14 +465,524 @@ export default function SettingsModal({ isOpen, onClose }) {
     );
   }
 
-  // ── Category Views Renderer ─────────────────────────────────────────
+  // ── Category Views Renderer (SimpMusic Categorized Hub) ─────────────
   function renderActiveCategory() {
     switch (activeCategory) {
-      // 1. Account & Cloud Sync
+      // ── 1. Quality & Playback ──────────────────────────────────────
+      case 'quality':
+        return (
+          <div className="space-y-4 animate-fade-in">
+            {/* Section Header */}
+            <div className="pb-1">
+              <h3 className="text-title-lg font-bold text-white">Quality & Playback</h3>
+              <p className="text-body-sm text-neutral-400 mt-0.5">
+                Tune stream fidelity, volume normalization, and continuous radio playback.
+              </p>
+            </div>
+
+            {/* Audio Quality Stream Card */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-title-sm font-bold text-white">Streaming Audio Fidelity</h4>
+                  <p className="text-body-xs text-neutral-400 mt-0.5">
+                    High-bitrate OPUS stream negotiation directly from YouTube Music audio backend.
+                  </p>
+                </div>
+                <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">graphic_eq</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { id: 'max',       label: 'Maximum (256k)', detail: 'High-Res OPUS Audio' },
+                  { id: 'standard',  label: 'Balanced (160k)', detail: 'Smooth Bandwidth' },
+                  { id: 'datasaver', label: 'Data Saver (128k)', detail: 'Minimal Network Footprint' },
+                ].map((q) => (
+                  <button
+                    key={q.id}
+                    onClick={() => handleQualityChange(q.id)}
+                    className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      audioQuality === q.id
+                        ? 'bg-accent/15 border-accent text-accent font-bold shadow-md'
+                        : 'bg-[#121214] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
+                    }`}
+                  >
+                    <p className="text-label-md font-bold">{q.label}</p>
+                    <p className="text-body-xs opacity-80 mt-1">{q.detail}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Volume Normalization Card */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 flex items-center justify-between shadow-lg">
+              <div className="pr-4">
+                <p className="text-label-md font-bold text-white">Normalize Volume</p>
+                <p className="text-body-xs text-neutral-400 mt-0.5">
+                  Equalize gain across different album masters to prevent loud audio spikes
+                </p>
+              </div>
+              <button
+                onClick={handleNormalizeToggle}
+                className={`w-12 h-6.5 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                  normalizeAudio ? 'bg-accent' : 'bg-neutral-700'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-4.5 h-4.5 rounded-full bg-black transition-transform ${
+                    normalizeAudio ? 'translate-x-5.5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Crossfade Card */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-3 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-label-md font-bold text-white">Crossfade Duration</p>
+                  <p className="text-body-xs text-neutral-400 mt-0.5">Smoothly fade between ending and upcoming songs</p>
+                </div>
+                <span className="text-label-sm font-mono font-bold text-accent px-2.5 py-1 rounded-full bg-accent/15 border border-accent/30">
+                  {crossfadeDuration}s
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="12"
+                step="1"
+                value={crossfadeDuration}
+                onChange={(e) => {
+                  setCrossfadeDuration(Number(e.target.value));
+                  localStorage.setItem('pulse_crossfade', e.target.value);
+                }}
+                className="w-full accent-accent"
+              />
+            </div>
+
+            {/* Smart Radio Auto-Queue Card */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 flex items-center justify-between shadow-lg">
+              <div className="pr-4">
+                <p className="text-label-md font-bold text-white">Smart Radio & Continuous Queue</p>
+                <p className="text-body-xs text-neutral-400 mt-0.5">
+                  Automatically fetch related mixes and recommendations when your playlist completes
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !smartRecs;
+                  setSmartRecs(next);
+                  localStorage.setItem('pulse_smart_recs', String(next));
+                }}
+                className={`w-12 h-6.5 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                  smartRecs ? 'bg-accent' : 'bg-neutral-700'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-4.5 h-4.5 rounded-full bg-black transition-transform ${
+                    smartRecs ? 'translate-x-5.5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        );
+
+      // ── 2. Interface & Themes ──────────────────────────────────────
+      case 'interface':
+        return (
+          <div className="space-y-4 animate-fade-in">
+            <div className="pb-1">
+              <h3 className="text-title-lg font-bold text-white">Interface & Themes</h3>
+              <p className="text-body-sm text-neutral-400 mt-0.5">
+                Customize palette accents, dynamic album color extraction, and synced lyric typography.
+              </p>
+            </div>
+
+            {/* Theming Engine Card */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-5 shadow-lg">
+              <div>
+                <h4 className="text-title-sm font-bold text-white">Theme Accent Engine</h4>
+                <p className="text-body-xs text-neutral-400 mt-0.5">
+                  Choose between automatic cover-art colors, clean monochrome B&W, or custom palettes.
+                </p>
+              </div>
+
+              {/* 3 Theme Mode Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 1. Dynamic */}
+                <button
+                  type="button"
+                  onClick={() => setThemeMode('dynamic')}
+                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer relative overflow-hidden ${
+                    themeMode === 'dynamic'
+                      ? 'bg-[#222225] border-white/40 shadow-lg ring-2 ring-accent'
+                      : 'bg-[#141416] border-white/5 hover:bg-[#1c1c1f] hover:border-white/10 text-neutral-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="material-symbols-outlined text-[24px]" style={{ color: extractedColor }}>
+                      auto_awesome
+                    </span>
+                    <span
+                      className="w-5 h-5 rounded-full border border-white/20 shadow-sm transition-colors duration-500"
+                      style={{ backgroundColor: extractedColor }}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-label-md font-bold text-white block">Dynamic (Album Art)</span>
+                    <span className="text-[12px] text-neutral-400 block mt-0.5">
+                      Extracts real-time cover colors
+                    </span>
+                  </div>
+                </button>
+
+                {/* 2. Monochrome B&W */}
+                <button
+                  type="button"
+                  onClick={() => setThemeMode('default')}
+                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer relative overflow-hidden ${
+                    themeMode === 'default'
+                      ? 'bg-[#222225] border-white/40 shadow-lg ring-2 ring-white'
+                      : 'bg-[#141416] border-white/5 hover:bg-[#1c1c1f] hover:border-white/10 text-neutral-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="material-symbols-outlined text-[24px] text-white">
+                      contrast
+                    </span>
+                    <span className="w-5 h-5 rounded-full bg-white border border-white/20 shadow-sm" />
+                  </div>
+                  <div>
+                    <span className="text-label-md font-bold text-white block">Default (Monochrome)</span>
+                    <span className="text-[12px] text-neutral-400 block mt-0.5">
+                      Clean B&W minimal aesthetic
+                    </span>
+                  </div>
+                </button>
+
+                {/* 3. Custom Palette */}
+                <button
+                  type="button"
+                  onClick={() => setThemeMode('custom')}
+                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer relative overflow-hidden ${
+                    themeMode === 'custom'
+                      ? 'bg-[#222225] border-white/40 shadow-lg ring-2 ring-accent'
+                      : 'bg-[#141416] border-white/5 hover:bg-[#1c1c1f] hover:border-white/10 text-neutral-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="material-symbols-outlined text-[24px]" style={{ color: customColor }}>
+                      palette
+                    </span>
+                    <span
+                      className="w-5 h-5 rounded-full border border-white/20 shadow-sm transition-colors"
+                      style={{ backgroundColor: customColor }}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-label-md font-bold text-white block">Custom Palette</span>
+                    <span className="text-[12px] text-neutral-400 block mt-0.5">
+                      Pick any hex color swatch
+                    </span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Custom Color Selector Panel */}
+              {themeMode === 'custom' && (
+                <div className="p-4 rounded-2xl bg-[#141416] border border-white/10 space-y-3.5 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-label-sm font-bold text-white">Curated Palettes</span>
+                    <span className="text-body-xs font-mono text-neutral-400 uppercase">
+                      Hex: {customColor}
+                    </span>
+                  </div>
+
+                  {/* Preset Swatches */}
+                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                    {presetPalettes.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setCustomColor(p.hex)}
+                        title={p.name}
+                        className={`h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer border ${
+                          customColor.toLowerCase() === p.hex.toLowerCase()
+                            ? 'border-white scale-110 shadow-lg ring-2 ring-white/40'
+                            : 'border-white/10 hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: p.hex }}
+                      >
+                        {customColor.toLowerCase() === p.hex.toLowerCase() && (
+                          <span className="material-symbols-outlined text-[16px] text-black font-bold">
+                            check
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Native Picker */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <label className="relative flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#222225] border border-white/10 hover:border-white/30 cursor-pointer text-body-sm text-white transition-colors">
+                      <input
+                        type="color"
+                        value={customColor}
+                        onChange={(e) => setCustomColor(e.target.value)}
+                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                      />
+                      <span
+                        className="w-5 h-5 rounded-full border border-white/20 flex-shrink-0"
+                        style={{ backgroundColor: customColor }}
+                      />
+                      <span>Pick Custom Swatch</span>
+                    </label>
+
+                    <input
+                      type="text"
+                      value={customColor}
+                      onChange={(e) => setCustomColor(e.target.value)}
+                      placeholder="#f59e0b"
+                      maxLength={7}
+                      className="w-28 px-3.5 py-2.5 rounded-xl bg-[#222225] border border-white/10 text-white font-mono text-body-sm text-center focus:border-accent focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Ambient Glow Toggle */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 flex items-center justify-between shadow-lg">
+              <div className="pr-4">
+                <p className="text-label-md font-bold text-white">Dynamic Album Art Ambient Glow</p>
+                <p className="text-body-xs text-neutral-400 mt-0.5">
+                  Diffuse real-time cover art colors into the background canvas and player modals
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !ambientGlow;
+                  setAmbientGlow(next);
+                  localStorage.setItem('pulse_ambient_glow', String(next));
+                }}
+                className={`w-12 h-6.5 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                  ambientGlow ? 'bg-accent' : 'bg-neutral-700'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-4.5 h-4.5 rounded-full bg-black transition-transform ${
+                    ambientGlow ? 'translate-x-5.5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Lyrics Font Size Card */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4 shadow-lg">
+              <div>
+                <h4 className="text-title-sm font-bold text-white">Synced Lyrics Font Size</h4>
+                <p className="text-body-xs text-neutral-400 mt-0.5">Adjust text size in the full-screen lyrics sheet</p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { id: 'compact', label: 'Compact' },
+                  { id: 'normal',  label: 'Standard' },
+                  { id: 'large',   label: 'Large' },
+                ].map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      setLyricFontSize(s.id);
+                      localStorage.setItem('pulse_lyric_size', s.id);
+                    }}
+                    className={`py-2.5 px-3 rounded-xl border text-center text-body-sm font-semibold transition-all cursor-pointer ${
+                      lyricFontSize === s.id
+                        ? 'bg-accent text-black font-bold border-accent shadow-md'
+                        : 'bg-[#121214] border-white/5 text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Romanized Lyrics Toggle */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 flex items-center justify-between shadow-lg">
+              <div className="pr-4">
+                <p className="text-label-md font-bold text-white">Romanized Phonetic Lyrics</p>
+                <p className="text-body-xs text-neutral-400 mt-0.5">Render Romaji, Pinyin, and Hindi phonetic pronunciation subtitles</p>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !romanizedLyrics;
+                  setRomanizedLyrics(next);
+                  localStorage.setItem('pulse_romanized', String(next));
+                }}
+                className={`w-12 h-6.5 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                  romanizedLyrics ? 'bg-accent' : 'bg-neutral-700'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-4.5 h-4.5 rounded-full bg-black transition-transform ${
+                    romanizedLyrics ? 'translate-x-5.5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        );
+
+      // ── 3. Content & Language ──────────────────────────────────────
+      case 'content':
+        return (
+          <div className="space-y-4 animate-fade-in">
+            <div className="pb-1">
+              <h3 className="text-title-lg font-bold text-white">Content & Language</h3>
+              <p className="text-body-sm text-neutral-400 mt-0.5">
+                Filter regions, explicit lyrics, data usage, and track resume behavior.
+              </p>
+            </div>
+
+            {/* Region / Language Dropdown */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-3 shadow-lg">
+              <div>
+                <label className="block text-label-md font-bold text-white mb-0.5">
+                  Preferred Music Region & Charts
+                </label>
+                <p className="text-body-xs text-neutral-400 mb-3">
+                  Tailor home feed recommendations and trending playlists to your local language
+                </p>
+              </div>
+              <select
+                value={selectedLanguage}
+                onChange={(e) => {
+                  setSelectedLanguage(e.target.value);
+                  localStorage.setItem('pulse_music_lang', e.target.value);
+                }}
+                className="w-full px-4 py-3 rounded-xl bg-[#121214] border border-white/10 text-white text-body-sm font-semibold focus:border-accent focus:outline-none cursor-pointer"
+              >
+                <option value="all">Global (All Regions)</option>
+                <option value="en">English (US / UK / Global Pop)</option>
+                <option value="hi">Hindi & Bollywood</option>
+                <option value="pa">Punjabi Pop</option>
+                <option value="es">Latin & Spanish</option>
+                <option value="kr">K-Pop</option>
+                <option value="jp">J-Pop & Anime</option>
+              </select>
+            </div>
+
+            {/* Explicit Filter Toggle */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 flex items-center justify-between shadow-lg">
+              <div className="pr-4">
+                <p className="text-label-md font-bold text-white">Filter Explicit Content</p>
+                <p className="text-body-xs text-neutral-400 mt-0.5">Hide tracks with explicit lyric advisories in feeds and search</p>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !explicitFilter;
+                  setExplicitFilter(next);
+                  localStorage.setItem('pulse_explicit_filter', String(next));
+                }}
+                className={`w-12 h-6.5 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                  explicitFilter ? 'bg-accent' : 'bg-neutral-700'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-4.5 h-4.5 rounded-full bg-black transition-transform ${
+                    explicitFilter ? 'translate-x-5.5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Remember Last Song Toggle */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 flex items-center justify-between shadow-lg">
+              <div className="pr-4">
+                <p className="text-label-md font-bold text-white">Remember Last Playing Song</p>
+                <p className="text-body-xs text-neutral-400 mt-0.5">Restore your last active song and playback position upon launching app</p>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !rememberLastSong;
+                  setRememberLastSong(next);
+                  localStorage.setItem('pulse_remember_song', String(next));
+                }}
+                className={`w-12 h-6.5 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                  rememberLastSong ? 'bg-accent' : 'bg-neutral-700'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-4.5 h-4.5 rounded-full bg-black transition-transform ${
+                    rememberLastSong ? 'translate-x-5.5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Data Saver Toggle */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 flex items-center justify-between shadow-lg">
+              <div className="pr-4">
+                <p className="text-label-md font-bold text-white">Data Saver Mode</p>
+                <p className="text-body-xs text-neutral-400 mt-0.5">Switch to lightweight 128k audio format when on mobile networks</p>
+              </div>
+              <button
+                onClick={() => {
+                  const next = !dataSaver;
+                  setDataSaver(next);
+                  localStorage.setItem('pulse_data_saver', String(next));
+                }}
+                className={`w-12 h-6.5 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                  dataSaver ? 'bg-accent' : 'bg-neutral-700'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-4.5 h-4.5 rounded-full bg-black transition-transform ${
+                    dataSaver ? 'translate-x-5.5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Listening Stats Overview Card */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-3 shadow-lg">
+              <h4 className="text-label-md font-bold text-white flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-accent">bar_chart</span>
+                Personal Library Metrics
+              </h4>
+              <div className="grid grid-cols-3 gap-2.5 pt-1">
+                <div className="p-3 rounded-xl bg-[#111113] border border-white/5 text-center">
+                  <span className="text-[10px] font-mono text-neutral-400 block uppercase">Liked</span>
+                  <span className="text-title-md font-extrabold text-accent mt-0.5 block">{liked?.length || 0}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#111113] border border-white/5 text-center">
+                  <span className="text-[10px] font-mono text-neutral-400 block uppercase">Playlists</span>
+                  <span className="text-title-md font-extrabold text-white mt-0.5 block">{playlists?.length || 0}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#111113] border border-white/5 text-center">
+                  <span className="text-[10px] font-mono text-neutral-400 block uppercase">History</span>
+                  <span className="text-title-md font-extrabold text-white mt-0.5 block">{history?.length || 0}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      // ── 4. Account & Cloud ─────────────────────────────────────────
       case 'account':
         return (
           <div className="space-y-4 animate-fade-in">
-            {renderPlaylistUrlImporterSection()}
+            <div className="pb-1">
+              <h3 className="text-title-lg font-bold text-white">Account & Cloud</h3>
+              <p className="text-body-sm text-neutral-400 mt-0.5">
+                Manage cloud sync for your library, playlists, and listening preferences.
+              </p>
+            </div>
 
             <div className="rounded-2xl border border-white/10 bg-[#18181a] p-5 shadow-lg">
               <div className="flex items-start justify-between gap-4">
@@ -488,7 +990,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   <p className="text-[11px] uppercase tracking-widest text-accent font-mono font-semibold">
                     Cloud Account & Sync
                   </p>
-                  <h3 className="text-headline-sm font-semibold text-white mt-1">
+                  <h3 className="text-title-md font-bold text-white mt-1">
                     {user ? 'Google Account Connected' : 'Connect with Google'}
                   </h3>
                   <p className="text-body-sm text-neutral-400 mt-1 max-w-md">
@@ -635,648 +1137,25 @@ export default function SettingsModal({ isOpen, onClose }) {
           </div>
         );
 
-      // 2. Listening Stats
-      case 'stats':
-        return (
-          <div className="space-y-4 animate-fade-in">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              <div className="p-4 rounded-2xl bg-[#18181a] border border-white/10">
-                <span className="text-[11px] font-mono text-neutral-400 block uppercase">LIKED TRACKS</span>
-                <span className="text-headline-md font-extrabold text-accent mt-1 block">
-                  {liked?.length || 0}
-                </span>
-              </div>
-              <div className="p-4 rounded-2xl bg-[#18181a] border border-white/10">
-                <span className="text-[11px] font-mono text-neutral-400 block uppercase">PLAYLISTS</span>
-                <span className="text-headline-md font-extrabold text-white mt-1 block">
-                  {playlists?.length || 0}
-                </span>
-              </div>
-              <div className="p-4 rounded-2xl bg-[#18181a] border border-white/10 col-span-2 sm:col-span-1">
-                <span className="text-[11px] font-mono text-neutral-400 block uppercase">SESSION HISTORY</span>
-                <span className="text-headline-md font-extrabold text-accent mt-1 block">
-                  {history?.length || 0}
-                </span>
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-3">
-              <h4 className="text-label-md font-bold text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-accent">insights</span>
-                Listening Insights
-              </h4>
-              <p className="text-body-sm text-neutral-400 leading-relaxed">
-                Your highest engagement genres include Indie R&B, Dream Pop, and Neo-Soul. High-resolution OPUS audio playback active on 100% of streams.
-              </p>
-            </div>
-          </div>
-        );
-
-      // 3. Appearance (Dynamic Theming Engine)
-      case 'appearance':
-        return (
-          <div className="space-y-4 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-5">
-              <div>
-                <h4 className="text-headline-sm font-bold text-white">Dynamic Theming Engine</h4>
-                <p className="text-body-sm text-neutral-400 mt-0.5">
-                  Customize the interface accent colors across player buttons, progress bars, and active badges.
-                </p>
-              </div>
-
-              {/* 3 Explicit Theme Options */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* 1. Dynamic (From Album Art) */}
-                <button
-                  type="button"
-                  onClick={() => setThemeMode('dynamic')}
-                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer relative overflow-hidden ${
-                    themeMode === 'dynamic'
-                      ? 'bg-[#222225] border-white/40 shadow-lg ring-2 ring-accent'
-                      : 'bg-[#141416] border-white/5 hover:bg-[#1c1c1f] hover:border-white/10 text-neutral-400'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="material-symbols-outlined text-[24px]" style={{ color: extractedColor }}>
-                      auto_awesome
-                    </span>
-                    <span
-                      className="w-5 h-5 rounded-full border border-white/20 shadow-sm transition-colors duration-500"
-                      style={{ backgroundColor: extractedColor }}
-                    />
-                  </div>
-                  <div>
-                    <span className="text-label-md font-bold text-white block">Dynamic (Album Art)</span>
-                    <span className="text-[12px] text-neutral-400 block mt-0.5">
-                      Extracts vibrant color from current cover
-                    </span>
-                  </div>
-                </button>
-
-                {/* 2. Default (Monochrome B&W) */}
-                <button
-                  type="button"
-                  onClick={() => setThemeMode('default')}
-                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer relative overflow-hidden ${
-                    themeMode === 'default'
-                      ? 'bg-[#222225] border-white/40 shadow-lg ring-2 ring-white'
-                      : 'bg-[#141416] border-white/5 hover:bg-[#1c1c1f] hover:border-white/10 text-neutral-400'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="material-symbols-outlined text-[24px] text-white">
-                      contrast
-                    </span>
-                    <span className="w-5 h-5 rounded-full bg-white border border-white/20 shadow-sm" />
-                  </div>
-                  <div>
-                    <span className="text-label-md font-bold text-white block">Default (Monochrome)</span>
-                    <span className="text-[12px] text-neutral-400 block mt-0.5">
-                      Clean black & white minimal aesthetic
-                    </span>
-                  </div>
-                </button>
-
-                {/* 3. Custom Palette Picker */}
-                <button
-                  type="button"
-                  onClick={() => setThemeMode('custom')}
-                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer relative overflow-hidden ${
-                    themeMode === 'custom'
-                      ? 'bg-[#222225] border-white/40 shadow-lg ring-2 ring-accent'
-                      : 'bg-[#141416] border-white/5 hover:bg-[#1c1c1f] hover:border-white/10 text-neutral-400'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="material-symbols-outlined text-[24px]" style={{ color: customColor }}>
-                      palette
-                    </span>
-                    <span
-                      className="w-5 h-5 rounded-full border border-white/20 shadow-sm transition-colors"
-                      style={{ backgroundColor: customColor }}
-                    />
-                  </div>
-                  <div>
-                    <span className="text-label-md font-bold text-white block">Custom Palette Picker</span>
-                    <span className="text-[12px] text-neutral-400 block mt-0.5">
-                      Select your custom hex color
-                    </span>
-                  </div>
-                </button>
-              </div>
-
-              {/* Custom Color Selector Panel */}
-              {themeMode === 'custom' && (
-                <div className="p-4 rounded-2xl bg-[#141416] border border-white/10 space-y-3.5 animate-fade-in">
-                  <div className="flex items-center justify-between">
-                    <span className="text-label-sm font-bold text-white">Curated Palettes & Color Picker</span>
-                    <span className="text-body-xs font-mono text-neutral-400 uppercase">
-                      Current: {customColor}
-                    </span>
-                  </div>
-
-                  {/* Preset Swatches */}
-                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-                    {presetPalettes.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setCustomColor(p.hex)}
-                        title={p.name}
-                        className={`h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer border ${
-                          customColor.toLowerCase() === p.hex.toLowerCase()
-                            ? 'border-white scale-110 shadow-lg ring-2 ring-white/40'
-                            : 'border-white/10 hover:scale-105'
-                        }`}
-                        style={{ backgroundColor: p.hex }}
-                      >
-                        {customColor.toLowerCase() === p.hex.toLowerCase() && (
-                          <span className="material-symbols-outlined text-[16px] text-black font-bold">
-                            check
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Hex Color Input + Live Native Picker */}
-                  <div className="flex items-center gap-3 pt-2">
-                    <label className="relative flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#222225] border border-white/10 hover:border-white/30 cursor-pointer text-body-sm text-white transition-colors">
-                      <input
-                        type="color"
-                        value={customColor}
-                        onChange={(e) => setCustomColor(e.target.value)}
-                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                      />
-                      <span
-                        className="w-5 h-5 rounded-full border border-white/20 flex-shrink-0"
-                        style={{ backgroundColor: customColor }}
-                      />
-                      <span>Pick Any Custom Color</span>
-                    </label>
-
-                    <input
-                      type="text"
-                      value={customColor}
-                      onChange={(e) => setCustomColor(e.target.value)}
-                      placeholder="#f59e0b"
-                      maxLength={7}
-                      className="w-28 px-3.5 py-2.5 rounded-xl bg-[#222225] border border-white/10 text-white font-mono text-body-sm text-center focus:border-accent focus:outline-none"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Live Theme Preview Component */}
-              <div className="p-4 rounded-2xl bg-[#141416] border border-white/10 space-y-3">
-                <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-widest block">
-                  Live Interface Preview
-                </span>
-                <div className="p-3.5 rounded-xl bg-[#1c1c1f] border border-white/5 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center text-black font-bold flex-shrink-0 shadow-md transition-colors duration-500"
-                      style={{ backgroundColor: activeAccentColor }}
-                    >
-                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        music_note
-                      </span>
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-body-sm font-bold text-white truncate">Active Theme Accent</p>
-                      <p className="text-[11px] text-neutral-400 truncate font-mono">
-                        Applied Color: {activeAccentColor}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-black font-bold shadow-lg transition-all duration-500 hover:scale-105"
-                      style={{ backgroundColor: activeAccentColor }}
-                    >
-                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        play_arrow
-                      </span>
-                    </button>
-                    <span
-                      className="px-2.5 py-1 rounded-full text-[11px] font-bold text-black transition-colors duration-500"
-                      style={{ backgroundColor: activeAccentColor }}
-                    >
-                      Active
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Ambient Glow Toggle */}
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 flex items-center justify-between">
-              <div>
-                <p className="text-label-md font-semibold text-white">Dynamic Album Art Glow</p>
-                <p className="text-body-xs text-neutral-400">
-                  Diffuse real-time cover art colors into the background canvas
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  const next = !ambientGlow;
-                  setAmbientGlow(next);
-                  localStorage.setItem('pulse_ambient_glow', String(next));
-                }}
-                className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  ambientGlow ? 'bg-accent' : 'bg-neutral-700'
-                }`}
-              >
-                <span
-                  className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-black transition-transform ${
-                    ambientGlow ? 'translate-x-6' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-        );
-
-      // 4. Playback
-      case 'playback':
-        return (
-          <div className="space-y-4 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4">
-              <div>
-                <h4 className="text-headline-sm font-bold text-white">Audio Streaming Fidelity</h4>
-                <p className="text-body-sm text-neutral-400 mt-0.5">
-                  Powered by high-bitrate YouTube Music audio streams with automatic Opus/AAC negotiation.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {[
-                  { id: 'max',      label: 'Maximum (256k)', detail: 'High-Res OPUS Audio' },
-                  { id: 'standard', label: 'Balanced (160k)', detail: 'Smooth Bandwidth' },
-                  { id: 'datasaver',label: 'Data Saver (128k)', detail: 'Minimal Network Footprint' },
-                ].map((q) => (
-                  <button
-                    key={q.id}
-                    onClick={() => handleQualityChange(q.id)}
-                    className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      audioQuality === q.id
-                        ? 'bg-accent/15 border-accent text-accent font-bold shadow-md'
-                        : 'bg-[#121214] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
-                    }`}
-                  >
-                    <p className="text-label-md font-bold">{q.label}</p>
-                    <p className="text-body-xs opacity-80 mt-1">{q.detail}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Volume Normalization */}
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 flex items-center justify-between">
-              <div>
-                <p className="text-label-md font-semibold text-white">Normalize Volume</p>
-                <p className="text-body-xs text-neutral-400">
-                  Prevent sudden volume spikes between different tracks
-                </p>
-              </div>
-              <button
-                onClick={handleNormalizeToggle}
-                className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  normalizeAudio ? 'bg-accent' : 'bg-neutral-700'
-                }`}
-              >
-                <span
-                  className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-black transition-transform ${
-                    normalizeAudio ? 'translate-x-6' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Crossfade Slider */}
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-label-md font-semibold text-white">Crossfade Duration</p>
-                <span className="text-label-sm font-mono text-accent">{crossfadeDuration}s</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="12"
-                step="1"
-                value={crossfadeDuration}
-                onChange={(e) => {
-                  setCrossfadeDuration(Number(e.target.value));
-                  localStorage.setItem('pulse_crossfade', e.target.value);
-                }}
-                className="w-full"
-              />
-            </div>
-          </div>
-        );
-
-      // 5. ArchiveTune Canvas
-      case 'canvas':
-        return (
-          <div className="space-y-4 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-3">
-              <h4 className="text-headline-sm font-bold text-white">ArchiveTune Canvas Engine</h4>
-              <p className="text-body-sm text-neutral-400 leading-relaxed">
-                Full-bleed visualizer system with audio-reactive waveforms and subtle cinematic canvas animation.
-              </p>
-
-              <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-                <div>
-                  <p className="text-label-md font-semibold text-white">Full-Screen Canvas Motion</p>
-                  <p className="text-body-xs text-neutral-400">Animate live artwork during active playback</p>
-                </div>
-                <button
-                  onClick={() => {
-                    const next = !canvasBg;
-                    setCanvasBg(next);
-                    localStorage.setItem('pulse_canvas_bg', String(next));
-                  }}
-                  className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    canvasBg ? 'bg-accent' : 'bg-neutral-700'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-black transition-transform ${
-                      canvasBg ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-
-      // 6. Lyrics
-      case 'lyrics':
-        return (
-          <div className="space-y-4 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4">
-              <h4 className="text-headline-sm font-bold text-white">Synced Lyrics Typography</h4>
-
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { id: 'compact', label: 'Compact' },
-                  { id: 'normal',  label: 'Standard' },
-                  { id: 'large',   label: 'Large' },
-                ].map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      setLyricFontSize(s.id);
-                      localStorage.setItem('pulse_lyric_size', s.id);
-                    }}
-                    className={`py-2.5 px-3 rounded-xl border text-center text-body-sm font-medium transition-all cursor-pointer ${
-                      lyricFontSize === s.id
-                        ? 'bg-accent text-black font-bold border-accent'
-                        : 'bg-[#121214] border-white/5 text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Romanized toggle */}
-              <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-                <div>
-                  <p className="text-label-md font-semibold text-white">Romanized Lyrics Support</p>
-                  <p className="text-body-xs text-neutral-400">Render Romaji, Pinyin, and Hindi phonetic subtitles</p>
-                </div>
-                <button
-                  onClick={() => {
-                    const next = !romanizedLyrics;
-                    setRomanizedLyrics(next);
-                    localStorage.setItem('pulse_romanized', String(next));
-                  }}
-                  className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    romanizedLyrics ? 'bg-accent' : 'bg-neutral-700'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-black transition-transform ${
-                      romanizedLyrics ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-
-      // 7. Content
-      case 'content':
-        return (
-          <div className="space-y-4 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4">
-              <h4 className="text-headline-sm font-bold text-white">Preferred Music Region</h4>
-              <select
-                value={selectedLanguage}
-                onChange={(e) => {
-                  setSelectedLanguage(e.target.value);
-                  localStorage.setItem('pulse_music_lang', e.target.value);
-                }}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#121214] border border-white/10 text-white text-body-sm focus:border-accent focus:outline-none"
-              >
-                <option value="all">Global (All Regions)</option>
-                <option value="en">English (US / UK / Global Pop)</option>
-                <option value="hi">Hindi & Bollywood</option>
-                <option value="pa">Punjabi Pop</option>
-                <option value="es">Latin & Spanish</option>
-                <option value="kr">K-Pop</option>
-                <option value="jp">J-Pop & Anime</option>
-              </select>
-
-              <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-                <div>
-                  <p className="text-label-md font-semibold text-white">Filter Explicit Content</p>
-                  <p className="text-body-xs text-neutral-400">Hide songs with explicit lyric advisories</p>
-                </div>
-                <button
-                  onClick={() => {
-                    const next = !explicitFilter;
-                    setExplicitFilter(next);
-                    localStorage.setItem('pulse_explicit_filter', String(next));
-                  }}
-                  className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    explicitFilter ? 'bg-accent' : 'bg-neutral-700'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-black transition-transform ${
-                      explicitFilter ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-
-      // 8. Behavior
-      case 'behavior':
-        return (
-          <div className="space-y-4 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-label-md font-semibold text-white">Remember Last Song</p>
-                  <p className="text-body-xs text-neutral-400">Restore your last playing track and position on launch</p>
-                </div>
-                <button
-                  onClick={() => {
-                    const next = !rememberLastSong;
-                    setRememberLastSong(next);
-                    localStorage.setItem('pulse_remember_song', String(next));
-                  }}
-                  className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    rememberLastSong ? 'bg-accent' : 'bg-neutral-700'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-black transition-transform ${
-                      rememberLastSong ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-
-      // 9. Integration
-      case 'integration':
-        return (
-          <div className="space-y-4 animate-fade-in">
-            {renderPlaylistUrlImporterSection()}
-
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-3">
-              <h4 className="text-headline-sm font-bold text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-accent">sensors</span>
-                Connected Services
-              </h4>
-              <p className="text-body-sm text-neutral-400">
-                YouTube Music Stream Pipe active. Discord Rich Presence and Last.fm scrobbling bridge ready for companion integration.
-              </p>
-            </div>
-          </div>
-        );
-
-      // 10. AI Integration
-      case 'ai':
-        return (
-          <div className="space-y-4 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h4 className="text-headline-sm font-bold text-white flex items-center gap-2">
-                    <span className="material-symbols-outlined text-accent">auto_awesome</span>
-                    Smart DJ & Vibe Matching
-                  </h4>
-                  <p className="text-body-sm text-neutral-400 mt-1">
-                    AI-powered continuous queue curation based on acoustic similarity and harmonic progressions.
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-white/10 flex items-center justify-between">
-                <div>
-                  <p className="text-label-md font-semibold text-white">Auto-Generate Dynamic Queue</p>
-                  <p className="text-body-xs text-neutral-400">Automatically queue similar songs when playlist ends</p>
-                </div>
-                <button
-                  onClick={() => {
-                    const next = !smartRecs;
-                    setSmartRecs(next);
-                    localStorage.setItem('pulse_smart_recs', String(next));
-                  }}
-                  className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    smartRecs ? 'bg-accent' : 'bg-neutral-700'
-                  }`}
-                >
-                  <span
-                    className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-black transition-transform ${
-                      smartRecs ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-
-      // 11. Internet & Data
-      case 'internet':
-        return (
-          <div className="space-y-4 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 flex items-center justify-between">
-              <div>
-                <p className="text-label-md font-semibold text-white">Data Saver Mode</p>
-                <p className="text-body-xs text-neutral-400">
-                  Switch to 128kbps AAC and disable animated artwork when on metered cellular data
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  const next = !dataSaver;
-                  setDataSaver(next);
-                  localStorage.setItem('pulse_data_saver', String(next));
-                }}
-                className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  dataSaver ? 'bg-accent' : 'bg-neutral-700'
-                }`}
-              >
-                <span
-                  className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-black transition-transform ${
-                    dataSaver ? 'translate-x-6' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-        );
-
-      // 12. Storage
-      case 'storage':
-        return (
-          <div className="space-y-4 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4">
-              <h4 className="text-headline-sm font-bold text-white">Browser Storage</h4>
-              <div className="p-4 rounded-xl bg-[#121214] border border-white/5 flex items-center justify-between">
-                <div>
-                  <p className="text-label-md font-semibold text-white">Local Library Storage</p>
-                  <p className="text-body-xs text-neutral-400">
-                    {liked?.length || 0} Liked Songs · {playlists?.length || 0} Playlists · {history?.length || 0} History Tracks
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem('pulse_search_history');
-                    alert('Search history cleared.');
-                  }}
-                  className="px-3 py-1.5 rounded-lg border border-white/10 text-[12px] text-neutral-400 hover:text-white hover:border-white/30 cursor-pointer"
-                >
-                  Clear Search History
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-
-      // 13. Backup & Restore
+      // ── 5. Backup & Import ─────────────────────────────────────────
       case 'backup':
         return (
           <div className="space-y-4 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4">
+            <div className="pb-1">
+              <h3 className="text-title-lg font-bold text-white">Backup & Import</h3>
+              <p className="text-body-sm text-neutral-400 mt-0.5">
+                Import YouTube playlists directly or export/restore your library via JSON.
+              </p>
+            </div>
+
+            {/* YouTube Playlist URL Importer */}
+            {renderPlaylistUrlImporterSection()}
+
+            {/* JSON Backup & Restore Card */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4 shadow-lg">
               <div>
-                <h4 className="text-headline-sm font-bold text-white">JSON Library Backup</h4>
-                <p className="text-body-sm text-neutral-400 mt-0.5">
+                <h4 className="text-title-sm font-bold text-white">JSON Library Backup & Restore</h4>
+                <p className="text-body-xs text-neutral-400 mt-0.5">
                   Export or restore your full cassette.fm library including playlists, liked tracks, and tags.
                 </p>
               </div>
@@ -1293,7 +1172,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                 </div>
               )}
 
-              <div className="flex flex-wrap gap-3 pt-2">
+              <div className="flex flex-wrap gap-3 pt-1">
                 <button
                   onClick={handleExportBackup}
                   className="px-4 py-2.5 rounded-xl bg-accent text-black font-bold text-label-md flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer shadow-md shadow-accent/20"
@@ -1312,33 +1191,63 @@ export default function SettingsModal({ isOpen, onClose }) {
           </div>
         );
 
-      // 14. Developer Options
-      case 'developer':
+      // ── 6. Devices & Engine ────────────────────────────────────────
+      case 'devices':
         return (
           <div className="space-y-4 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4">
-              <h4 className="text-headline-sm font-bold text-white flex items-center gap-2">
+            <div className="pb-1">
+              <h3 className="text-title-lg font-bold text-white">Devices & Engine</h3>
+              <p className="text-body-sm text-neutral-400 mt-0.5">
+                Inspect active audio pipeline, browser storage diagnostics, and system version.
+              </p>
+            </div>
+
+            {/* System Diagnostics Card */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4 shadow-lg">
+              <h4 className="text-title-sm font-bold text-white flex items-center gap-2">
                 <span className="material-symbols-outlined text-neutral-400">terminal</span>
-                System Diagnostics
+                Audio Pipeline Diagnostics
               </h4>
 
-              <div className="space-y-2 font-mono text-[12px] p-3.5 rounded-xl bg-[#0e0e0e] border border-white/10 text-neutral-300">
-                <div className="flex justify-between">
+              <div className="space-y-2.5 font-mono text-[12px] p-4 rounded-xl bg-[#0e0e0e] border border-white/10 text-neutral-300">
+                <div className="flex justify-between items-center py-1 border-b border-white/5">
                   <span className="text-neutral-500">App Version:</span>
-                  <span className="text-accent">cassette.fm v2.4.0 (ArchiveTune Edition)</span>
+                  <span className="text-accent font-bold">cassette.fm v2.4.0 (SimpMusic Edition)</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center py-1 border-b border-white/5">
                   <span className="text-neutral-500">Audio Codec:</span>
                   <span className="text-white">{activeStreamMeta?.mimeType || 'audio/webm; codecs="opus"'}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-500">Active Format itag:</span>
-                  <span className="text-white">#{activeStreamMeta?.itag || '251'}</span>
+                <div className="flex justify-between items-center py-1 border-b border-white/5">
+                  <span className="text-neutral-500">Stream Format itag:</span>
+                  <span className="text-white font-bold">#{activeStreamMeta?.itag || '251'}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center py-1">
                   <span className="text-neutral-500">Host Environment:</span>
                   <span className="text-white">Vite PWA · ServiceWorker Ready</span>
                 </div>
+              </div>
+            </div>
+
+            {/* Storage Management Card */}
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-3 shadow-lg">
+              <h4 className="text-title-sm font-bold text-white">Browser Storage Cache</h4>
+              <div className="p-4 rounded-xl bg-[#121214] border border-white/5 flex items-center justify-between">
+                <div>
+                  <p className="text-label-md font-semibold text-white">Search History & State</p>
+                  <p className="text-body-xs text-neutral-400 mt-0.5">
+                    {liked?.length || 0} Liked Songs · {playlists?.length || 0} Playlists · {history?.length || 0} Tracks
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('pulse_search_history');
+                    alert('Search history cleared.');
+                  }}
+                  className="px-3.5 py-2 rounded-xl border border-white/10 text-[12px] text-neutral-300 hover:text-white hover:border-white/30 cursor-pointer bg-[#18181a]"
+                >
+                  Clear History
+                </button>
               </div>
             </div>
           </div>

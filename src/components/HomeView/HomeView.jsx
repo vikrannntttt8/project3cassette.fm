@@ -53,12 +53,13 @@ export default function HomeView() {
     togglePlay,
     routeToSongEntity,
     routeToArtistEntity,
+    activeChip,
+    setActiveChip,
   } = usePlayer();
   const { query, results, loading, error, activeTab, search, submitSearch, switchTab, clear } = useMusicSearch();
 
   const [addMenuSong, setAddMenuSong] = useState(null);
   const [selectedArtist, setSelectedArtist] = useState(null);
-  const [activeChip, setActiveChip] = useState('all');
 
   // ── Play handlers ─────────────────────────────────────────────────
   const handlePlaySong = useCallback(
@@ -528,18 +529,19 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
   return (
     <div
       onClick={onPlay}
-      className={`group flex items-center gap-3 px-3 py-2 rounded-2xl transition-all duration-150 cursor-pointer min-h-[50px] select-none ${
+      className={`group flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl transition-all duration-150 cursor-pointer min-h-[58px] select-none ${
         isActive
-          ? 'bg-accent/15 text-accent'
-          : 'bg-[#18181a]/55 hover:bg-[#18181a] text-white'
+          ? 'bg-accent/15 text-accent border border-accent/20'
+          : 'bg-[#18181a]/50 hover:bg-[#18181a] text-white border border-transparent hover:border-white/5'
       }`}
     >
-      <div className="relative w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 bg-[#222225]">
+      {/* 48px YouTube Music Style Artwork */}
+      <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-[#222225] border border-white/5">
         {song.thumbnail ? (
           <img src={song.thumbnail} alt={song.title} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="material-symbols-outlined text-white/30 text-[18px]">music_note</span>
+            <span className="material-symbols-outlined text-white/30 text-[20px]">music_note</span>
           </div>
         )}
         <div
@@ -548,12 +550,12 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
           }`}
         >
           {isActive && isPlaying ? (
-            <span className="material-symbols-outlined text-accent text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <span className="material-symbols-outlined text-accent text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
               graphic_eq
             </span>
           ) : (
             <span
-              className="material-symbols-outlined text-white text-[18px]"
+              className="material-symbols-outlined text-white text-[20px]"
               style={{ fontVariationSettings: "'FILL' 1" }}
             >
               play_arrow
@@ -562,53 +564,60 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
         </div>
       </div>
 
+      {/* Meta Text */}
       <div className="flex-1 min-w-0 flex flex-col justify-center overflow-hidden">
         <p
-          className={`font-semibold text-white text-[13.5px] leading-tight truncate whitespace-nowrap overflow-hidden text-ellipsis ${
+          className={`font-semibold text-white text-[14px] leading-snug tracking-tight truncate whitespace-nowrap overflow-hidden text-ellipsis ${
             isActive ? 'text-accent font-bold' : ''
           }`}
           title={song.title}
         >
           {song.title}
         </p>
-        <ArtistLinks
-          artists={song.artists}
-          artist={song.artist}
-          artistId={song.artistId}
-          className="text-[11px] text-neutral-400 truncate mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis"
-        />
+        <div className="flex items-center gap-1.5 text-[12px] text-neutral-400 font-normal truncate mt-0.5">
+          <ArtistLinks
+            artists={song.artists}
+            artist={song.artist}
+            artistId={song.artistId}
+            className="truncate whitespace-nowrap overflow-hidden text-ellipsis hover:text-white"
+          />
+          {song.album && (
+            <>
+              <span className="text-neutral-600">•</span>
+              <span className="truncate whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] hidden xs:inline" title={song.album}>
+                {song.album}
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center gap-1 flex-shrink-0">
-        <div
-          className={`flex items-center gap-0.5 transition-opacity ${
-            liked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+      {/* Actions */}
+      <div className="flex items-center gap-1 flex-shrink-0 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleLike(song);
+          }}
+          className={`p-2 rounded-full transition-transform active:scale-90 min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer ${
+            liked ? 'text-accent' : 'text-neutral-400 hover:text-white'
           }`}
+          title={liked ? 'Unlike' : 'Like'}
+          aria-label={liked ? 'Unlike' : 'Like'}
         >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleLike(song);
-            }}
-            className={`p-1.5 rounded-full hover:scale-110 transition-transform cursor-pointer ${
-              liked ? 'text-accent' : 'text-neutral-400 hover:text-white'
-            }`}
-            title={liked ? 'Unlike' : 'Like'}
+          <span
+            className="material-symbols-outlined text-[19px]"
+            style={{ fontVariationSettings: `'FILL' ${liked ? 1 : 0}` }}
           >
-            <span
-              className="material-symbols-outlined text-[18px]"
-              style={{ fontVariationSettings: `'FILL' ${liked ? 1 : 0}` }}
-            >
-              favorite
-            </span>
-          </button>
-          <TrackContextMenu track={song} onAddToPlaylist={onAddToPlaylist} />
-        </div>
-        <span className="text-[11px] text-neutral-500 font-mono min-w-[32px] text-right">
-          {formatTime(song.duration)}
-        </span>
+            favorite
+          </span>
+        </button>
+        <TrackContextMenu track={song} onAddToPlaylist={onAddToPlaylist} />
       </div>
+      <span className="text-[11.5px] text-neutral-500 font-mono min-w-[32px] text-right hidden xs:inline">
+        {formatTime(song.duration)}
+      </span>
     </div>
   );
 }

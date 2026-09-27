@@ -127,8 +127,8 @@ export function PlayerProvider({ children }) {
     }
     return { view: 'home', currentId: null, extra: null };
   });
-  const [navHistory, setNavHistory] = useState([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activeChip, setActiveChip] = useState('all');
 
   // ── Audio Quality & Stream Bitrate State (max | standard | datasaver) ──
   const [audioQuality, setAudioQualityState] = useState(() => {
@@ -845,8 +845,8 @@ export function PlayerProvider({ children }) {
     navState, setNavState, navigateTo, goBack, canGoBack, navHistory, playAlbum,
     handleEntityClick,
     routeToSongEntity,
-    routeToArtistEntity,
     isSettingsOpen, setIsSettingsOpen,
+    activeChip, setActiveChip,
     // Audio Quality & Bitrate
     audioQuality, setAudioQuality, activeStreamMeta, streamToast, setStreamToast,
     // Actions

@@ -252,33 +252,54 @@ export function PlayerProvider({ children }) {
 
     // Load YouTube IFrame API script dynamically on app mount if not present
     if (!window.YT && !document.getElementById('youtube-iframe-api-script')) {
-      const script = document.createElement('script');
-      script.id = 'youtube-iframe-api-script';
-      script.src = 'https://www.youtube.com/iframe_api';
-      document.head.appendChild(script);
+      try {
+        const script = document.createElement('script');
+        script.id = 'youtube-iframe-api-script';
+        script.src = 'https://www.youtube.com/iframe_api';
+        script.async = true;
+        script.onerror = () => {
+          console.warn('[YouTube Player] Failed to load YouTube IFrame API script. Running in fallback mode.');
+          setIsLoading(false);
+        };
+        document.head.appendChild(script);
+      } catch (err) {
+        console.warn('[YouTube Player] Script injection error:', err);
+      }
     }
 
+    let pollAttempts = 0;
+    const maxPollAttempts = 35; // ~10.5 seconds max polling before timeout
+
     const setupPlayer = () => {
-      if (window.YT && window.YT.Player && !ytPlayerRef.current) {
-        try {
-          ytPlayerRef.current = new window.YT.Player('youtube-player-container', {
-            height: '200',
-            width: '200',
-            playerVars: {
-              autoplay: 1,
-              controls: 0,
-              disablekb: 1,
-              fs: 0,
-              modestbranding: 1,
-              rel: 0,
-              origin: window.location.origin,
-              enablejsapi: 1,
-              playsinline: 1,
-            },
-            events: {
-              onReady: () => {
+      try {
+        if (!window.YT || typeof window.YT.Player !== 'function' || ytPlayerRef.current) {
+          return;
+        }
+
+        const container = document.getElementById('youtube-player-container');
+        if (!container) {
+          return;
+        }
+
+        ytPlayerRef.current = new window.YT.Player('youtube-player-container', {
+          height: '200',
+          width: '200',
+          playerVars: {
+            autoplay: 1,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            rel: 0,
+            origin: window.location.origin,
+            enablejsapi: 1,
+            playsinline: 1,
+          },
+          events: {
+            onReady: () => {
+              try {
                 ytReadyRef.current = true;
-                if (ytPlayerRef.current?.setVolume) {
+                if (ytPlayerRef.current && typeof ytPlayerRef.current.setVolume === 'function') {
                   ytPlayerRef.current.setVolume(volume * 100);
                 }
                 if (pendingSongRef.current) {
@@ -286,15 +307,19 @@ export function PlayerProvider({ children }) {
                   pendingSongRef.current = null;
                   executeLoadSong(song);
                 }
-              },
-              onStateChange: (event) => {
+              } catch (e) {
+                console.warn('[YouTube Player] onReady handler error:', e);
+              }
+            },
+            onStateChange: (event) => {
+              try {
                 // YT.PlayerState.PLAYING = 1
                 if (event.data === 1) {
                   setIsPlaying(true);
                   setIsLoading(false);
-                  if (ytPlayerRef.current?.getDuration) {
+                  if (ytPlayerRef.current && typeof ytPlayerRef.current.getDuration === 'function') {
                     const d = ytPlayerRef.current.getDuration();
-                    if (d && d > 0) setDuration(d);
+                    if (typeof d === 'number' && d > 0) setDuration(d);
                   }
                 }
                 // YT.PlayerState.PAUSED = 2
@@ -314,30 +339,47 @@ export function PlayerProvider({ children }) {
                     playNextRef.current();
                   }
                 }
-              },
-              onError: (err) => {
-                console.warn('[YouTube Player] Playback error code:', err?.data);
-                setIsLoading(false);
-              },
+              } catch (e) {
+                console.warn('[YouTube Player] onStateChange handler error:', e);
+              }
             },
-          });
-        } catch (err) {
-          console.warn('[YouTube Player] Init error:', err);
-        }
+            onError: (err) => {
+              console.warn('[YouTube Player] Playback error code:', err?.data);
+              setIsLoading(false);
+            },
+          },
+        });
+      } catch (err) {
+        console.warn('[YouTube Player] Init error (fallback active):', err);
+        ytReadyRef.current = false;
+        setIsLoading(false);
       }
     };
 
-    if (window.YT && window.YT.Player) {
+    if (window.YT && typeof window.YT.Player === 'function') {
       setupPlayer();
     } else {
-      window.onYouTubeIframeAPIReady = setupPlayer;
+      window.onYouTubeIframeAPIReady = () => {
+        try {
+          setupPlayer();
+        } catch (e) {
+          console.warn('[YouTube Player] onYouTubeIframeAPIReady error:', e);
+        }
+      };
+
       const interval = setInterval(() => {
+        pollAttempts += 1;
         if (window.YT?.Player && !ytPlayerRef.current) {
           setupPlayer();
-        } else if (ytPlayerRef.current) {
+        } else if (ytPlayerRef.current || pollAttempts >= maxPollAttempts) {
           clearInterval(interval);
+          if (!ytPlayerRef.current && pollAttempts >= maxPollAttempts) {
+            console.warn('[YouTube Player] IFrame API load timeout. Running in resilient fallback state.');
+            setIsLoading(false);
+          }
         }
       }, 300);
+
       return () => clearInterval(interval);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -348,16 +390,20 @@ export function PlayerProvider({ children }) {
     let timer = null;
     if (isPlaying) {
       timer = setInterval(() => {
-        const p = ytPlayerRef.current;
-        if (p && typeof p.getCurrentTime === 'function') {
-          const t = p.getCurrentTime();
-          const d = p.getDuration();
-          if (typeof t === 'number' && !isNaN(t)) {
-            setCurrentTime(t);
+        try {
+          const p = ytPlayerRef.current;
+          if (p && typeof p.getCurrentTime === 'function') {
+            const t = p.getCurrentTime();
+            const d = typeof p.getDuration === 'function' ? p.getDuration() : 0;
+            if (typeof t === 'number' && !isNaN(t)) {
+              setCurrentTime(t);
+            }
+            if (typeof d === 'number' && !isNaN(d) && d > 0) {
+              setDuration(d);
+            }
           }
-          if (typeof d === 'number' && !isNaN(d) && d > 0) {
-            setDuration(d);
-          }
+        } catch (e) {
+          console.warn('[YouTube Player] Progress polling error:', e);
         }
       }, 1000);
     }
@@ -369,55 +415,79 @@ export function PlayerProvider({ children }) {
   // ── Unified YouTube Control Bindings ──────────────────────────────
 
   const play = useCallback(() => {
-    if (ytPlayerRef.current?.playVideo) {
-      ytPlayerRef.current.playVideo();
+    try {
+      if (ytPlayerRef.current && typeof ytPlayerRef.current.playVideo === 'function') {
+        ytPlayerRef.current.playVideo();
+      }
+    } catch (e) {
+      console.warn('[YouTube Player] play error:', e);
     }
   }, []);
 
   const pause = useCallback(() => {
-    if (ytPlayerRef.current?.pauseVideo) {
-      ytPlayerRef.current.pauseVideo();
+    try {
+      if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
+        ytPlayerRef.current.pauseVideo();
+      }
+    } catch (e) {
+      console.warn('[YouTube Player] pause error:', e);
     }
   }, []);
 
   const togglePlay = useCallback(() => {
-    const p = ytPlayerRef.current;
-    if (!p) return;
-    if (isPlaying) {
-      p.pauseVideo();
-    } else {
-      p.playVideo();
+    try {
+      const p = ytPlayerRef.current;
+      if (!p) return;
+      if (isPlaying) {
+        if (typeof p.pauseVideo === 'function') p.pauseVideo();
+      } else {
+        if (typeof p.playVideo === 'function') p.playVideo();
+      }
+    } catch (e) {
+      console.warn('[YouTube Player] togglePlay error:', e);
     }
   }, [isPlaying]);
 
   const seek = useCallback((time) => {
-    const p = ytPlayerRef.current;
-    if (p && typeof p.seekTo === 'function') {
-      p.seekTo(time, true);
-      setCurrentTime(time);
+    try {
+      const p = ytPlayerRef.current;
+      if (p && typeof p.seekTo === 'function') {
+        p.seekTo(time, true);
+        setCurrentTime(time);
+      }
+    } catch (e) {
+      console.warn('[YouTube Player] seek error:', e);
     }
   }, []);
 
   const changeVolume = useCallback((v) => {
-    const clamped = Math.max(0, Math.min(1, v));
-    const p = ytPlayerRef.current;
-    if (p && typeof p.setVolume === 'function') {
-      p.setVolume(clamped * 100);
-      p.unMute();
+    try {
+      const clamped = Math.max(0, Math.min(1, v));
+      const p = ytPlayerRef.current;
+      if (p && typeof p.setVolume === 'function') {
+        p.setVolume(clamped * 100);
+        if (typeof p.unMute === 'function') p.unMute();
+      }
+      setVolume(clamped);
+      setIsMuted(false);
+    } catch (e) {
+      console.warn('[YouTube Player] changeVolume error:', e);
     }
-    setVolume(clamped);
-    setIsMuted(false);
   }, []);
 
   const toggleMute = useCallback(() => {
-    const p = ytPlayerRef.current;
-    if (!p) return;
-    if (typeof p.isMuted === 'function' && p.isMuted()) {
-      p.unMute();
-      setIsMuted(false);
-    } else if (typeof p.mute === 'function') {
-      p.mute();
-      setIsMuted(true);
+    try {
+      const p = ytPlayerRef.current;
+      if (!p) return;
+      if (typeof p.isMuted === 'function' && p.isMuted()) {
+        if (typeof p.unMute === 'function') p.unMute();
+        setIsMuted(false);
+      } else if (typeof p.mute === 'function') {
+        p.mute();
+        setIsMuted(true);
+      }
+    } catch (e) {
+      console.warn('[YouTube Player] toggleMute error:', e);
     }
   }, []);
 
@@ -426,42 +496,47 @@ export function PlayerProvider({ children }) {
     const p = ytPlayerRef.current;
     if (!p) return;
 
-    setIsLoading(true);
-    setCurrentTime(0);
-    setDuration(0);
+    try {
+      setIsLoading(true);
+      setCurrentTime(0);
+      setDuration(0);
 
-    // Completely decoupled from Saavn preview URLs (preventing 30s limits)
-    const cleanSong = { ...song };
-    delete cleanSong.media_preview_url;
+      // Completely decoupled from Saavn preview URLs (preventing 30s limits)
+      const cleanSong = { ...song };
+      delete cleanSong.media_preview_url;
 
-    // Dynamically retrieve pre-mapped videoId or resolve dynamically
-    let targetVideoId = cleanSong.videoId || cleanSong.youtubeId;
-    if (!targetVideoId) {
-      targetVideoId = await resolveYouTubeVideoId(cleanSong.title, cleanSong.artist);
-    }
-
-    if (targetVideoId) {
-      cleanSong.videoId = targetVideoId;
-      cleanSong.youtubeId = targetVideoId;
-      if (typeof p.loadVideoById === 'function') {
-        p.loadVideoById(targetVideoId);
+      // Dynamically retrieve pre-mapped videoId or resolve dynamically
+      let targetVideoId = cleanSong.videoId || cleanSong.youtubeId;
+      if (!targetVideoId) {
+        targetVideoId = await resolveYouTubeVideoId(cleanSong.title, cleanSong.artist);
       }
-    } else {
-      // Direct YouTube search playlist loading fallback
-      const searchQuery = `${cleanSong.title} ${cleanSong.artist || ''}`.trim();
-      if (typeof p.loadPlaylist === 'function') {
-        p.loadPlaylist({ listType: 'search', list: searchQuery, index: 0, startSeconds: 0 });
+
+      if (targetVideoId) {
+        cleanSong.videoId = targetVideoId;
+        cleanSong.youtubeId = targetVideoId;
+        if (typeof p.loadVideoById === 'function') {
+          p.loadVideoById(targetVideoId);
+        }
+      } else {
+        // Direct YouTube search playlist loading fallback
+        const searchQuery = `${cleanSong.title} ${cleanSong.artist || ''}`.trim();
+        if (typeof p.loadPlaylist === 'function') {
+          p.loadPlaylist({ listType: 'search', list: searchQuery, index: 0, startSeconds: 0 });
+        }
       }
-    }
 
-    if (typeof p.setVolume === 'function') {
-      p.setVolume(volume * 100);
-      if (isMuted && typeof p.mute === 'function') p.mute();
-      else if (typeof p.unMute === 'function') p.unMute();
-    }
+      if (typeof p.setVolume === 'function') {
+        p.setVolume(volume * 100);
+        if (isMuted && typeof p.mute === 'function') p.mute();
+        else if (typeof p.unMute === 'function') p.unMute();
+      }
 
-    if (typeof p.playVideo === 'function') {
-      p.playVideo();
+      if (typeof p.playVideo === 'function') {
+        p.playVideo();
+      }
+    } catch (err) {
+      console.warn('[YouTube Player] Error during executeLoadSong:', err);
+      setIsLoading(false);
     }
   }, [volume, isMuted]);
 

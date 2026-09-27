@@ -30,7 +30,7 @@ export default function MobileHeader({ onSearchClick }) {
         className="flex items-center gap-1.5 cursor-pointer group py-1"
         aria-label="Go to Home"
       >
-        <span className="font-cassette text-[24px] text-white tracking-tight leading-none group-hover:text-amber-400 transition-colors">
+        <span className="font-cassette text-[24px] text-white tracking-tight leading-none group-hover:text-accent transition-colors">
           cassette.fm
         </span>
         <span className="w-1.5 h-1.5 rounded-full bg-accent" />

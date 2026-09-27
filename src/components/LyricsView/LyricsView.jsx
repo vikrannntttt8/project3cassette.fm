@@ -33,7 +33,7 @@ export default function LyricsView() {
               <polygon points="12 15 17 21 7 21 12 15" />
             </svg>
           </button>
-          <button onClick={toggleView} className="text-white hover:text-white/70 transition-colors" title="Lyrics Active">
+          <button onClick={toggleView} className="text-accent hover:opacity-80 transition-colors" title="Lyrics Active">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M7 8h10M7 12h6m-6 4h10M4 4h16v16H4V4z" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

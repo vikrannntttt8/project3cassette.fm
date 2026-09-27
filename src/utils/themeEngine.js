@@ -4,17 +4,19 @@
  * and applies CSS custom properties dynamically to :root.
  */
 
-export const DEFAULT_ACCENT_HEX = '#f59e0b'; // Cassette Warm Gold
+export const DEFAULT_ACCENT_HEX = '#ffffff'; // Clean Modern Monochrome White
 
 export const PRESET_PALETTES = [
-  { id: 'gold',    name: 'Cassette Gold', hex: '#f59e0b', ring: 'ring-amber-500' },
-  { id: 'rose',    name: 'Rose Pink',     hex: '#f43f5e', ring: 'ring-rose-500' },
-  { id: 'violet',  name: 'Neon Violet',   hex: '#a855f7', ring: 'ring-violet-500' },
-  { id: 'cyan',    name: 'Electric Cyan', hex: '#06b6d4', ring: 'ring-cyan-500' },
-  { id: 'emerald', name: 'Emerald Wave',  hex: '#10b981', ring: 'ring-emerald-500' },
-  { id: 'orange',  name: 'Sunset Orange', hex: '#fb923c', ring: 'ring-orange-500' },
-  { id: 'blue',    name: 'Electric Blue', hex: '#3b82f6', ring: 'ring-blue-500' },
-  { id: 'ruby',    name: 'Crimson Ruby',  hex: '#ef4444', ring: 'ring-red-500' },
+  { id: 'white',   name: 'Monochrome White', hex: '#ffffff', ring: 'ring-white' },
+  { id: 'silver',  name: 'Silver Slate',     hex: '#cbd5e1', ring: 'ring-slate-300' },
+  { id: 'gold',    name: 'Cassette Gold',   hex: '#f59e0b', ring: 'ring-amber-500' },
+  { id: 'rose',    name: 'Rose Pink',       hex: '#f43f5e', ring: 'ring-rose-500' },
+  { id: 'violet',  name: 'Neon Violet',     hex: '#a855f7', ring: 'ring-violet-500' },
+  { id: 'cyan',    name: 'Electric Cyan',   hex: '#06b6d4', ring: 'ring-cyan-500' },
+  { id: 'emerald', name: 'Emerald Wave',    hex: '#10b981', ring: 'ring-emerald-500' },
+  { id: 'orange',  name: 'Sunset Orange',   hex: '#fb923c', ring: 'ring-orange-500' },
+  { id: 'blue',    name: 'Electric Blue',   hex: '#3b82f6', ring: 'ring-blue-500' },
+  { id: 'ruby',    name: 'Crimson Ruby',    hex: '#ef4444', ring: 'ring-red-500' },
 ];
 
 export function hexToRgb(hex) {

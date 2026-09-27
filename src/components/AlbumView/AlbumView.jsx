@@ -184,13 +184,13 @@ export default function AlbumView({ browseId, initialData }) {
                       key={track.id || idx}
                       onClick={() => handleTrackClick(track, idx)}
                       className={`group flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer min-h-[50px] select-none ${
-                        isCurrent ? 'bg-amber-500/15 text-amber-300' : 'bg-[#18181a]/55 hover:bg-[#18181a] text-white'
+                        isCurrent ? 'bg-accent/15 text-accent' : 'bg-[#18181a]/55 hover:bg-[#18181a] text-white'
                       }`}
                     >
                       <div className="flex items-center gap-3.5 min-w-0 flex-1">
                         <div className="w-7 text-center text-label-md font-mono text-neutral-500 flex-shrink-0 flex items-center justify-center">
                           {isCurrent && isPlaying ? (
-                            <span className="material-symbols-outlined text-amber-400 text-[18px]">
+                            <span className="material-symbols-outlined text-accent text-[18px]">
                               graphic_eq
                             </span>
                           ) : (
@@ -206,7 +206,7 @@ export default function AlbumView({ browseId, initialData }) {
                         <div className="min-w-0 flex-1">
                           <p
                             className={`text-label-md font-semibold truncate transition-colors ${
-                              isCurrent ? 'text-amber-300 font-bold' : 'text-white'
+                              isCurrent ? 'text-accent font-bold' : 'text-white'
                             }`}
                             title={track.title}
                           >
@@ -230,7 +230,7 @@ export default function AlbumView({ browseId, initialData }) {
                             toggleLike(track);
                           }}
                           className={`p-1.5 rounded-full transition-transform active:scale-90 cursor-pointer ${
-                            isLiked(track.id) ? 'text-amber-500' : 'text-neutral-500 hover:text-white'
+                            isLiked(track.id) ? 'text-accent' : 'text-neutral-500 hover:text-white'
                           }`}
                           title={isLiked(track.id) ? 'Unlike' : 'Like'}
                         >

@@ -168,7 +168,7 @@ export default function AuthModal() {
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/5 bg-[#18181a]">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <div className="w-8 h-8 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center text-accent">
               <span className="material-symbols-outlined text-[20px]">
                 {user ? 'account_circle' : 'lock'}
               </span>
@@ -202,10 +202,10 @@ export default function AuthModal() {
                   <img
                     src={user.user_metadata.avatar_url || user.user_metadata.picture}
                     alt=""
-                    className="w-13 h-13 rounded-full object-cover border-2 border-amber-500/40 flex-shrink-0"
+                    className="w-13 h-13 rounded-full object-cover border-2 border-accent/40 flex-shrink-0"
                   />
                 ) : (
-                  <div className="w-13 h-13 rounded-full bg-gradient-to-br from-amber-500 to-amber-700 text-black font-extrabold flex items-center justify-center text-lg flex-shrink-0 shadow-md">
+                  <div className="w-13 h-13 rounded-full bg-accent text-black font-extrabold flex items-center justify-center text-lg flex-shrink-0 shadow-md">
                     {getInitials(user.user_metadata?.full_name || user.user_metadata?.name, user.email)}
                   </div>
                 )}
@@ -225,7 +225,7 @@ export default function AuthModal() {
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-3 rounded-xl bg-[#18181a] border border-white/5">
                   <span className="text-[10px] font-mono text-neutral-400 uppercase block">Liked</span>
-                  <span className="text-label-lg font-bold text-amber-400">{liked?.length || 0}</span>
+                  <span className="text-label-lg font-bold text-accent">{liked?.length || 0}</span>
                 </div>
                 <div className="p-3 rounded-xl bg-[#18181a] border border-white/5">
                   <span className="text-[10px] font-mono text-neutral-400 uppercase block">Playlists</span>
@@ -233,7 +233,7 @@ export default function AuthModal() {
                 </div>
                 <div className="p-3 rounded-xl bg-[#18181a] border border-white/5">
                   <span className="text-[10px] font-mono text-neutral-400 uppercase block">History</span>
-                  <span className="text-label-lg font-bold text-amber-400">{history?.length || 0}</span>
+                  <span className="text-label-lg font-bold text-accent">{history?.length || 0}</span>
                 </div>
               </div>
 
@@ -256,7 +256,7 @@ export default function AuthModal() {
                 <button
                   onClick={handleManualSync}
                   disabled={syncLoading}
-                  className="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-label-md flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                  className="w-full py-2.5 px-4 rounded-xl bg-accent hover:opacity-90 text-black font-bold text-label-md flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-accent/20 disabled:opacity-50"
                 >
                   <span className={`material-symbols-outlined text-[18px] ${syncLoading ? 'animate-spin' : ''}`}>
                     sync
@@ -312,7 +312,7 @@ export default function AuthModal() {
                     }}
                     className={`py-2 rounded-lg text-label-sm font-bold transition-all cursor-pointer ${
                       tab === 'signin'
-                        ? 'bg-amber-500 text-black shadow-md'
+                        ? 'bg-accent text-black shadow-md'
                         : 'text-neutral-400 hover:text-white'
                     }`}
                   >
@@ -326,7 +326,7 @@ export default function AuthModal() {
                     }}
                     className={`py-2 rounded-lg text-label-sm font-bold transition-all cursor-pointer ${
                       tab === 'signup'
-                        ? 'bg-amber-500 text-black shadow-md'
+                        ? 'bg-accent text-black shadow-md'
                         : 'text-neutral-400 hover:text-white'
                     }`}
                   >
@@ -342,7 +342,7 @@ export default function AuthModal() {
                       setTab('signin');
                       setErrorMsg(null);
                     }}
-                    className="text-body-xs text-amber-400 hover:underline cursor-pointer"
+                    className="text-body-xs text-accent hover:underline cursor-pointer"
                   >
                     Back to Sign In
                   </button>
@@ -375,7 +375,7 @@ export default function AuthModal() {
                       placeholder="e.g. Maya Lin"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#1c1c1f] border border-white/10 text-white text-body-sm focus:border-amber-500 focus:outline-none transition-colors"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#1c1c1f] border border-white/10 text-white text-body-sm focus:border-accent focus:outline-none transition-colors"
                     />
                   </div>
                 )}
@@ -390,7 +390,7 @@ export default function AuthModal() {
                     placeholder="you@domain.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#1c1c1f] border border-white/10 text-white text-body-sm focus:border-amber-500 focus:outline-none transition-colors"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#1c1c1f] border border-white/10 text-white text-body-sm focus:border-accent focus:outline-none transition-colors"
                   />
                 </div>
 
@@ -407,7 +407,7 @@ export default function AuthModal() {
                             setTab('forgot');
                             setErrorMsg(null);
                           }}
-                          className="text-[11px] text-neutral-400 hover:text-amber-400 transition-colors cursor-pointer"
+                          className="text-[11px] text-neutral-400 hover:text-accent transition-colors cursor-pointer"
                         >
                           Forgot?
                         </button>
@@ -420,7 +420,7 @@ export default function AuthModal() {
                         placeholder="••••••••"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-3.5 py-2.5 pr-10 rounded-xl bg-[#1c1c1f] border border-white/10 text-white text-body-sm focus:border-amber-500 focus:outline-none transition-colors"
+                        className="w-full px-3.5 py-2.5 pr-10 rounded-xl bg-[#1c1c1f] border border-white/10 text-white text-body-sm focus:border-accent focus:outline-none transition-colors"
                       />
                       <button
                         type="button"
@@ -438,7 +438,7 @@ export default function AuthModal() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full mt-2 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-label-md flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                  className="w-full mt-2 py-3 rounded-xl bg-accent hover:opacity-90 text-black font-bold text-label-md flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-accent/20 disabled:opacity-50"
                 >
                   {loading && (
                     <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />

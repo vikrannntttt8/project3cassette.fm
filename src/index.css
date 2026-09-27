@@ -56,12 +56,12 @@
 }
 
 :root {
-  --accent-color: #f59e0b;
-  --accent-color-rgb: 245, 158, 11;
-  --accent-color-glow: rgba(245, 158, 11, 0.35);
-  --accent-hover: #fbbf24;
-  --accent-subtle: rgba(245, 158, 11, 0.15);
-  --accent-border: rgba(245, 158, 11, 0.30);
+  --accent-color: #ffffff;
+  --accent-color-rgb: 255, 255, 255;
+  --accent-color-glow: rgba(255, 255, 255, 0.25);
+  --accent-hover: #e4e4e7;
+  --accent-subtle: rgba(255, 255, 255, 0.10);
+  --accent-border: rgba(255, 255, 255, 0.20);
   --mobile-nav-h: 56px;
   --mobile-header-h: 56px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -70,19 +70,19 @@
 @layer utilities {
   /* Dynamic Theme Utility Classes */
   .text-accent {
-    color: var(--accent-color, #f59e0b) !important;
+    color: var(--accent-color, #ffffff) !important;
   }
   .bg-accent {
-    background-color: var(--accent-color, #f59e0b) !important;
+    background-color: var(--accent-color, #ffffff) !important;
   }
   .border-accent {
-    border-color: var(--accent-color, #f59e0b) !important;
+    border-color: var(--accent-color, #ffffff) !important;
   }
   .shadow-accent {
-    box-shadow: 0 10px 25px -5px var(--accent-color-glow, rgba(245, 158, 11, 0.35)) !important;
+    box-shadow: 0 10px 25px -5px var(--accent-color-glow, rgba(255, 255, 255, 0.25)) !important;
   }
   .ring-accent {
-    --tw-ring-color: var(--accent-color, #f59e0b) !important;
+    --tw-ring-color: var(--accent-color, #ffffff) !important;
   }
 
   /* Active lyric glow — dynamic */

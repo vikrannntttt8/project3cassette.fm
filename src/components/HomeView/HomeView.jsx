@@ -320,7 +320,7 @@ export default function HomeView() {
               onClick={() => setActiveChip(chip.id)}
               className={`px-3.5 py-1.5 rounded-full text-[12.5px] font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 flex-shrink-0 min-h-[38px] cursor-pointer ${
                 activeChip === chip.id
-                  ? 'bg-amber-500 text-black font-bold shadow-md shadow-amber-500/20'
+                  ? 'bg-accent text-black font-bold shadow-md shadow-accent/20'
                   : 'bg-[#18181a] text-neutral-400 border border-white/5 hover:text-white'
               }`}
             >
@@ -484,7 +484,7 @@ function ShelfHeader({ title, subtitle, icon, onPrev, onNext, children }) {
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-2.5 min-w-0">
         {icon && (
-          <span className="material-symbols-outlined text-amber-500 text-[20px] flex-shrink-0">
+          <span className="material-symbols-outlined text-accent text-[20px] flex-shrink-0">
             {icon}
           </span>
         )}
@@ -531,7 +531,7 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
       onClick={onPlay}
       className={`group flex items-center gap-3 px-3 py-2 rounded-2xl transition-all duration-150 cursor-pointer min-h-[50px] select-none ${
         isActive
-          ? 'bg-amber-500/15 text-amber-300'
+          ? 'bg-accent/15 text-accent'
           : 'bg-[#18181a]/55 hover:bg-[#18181a] text-white'
       }`}
     >
@@ -549,7 +549,7 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
           }`}
         >
           {isActive && isPlaying ? (
-            <span className="material-symbols-outlined text-amber-400 text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <span className="material-symbols-outlined text-accent text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
               graphic_eq
             </span>
           ) : (
@@ -567,7 +567,7 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
         <MarqueeText
           text={song.title}
           className={`font-semibold text-white text-[13.5px] leading-tight ${
-            isActive ? 'text-amber-300 font-bold' : ''
+            isActive ? 'text-accent font-bold' : ''
           }`}
         />
         <ArtistLinks
@@ -591,7 +591,7 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
               toggleLike(song);
             }}
             className={`p-1.5 rounded-full hover:scale-110 transition-transform cursor-pointer ${
-              liked ? 'text-amber-500' : 'text-neutral-400 hover:text-white'
+              liked ? 'text-accent' : 'text-neutral-400 hover:text-white'
             }`}
             title={liked ? 'Unlike' : 'Like'}
           >
@@ -732,12 +732,12 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
       <div className="space-y-4 animate-fade-in">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-amber-500 text-[24px]">bolt</span>
+            <span className="material-symbols-outlined text-accent text-[24px]">bolt</span>
             <h2 className="text-headline-sm font-bold text-white">Quick Picks & Instant Radio</h2>
           </div>
           <button
             onClick={() => onPlaySong(quickPicks[0], quickPicks)}
-            className="px-4 py-2 rounded-full bg-amber-500 text-black font-bold text-label-sm hover:bg-amber-400 transition-colors flex items-center gap-1.5 shadow-md shadow-amber-500/20"
+            className="px-4 py-2 rounded-full bg-accent text-black font-bold text-label-sm hover:opacity-90 transition-opacity flex items-center gap-1.5 shadow-md shadow-accent/20"
           >
             <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
               play_arrow
@@ -766,7 +766,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
     return (
       <div className="space-y-4 animate-fade-in">
         <div className="flex items-center gap-2.5">
-          <span className="material-symbols-outlined text-amber-500 text-[24px]">radio</span>
+          <span className="material-symbols-outlined text-accent text-[24px]">radio</span>
           <h2 className="text-headline-sm font-bold text-white">Daily Mixes & Curated Radio</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
@@ -774,7 +774,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
             <button
               key={mix.id}
               onClick={() => playMix(mix)}
-              className="group flex flex-col gap-2 rounded-2xl p-3 bg-[#18181a] hover:bg-[#222225] border border-white/5 hover:border-amber-500/40 transition-all text-left cursor-pointer"
+              className="group flex flex-col gap-2 rounded-2xl p-3 bg-[#18181a] hover:bg-[#222225] border border-white/5 hover:border-accent/40 transition-all text-left cursor-pointer"
             >
               <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-[#222225]">
                 {mix.thumbnail ? (
@@ -785,14 +785,14 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
                   </div>
                 )}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <div className="w-11 h-11 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                  <div className="w-11 h-11 rounded-full bg-accent text-black flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
                     <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                       play_arrow
                     </span>
                   </div>
                 </div>
               </div>
-              <p className="text-label-md font-bold text-white truncate group-hover:text-amber-300">{mix.title}</p>
+              <p className="text-label-md font-bold text-white truncate group-hover:text-accent">{mix.title}</p>
               <p className="text-body-xs text-neutral-400 truncate">{mix.subtitle || 'Radio Station'}</p>
             </button>
           ))}
@@ -806,7 +806,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
     return (
       <div className="space-y-4 animate-fade-in">
         <div className="flex items-center gap-2.5">
-          <span className="material-symbols-outlined text-amber-500 text-[24px]">album</span>
+          <span className="material-symbols-outlined text-accent text-[24px]">album</span>
           <h2 className="text-headline-sm font-bold text-white">Trending Albums & Releases</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5">
@@ -827,7 +827,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
     return (
       <div className="space-y-4 animate-fade-in">
         <div className="flex items-center gap-2.5">
-          <span className="material-symbols-outlined text-amber-500 text-[24px]">person</span>
+          <span className="material-symbols-outlined text-accent text-[24px]">person</span>
           <h2 className="text-headline-sm font-bold text-white">Featured Artists</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
@@ -854,7 +854,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
       {history && history.length > 0 && (
         <section className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-amber-500 text-[20px]">history</span>
+            <span className="material-symbols-outlined text-accent text-[20px]">history</span>
             <div>
               <h2 className="text-headline-sm font-bold text-white tracking-tight">Listen Again</h2>
               <p className="text-body-xs text-neutral-400">Jump back into your recent tracks</p>
@@ -888,7 +888,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
           >
             <button
               onClick={() => onPlaySong(quickPicks[0], quickPicks)}
-              className="px-3 py-1 rounded-full border border-white/10 hover:border-amber-500 text-[12px] text-neutral-400 hover:text-amber-400 flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-1 rounded-full border border-white/10 hover:border-accent text-[12px] text-neutral-400 hover:text-accent flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[15px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                 play_arrow
@@ -941,11 +941,11 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
               <button
                 key={mix.id}
                 onClick={() => playMix(mix)}
-                className="group flex flex-col gap-2 rounded-2xl p-3 bg-[#18181a] hover:bg-[#222225] border border-white/5 hover:border-amber-500/40 transition-all text-left w-40 sm:w-44 flex-shrink-0 snap-start cursor-pointer relative"
+                className="group flex flex-col gap-2 rounded-2xl p-3 bg-[#18181a] hover:bg-[#222225] border border-white/5 hover:border-accent/40 transition-all text-left w-40 sm:w-44 flex-shrink-0 snap-start cursor-pointer relative"
               >
                 {loadingMixId === mix.id && (
                   <div className="absolute inset-0 bg-black/80 rounded-2xl flex items-center justify-center z-10">
-                    <div className="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
                 <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-[#222225] border border-white/5">
@@ -961,7 +961,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
                     </div>
                   )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="w-10 h-10 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                    <div className="w-10 h-10 rounded-full bg-accent text-black flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
                       <span
                         className="material-symbols-outlined text-[22px]"
                         style={{ fontVariationSettings: "'FILL' 1" }}
@@ -972,7 +972,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
                   </div>
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-label-md font-bold text-white truncate group-hover:text-amber-300">
+                  <span className="text-label-md font-bold text-white truncate group-hover:text-accent">
                     {mix.title}
                   </span>
                   <span className="text-body-xs text-neutral-400 truncate">
@@ -1030,7 +1030,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
                   if (it.type === 'album') onAlbumClick(it);
                   else playMix(it);
                 }}
-                className="group flex flex-col gap-2 rounded-2xl p-3 bg-[#18181a] hover:bg-[#222225] border border-white/5 hover:border-amber-500/40 transition-all text-left w-40 sm:w-44 flex-shrink-0 snap-start cursor-pointer"
+                className="group flex flex-col gap-2 rounded-2xl p-3 bg-[#18181a] hover:bg-[#222225] border border-white/5 hover:border-accent/40 transition-all text-left w-40 sm:w-44 flex-shrink-0 snap-start cursor-pointer"
               >
                 <div className="relative aspect-square w-full rounded-xl overflow-hidden bg-[#222225]">
                   {it.thumbnail ? (
@@ -1045,7 +1045,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
                     </div>
                   )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <div className="w-10 h-10 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                    <div className="w-10 h-10 rounded-full bg-accent text-black flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
                       <span
                         className="material-symbols-outlined text-[22px]"
                         style={{ fontVariationSettings: "'FILL' 1" }}
@@ -1056,7 +1056,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
                   </div>
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <span className="text-label-md font-bold text-white truncate group-hover:text-amber-300">
+                  <span className="text-label-md font-bold text-white truncate group-hover:text-accent">
                     {it.title}
                   </span>
                   <span className="text-body-xs text-neutral-400 truncate">
@@ -1095,7 +1095,7 @@ function TipBanner() {
   return (
     <div className="w-full rounded-2xl border border-white/10 bg-[#18181a] px-4 py-3 flex items-center justify-between gap-3 text-body-sm text-neutral-400">
       <div className="flex items-center gap-2.5 min-w-0">
-        <span className="material-symbols-outlined text-[18px] text-amber-500 flex-shrink-0">info</span>
+        <span className="material-symbols-outlined text-[18px] text-accent flex-shrink-0">info</span>
         <p className="truncate text-[12.5px]">
           <span className="text-white font-semibold">Fidelity Engine:</span> All tracks stream in high-bitrate
           OPUS via YouTube Music. Sign in with Google in Settings to sync your cloud library.

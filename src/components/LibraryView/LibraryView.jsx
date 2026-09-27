@@ -120,7 +120,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
               onClick={() => setActiveSection('playlists')}
               className={`px-4 py-2 rounded-full text-label-md font-medium transition-all whitespace-nowrap min-h-[40px] cursor-pointer ${
                 activeSection === 'playlists'
-                  ? 'bg-amber-500 text-black font-bold shadow-md shadow-amber-500/20'
+                  ? 'bg-accent text-black font-bold shadow-md shadow-accent/20'
                   : 'bg-[#18181a] text-neutral-400 hover:bg-[#222225] hover:text-white'
               }`}
             >
@@ -131,7 +131,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
               onClick={() => setActiveSection('liked')}
               className={`px-4 py-2 rounded-full text-label-md font-medium transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[40px] cursor-pointer ${
                 activeSection === 'liked'
-                  ? 'bg-amber-500 text-black font-bold shadow-md shadow-amber-500/20'
+                  ? 'bg-accent text-black font-bold shadow-md shadow-accent/20'
                   : 'bg-[#18181a] text-neutral-400 hover:bg-[#222225] hover:text-white'
               }`}
             >
@@ -143,7 +143,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
               onClick={() => setActiveSection('albums')}
               className={`px-4 py-2 rounded-full text-label-md font-medium transition-all whitespace-nowrap min-h-[40px] cursor-pointer ${
                 activeSection === 'albums'
-                  ? 'bg-amber-500 text-black font-bold shadow-md shadow-amber-500/20'
+                  ? 'bg-accent text-black font-bold shadow-md shadow-accent/20'
                   : 'bg-[#18181a] text-neutral-400 hover:bg-[#222225] hover:text-white'
               }`}
             >
@@ -204,7 +204,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                   />
                   <button
                     onClick={handleCreatePlaylist}
-                    className="px-4 py-1.5 rounded-full bg-amber-500 text-black text-label-sm font-bold hover:bg-amber-400 transition-colors cursor-pointer"
+                    className="px-4 py-1.5 rounded-full bg-accent text-black text-label-sm font-bold hover:opacity-90 transition-opacity cursor-pointer"
                   >
                     Create
                   </button>
@@ -215,17 +215,17 @@ export default function LibraryView({ initialSection = 'playlists' }) {
               ) : (
                 <button
                   onClick={() => setCreatingPlaylist(true)}
-                  className="flex-1 flex items-center justify-center gap-3 px-4 py-3 rounded-2xl bg-[#141416] border border-white/10 hover:border-amber-500/50 hover:bg-[#18181a] transition-all group min-h-[48px] cursor-pointer"
+                  className="flex-1 flex items-center justify-center gap-3 px-4 py-3 rounded-2xl bg-[#141416] border border-white/10 hover:border-accent/50 hover:bg-[#18181a] transition-all group min-h-[48px] cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[22px] text-amber-500">add_circle</span>
+                  <span className="material-symbols-outlined text-[22px] text-accent">add_circle</span>
                   <span className="text-body-md font-semibold text-neutral-300 group-hover:text-white transition-colors">Create Playlist</span>
                 </button>
               )}
 
               {importingUrlModal ? (
-                <div className="flex-1 p-4 rounded-2xl bg-[#18181a] border border-amber-500/30 space-y-3">
+                <div className="flex-1 p-4 rounded-2xl bg-[#18181a] border border-accent/30 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-label-sm font-bold text-amber-400 flex items-center gap-1.5">
+                    <span className="text-label-sm font-bold text-accent flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[18px]">download</span>
                       Import YouTube Playlist URL
                     </span>
@@ -239,7 +239,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                     onChange={e => setImportUrlInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleImportPlaylist('playlist')}
                     placeholder="https://music.youtube.com/playlist?list=..."
-                    className="w-full px-3 py-2 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-body-xs focus:border-amber-500 focus:outline-none placeholder:text-neutral-600"
+                    className="w-full px-3 py-2 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-body-xs focus:border-accent focus:outline-none placeholder:text-neutral-600"
                   />
                   {importMsg && (
                     <p className={`text-body-xs font-medium ${importMsg.type === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -250,7 +250,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                     <button
                       onClick={() => handleImportPlaylist('playlist')}
                       disabled={importLoading || !importUrlInput.trim()}
-                      className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-label-sm font-bold transition-colors disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                      className="px-3.5 py-1.5 rounded-xl bg-accent hover:opacity-90 text-black text-label-sm font-bold transition-opacity disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                     >
                       {importLoading && <span className="material-symbols-outlined text-[14px] animate-spin">sync</span>}
                       {importLoading ? 'Importing...' : 'Import Playlist'}
@@ -267,9 +267,9 @@ export default function LibraryView({ initialSection = 'playlists' }) {
               ) : (
                 <button
                   onClick={() => setImportingUrlModal(true)}
-                  className="flex-1 flex items-center justify-center gap-3 px-4 py-3 rounded-2xl bg-[#141416] border border-white/10 hover:border-amber-500/50 hover:bg-[#18181a] transition-all group min-h-[48px] cursor-pointer"
+                  className="flex-1 flex items-center justify-center gap-3 px-4 py-3 rounded-2xl bg-[#141416] border border-white/10 hover:border-accent/50 hover:bg-[#18181a] transition-all group min-h-[48px] cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[22px] text-amber-400">download</span>
+                  <span className="material-symbols-outlined text-[22px] text-accent">download</span>
                   <span className="text-body-md font-semibold text-neutral-300 group-hover:text-white transition-colors">Import YouTube URL</span>
                 </button>
               )}
@@ -324,7 +324,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                 </span>
                 <button
                   onClick={() => playCollection(liked, 0)}
-                  className="flex items-center gap-2 px-5 py-2 rounded-full bg-amber-500 hover:bg-amber-400 text-black font-bold text-label-md hover:scale-105 active:scale-95 transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
+                  className="flex items-center gap-2 px-5 py-2 rounded-full bg-accent hover:opacity-90 text-black font-bold text-label-md hover:scale-105 active:scale-95 transition-all shadow-lg shadow-accent/20 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
                   Play All Liked

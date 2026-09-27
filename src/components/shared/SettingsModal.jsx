@@ -42,7 +42,7 @@ export default function SettingsModal({ isOpen, onClose }) {
     () => localStorage.getItem('pulse_normalize_audio') !== 'false'
   );
   const [accentColor, setAccentColor] = useState(
-    () => localStorage.getItem('pulse_accent_color') || 'amber'
+    () => localStorage.getItem('pulse_accent_color') || 'white'
   );
   const [ambientGlow, setAmbientGlow] = useState(
     () => localStorage.getItem('pulse_ambient_glow') !== 'false'
@@ -265,13 +265,13 @@ export default function SettingsModal({ isOpen, onClose }) {
         {/* ── Modal Top Header ────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-white/5 bg-[#18181a] flex-shrink-0 pt-safe">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <div className="w-8 h-8 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center text-accent">
               <span className="material-symbols-outlined text-[20px]">tune</span>
             </div>
             <div>
               <h2 className="text-headline-sm font-bold text-white tracking-tight flex items-center gap-2">
                 Settings Hub
-                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-accent/20 text-accent border border-accent/30">
                   ArchiveTune
                 </span>
               </h2>
@@ -311,7 +311,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                     <span className="material-symbols-outlined text-[16px]">{cat.icon}</span>
                   </div>
                   <span className="truncate flex-1">{cat.label}</span>
-                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
+                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-accent" />}
                 </button>
               );
             })}
@@ -326,7 +326,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   onClick={() => setActiveCategory(cat.id)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium whitespace-nowrap transition-all flex-shrink-0 ${
                     activeCategory === cat.id
-                      ? 'bg-amber-500 text-black font-semibold'
+                      ? 'bg-accent text-black font-semibold shadow-sm'
                       : 'bg-[#1e1e22] text-neutral-400 border border-white/5 hover:text-white'
                   }`}
                 >
@@ -360,7 +360,7 @@ export default function SettingsModal({ isOpen, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-full bg-amber-500 text-black text-label-sm font-bold hover:bg-amber-400 transition-colors cursor-pointer shadow-md shadow-amber-500/20"
+            className="px-4 py-1.5 rounded-full bg-accent text-black text-label-sm font-bold hover:brightness-110 transition-all cursor-pointer shadow-md shadow-accent/20"
           >
             Done
           </button>
@@ -376,10 +376,10 @@ export default function SettingsModal({ isOpen, onClose }) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-[11px] uppercase tracking-widest text-amber-500 font-mono font-semibold">
+              <p className="text-[11px] uppercase tracking-widest text-accent font-mono font-semibold">
                 Library Importer · YouTube & YT Music
               </p>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-semibold">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-accent/20 text-accent border border-accent/30 font-semibold">
                 No Cookies Needed
               </span>
             </div>
@@ -390,7 +390,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               Paste any public or unlisted YouTube / YouTube Music playlist URL to seamlessly import tracks into your library or merge into Liked Songs.
             </p>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0">
+          <div className="w-11 h-11 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent flex-shrink-0">
             <span className="material-symbols-outlined text-[24px]">download</span>
           </div>
         </div>
@@ -427,7 +427,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   }
                 }}
                 placeholder="https://music.youtube.com/playlist?list=... or PL..."
-                className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-body-sm focus:border-amber-500 focus:outline-none placeholder:text-neutral-600"
+                className="w-full pl-3.5 pr-9 py-2.5 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-body-sm focus:border-accent focus:outline-none placeholder:text-neutral-600"
               />
               {importUrl && (
                 <button
@@ -449,7 +449,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             <button
               onClick={() => handleImportPlaylistUrl('playlist')}
               disabled={importingUrl || !importUrl.trim()}
-              className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-label-sm transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2.5 rounded-xl bg-accent hover:brightness-110 text-black font-bold text-label-sm transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-accent/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className={`material-symbols-outlined text-[17px] ${importingUrl ? 'animate-spin' : ''}`}>
                 {importingUrl ? 'sync' : 'playlist_add'}
@@ -485,7 +485,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             <div className="rounded-2xl border border-white/10 bg-[#18181a] p-5 shadow-lg">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[11px] uppercase tracking-widest text-amber-500 font-mono font-semibold">
+                  <p className="text-[11px] uppercase tracking-widest text-accent font-mono font-semibold">
                     Cloud Account & Sync
                   </p>
                   <h3 className="text-headline-sm font-semibold text-white mt-1">
@@ -497,7 +497,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                       : 'Sign in to automatically sync your library across desktop and mobile devices.'}
                   </p>
                 </div>
-                <div className="w-11 h-11 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0">
+                <div className="w-11 h-11 rounded-2xl bg-accent/10 border border-accent/30 flex items-center justify-center text-accent flex-shrink-0">
                   <span className="material-symbols-outlined text-[24px]">
                     {user ? 'verified_user' : 'cloud_sync'}
                   </span>
@@ -517,7 +517,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                       <img
                         src={user.user_metadata.avatar_url || user.user_metadata?.picture}
                         alt="Avatar"
-                        className="w-10 h-10 rounded-full border border-amber-500/40 object-cover"
+                        className="w-10 h-10 rounded-full border border-accent/40 object-cover"
                       />
                     ) : (
                       <div className="w-10 h-10 rounded-full bg-accent text-black font-bold flex items-center justify-center">
@@ -605,7 +605,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                             placeholder="https://xyzcompany.supabase.co"
                             value={supabaseUrl}
                             onChange={(e) => setSupabaseUrl(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-[#18181a] border border-white/10 text-white text-body-sm focus:border-amber-500 focus:outline-none"
+                            className="w-full px-3 py-2 rounded-lg bg-[#18181a] border border-white/10 text-white text-body-sm focus:border-accent focus:outline-none"
                           />
                         </div>
                         <div>
@@ -617,12 +617,12 @@ export default function SettingsModal({ isOpen, onClose }) {
                             placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                             value={supabaseKey}
                             onChange={(e) => setSupabaseKey(e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg bg-[#18181a] border border-white/10 text-white text-body-sm focus:border-amber-500 focus:outline-none"
+                            className="w-full px-3 py-2 rounded-lg bg-[#18181a] border border-white/10 text-white text-body-sm focus:border-accent focus:outline-none"
                           />
                         </div>
                         <button
                           type="submit"
-                          className="px-4 py-2 rounded-xl bg-amber-500 text-black text-label-sm font-bold hover:bg-amber-400 transition-colors cursor-pointer"
+                          className="px-4 py-2 rounded-xl bg-accent text-black text-label-sm font-bold hover:brightness-110 transition-all cursor-pointer"
                         >
                           Save Credentials
                         </button>
@@ -713,26 +713,26 @@ export default function SettingsModal({ isOpen, onClose }) {
                   </div>
                 </button>
 
-                {/* 2. Default (Cassette Gold) */}
+                {/* 2. Default (Monochrome B&W) */}
                 <button
                   type="button"
                   onClick={() => setThemeMode('default')}
                   className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer relative overflow-hidden ${
                     themeMode === 'default'
-                      ? 'bg-[#222225] border-white/40 shadow-lg ring-2 ring-amber-500'
+                      ? 'bg-[#222225] border-white/40 shadow-lg ring-2 ring-white'
                       : 'bg-[#141416] border-white/5 hover:bg-[#1c1c1f] hover:border-white/10 text-neutral-400'
                   }`}
                 >
                   <div className="flex items-center justify-between w-full">
-                    <span className="material-symbols-outlined text-[24px] text-amber-500">
-                      album
+                    <span className="material-symbols-outlined text-[24px] text-white">
+                      contrast
                     </span>
-                    <span className="w-5 h-5 rounded-full bg-amber-500 border border-white/20 shadow-sm" />
+                    <span className="w-5 h-5 rounded-full bg-white border border-white/20 shadow-sm" />
                   </div>
                   <div>
-                    <span className="text-label-md font-bold text-white block">Default (Cassette Gold)</span>
+                    <span className="text-label-md font-bold text-white block">Default (Monochrome)</span>
                     <span className="text-[12px] text-neutral-400 block mt-0.5">
-                      Iconic signature gold (#f59e0b)
+                      Clean black & white minimal aesthetic
                     </span>
                   </div>
                 </button>
@@ -922,7 +922,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                     onClick={() => handleQualityChange(q.id)}
                     className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
                       audioQuality === q.id
-                        ? 'bg-amber-500/15 border-amber-500 text-amber-300 font-bold shadow-md'
+                        ? 'bg-accent/15 border-accent text-accent font-bold shadow-md'
                         : 'bg-[#121214] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
                     }`}
                   >
@@ -944,7 +944,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               <button
                 onClick={handleNormalizeToggle}
                 className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  normalizeAudio ? 'bg-amber-500' : 'bg-neutral-700'
+                  normalizeAudio ? 'bg-accent' : 'bg-neutral-700'
                 }`}
               >
                 <span
@@ -959,7 +959,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-label-md font-semibold text-white">Crossfade Duration</p>
-                <span className="text-label-sm font-mono text-amber-400">{crossfadeDuration}s</span>
+                <span className="text-label-sm font-mono text-accent">{crossfadeDuration}s</span>
               </div>
               <input
                 type="range"
@@ -999,7 +999,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                     localStorage.setItem('pulse_canvas_bg', String(next));
                   }}
                   className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    canvasBg ? 'bg-amber-500' : 'bg-neutral-700'
+                    canvasBg ? 'bg-accent' : 'bg-neutral-700'
                   }`}
                 >
                   <span
@@ -1034,7 +1034,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                     }}
                     className={`py-2.5 px-3 rounded-xl border text-center text-body-sm font-medium transition-all cursor-pointer ${
                       lyricFontSize === s.id
-                        ? 'bg-amber-500 text-black font-bold border-amber-500'
+                        ? 'bg-accent text-black font-bold border-accent'
                         : 'bg-[#121214] border-white/5 text-neutral-400 hover:text-white'
                     }`}
                   >
@@ -1056,7 +1056,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                     localStorage.setItem('pulse_romanized', String(next));
                   }}
                   className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    romanizedLyrics ? 'bg-amber-500' : 'bg-neutral-700'
+                    romanizedLyrics ? 'bg-accent' : 'bg-neutral-700'
                   }`}
                 >
                   <span
@@ -1082,7 +1082,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   setSelectedLanguage(e.target.value);
                   localStorage.setItem('pulse_music_lang', e.target.value);
                 }}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#121214] border border-white/10 text-white text-body-sm focus:border-amber-500 focus:outline-none"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#121214] border border-white/10 text-white text-body-sm focus:border-accent focus:outline-none"
               >
                 <option value="all">Global (All Regions)</option>
                 <option value="en">English (US / UK / Global Pop)</option>
@@ -1105,7 +1105,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                     localStorage.setItem('pulse_explicit_filter', String(next));
                   }}
                   className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    explicitFilter ? 'bg-amber-500' : 'bg-neutral-700'
+                    explicitFilter ? 'bg-accent' : 'bg-neutral-700'
                   }`}
                 >
                   <span
@@ -1136,7 +1136,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                     localStorage.setItem('pulse_remember_song', String(next));
                   }}
                   className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    rememberLastSong ? 'bg-amber-500' : 'bg-neutral-700'
+                    rememberLastSong ? 'bg-accent' : 'bg-neutral-700'
                   }`}
                 >
                   <span
@@ -1158,7 +1158,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
             <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-3">
               <h4 className="text-headline-sm font-bold text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-500">sensors</span>
+                <span className="material-symbols-outlined text-accent">sensors</span>
                 Connected Services
               </h4>
               <p className="text-body-sm text-neutral-400">
@@ -1176,7 +1176,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h4 className="text-headline-sm font-bold text-white flex items-center gap-2">
-                    <span className="material-symbols-outlined text-amber-400">auto_awesome</span>
+                    <span className="material-symbols-outlined text-accent">auto_awesome</span>
                     Smart DJ & Vibe Matching
                   </h4>
                   <p className="text-body-sm text-neutral-400 mt-1">
@@ -1197,7 +1197,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                     localStorage.setItem('pulse_smart_recs', String(next));
                   }}
                   className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                    smartRecs ? 'bg-amber-500' : 'bg-neutral-700'
+                    smartRecs ? 'bg-accent' : 'bg-neutral-700'
                   }`}
                 >
                   <span
@@ -1229,7 +1229,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   localStorage.setItem('pulse_data_saver', String(next));
                 }}
                 className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  dataSaver ? 'bg-amber-500' : 'bg-neutral-700'
+                  dataSaver ? 'bg-accent' : 'bg-neutral-700'
                 }`}
               >
                 <span
@@ -1286,7 +1286,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   className={`p-3 rounded-xl text-body-sm font-medium ${
                     importStatus.type === 'error'
                       ? 'bg-red-950/50 border border-red-800 text-red-300'
-                      : 'bg-amber-500/10 border border-amber-500/30 text-amber-300'
+                      : 'bg-accent/10 border border-accent/30 text-accent'
                   }`}
                 >
                   {importStatus.text}
@@ -1296,7 +1296,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               <div className="flex flex-wrap gap-3 pt-2">
                 <button
                   onClick={handleExportBackup}
-                  className="px-4 py-2.5 rounded-xl bg-amber-500 text-black font-bold text-label-md flex items-center gap-2 hover:bg-amber-400 transition-colors cursor-pointer shadow-md shadow-amber-500/20"
+                  className="px-4 py-2.5 rounded-xl bg-accent text-black font-bold text-label-md flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer shadow-md shadow-accent/20"
                 >
                   <span className="material-symbols-outlined text-[18px]">download</span>
                   Export Backup JSON
@@ -1325,7 +1325,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               <div className="space-y-2 font-mono text-[12px] p-3.5 rounded-xl bg-[#0e0e0e] border border-white/10 text-neutral-300">
                 <div className="flex justify-between">
                   <span className="text-neutral-500">App Version:</span>
-                  <span className="text-amber-400">cassette.fm v2.4.0 (ArchiveTune Edition)</span>
+                  <span className="text-accent">cassette.fm v2.4.0 (ArchiveTune Edition)</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-500">Audio Codec:</span>

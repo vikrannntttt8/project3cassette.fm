@@ -9,34 +9,41 @@ import {
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children, currentSong }) {
-  // 1. Theme mode: 'dynamic' | 'default' | 'custom'
+  // 1. Theme mode: 'default' (monochrome B&W) | 'custom' (settings lock) | 'dynamic' (album art)
   const [themeMode, setThemeModeState] = useState(() => {
-    return localStorage.getItem('pulse_theme_mode') || 'dynamic';
+    return localStorage.getItem('pulse_theme_mode') || 'default';
   });
 
-  // 2. Custom color picked by user
+  // 2. Custom color picked by user in Settings
   const [customColor, setCustomColorState] = useState(() => {
-    return localStorage.getItem('pulse_custom_color') || '#f59e0b';
+    return localStorage.getItem('pulse_custom_color') || '#ffffff';
   });
 
-  // 3. Last extracted color from currentSong
+  // 3. Last extracted color from currentSong (used ONLY in 'dynamic' mode)
   const [extractedColor, setExtractedColor] = useState(DEFAULT_ACCENT_HEX);
 
-  // Active color calculation
+  // Active color calculation:
+  // Priority #1: 'custom' setting locked
+  // Priority #2: 'dynamic' from cover art
+  // Priority #3: 'default' crisp monochrome B&W (#ffffff)
   const getActiveColor = useCallback(() => {
-    if (themeMode === 'default') return DEFAULT_ACCENT_HEX;
     if (themeMode === 'custom') return customColor || DEFAULT_ACCENT_HEX;
-    return extractedColor || DEFAULT_ACCENT_HEX;
+    if (themeMode === 'dynamic') return extractedColor || DEFAULT_ACCENT_HEX;
+    return DEFAULT_ACCENT_HEX;
   }, [themeMode, customColor, extractedColor]);
 
-  // Apply to DOM whenever theme variables change
+  // Apply to DOM whenever active theme variables change
   useEffect(() => {
     const activeHex = getActiveColor();
     applyThemeVariables(activeHex);
   }, [getActiveColor]);
 
-  // When currentSong changes and mode is dynamic, extract color
+  // CONDITIONAL DYNAMIC THEMING: ONLY extract & apply when themeMode === 'dynamic'
   useEffect(() => {
+    if (themeMode !== 'dynamic') {
+      return;
+    }
+
     let isMounted = true;
     const coverUrl = currentSong?.cover || currentSong?.thumbnail;
 
@@ -54,7 +61,7 @@ export function ThemeProvider({ children, currentSong }) {
     return () => {
       isMounted = false;
     };
-  }, [currentSong?.id, currentSong?.cover, currentSong?.thumbnail]);
+  }, [themeMode, currentSong?.id, currentSong?.cover, currentSong?.thumbnail]);
 
   const setThemeMode = (mode) => {
     setThemeModeState(mode);
@@ -62,8 +69,11 @@ export function ThemeProvider({ children, currentSong }) {
   };
 
   const setCustomColor = (hex) => {
+    if (!hex) return;
     setCustomColorState(hex);
+    setThemeModeState('custom');
     localStorage.setItem('pulse_custom_color', hex);
+    localStorage.setItem('pulse_theme_mode', 'custom');
   };
 
   const value = {

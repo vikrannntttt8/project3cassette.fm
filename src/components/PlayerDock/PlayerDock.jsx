@@ -124,7 +124,7 @@ export default function PlayerDock() {
                     toggleLike(currentSong);
                   }}
                   className={`p-1.5 rounded-full transition-transform active:scale-90 cursor-pointer ${
-                    liked ? 'text-amber-500' : 'text-neutral-500 hover:text-white'
+                    liked ? 'text-accent' : 'text-neutral-500 hover:text-white'
                   }`}
                   title={liked ? 'Unlike' : 'Like'}
                 >
@@ -328,7 +328,7 @@ export default function PlayerDock() {
               className="px-2.5 sm:px-3 py-1.5 rounded-full flex items-center gap-1.5 text-label-sm font-medium transition-all border border-white/10 bg-transparent text-neutral-400 hover:text-white hover:border-white/30 cursor-pointer"
               title="Open full lyrics & now playing"
             >
-              <span className="material-symbols-outlined text-[16px] text-amber-400">lyrics</span>
+              <span className="material-symbols-outlined text-[16px] text-accent">lyrics</span>
               <span className="hidden sm:inline text-[12px]">Lyrics</span>
             </button>
 

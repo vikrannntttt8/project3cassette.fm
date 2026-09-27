@@ -29,7 +29,7 @@ export default function Sidebar() {
           className="flex items-center gap-1.5 px-2.5 py-1.5 flex-shrink-0 cursor-pointer group"
           title="cassette.fm"
         >
-          <span className="font-cassette text-[26px] text-white tracking-tight select-none leading-none group-hover:text-amber-400 transition-colors">
+          <span className="font-cassette text-[26px] text-white tracking-tight select-none leading-none group-hover:text-accent transition-colors">
             cassette.fm
           </span>
           <span className="w-2 h-2 rounded-full bg-accent shadow-sm shadow-accent" />
@@ -139,7 +139,7 @@ export default function Sidebar() {
               <img
                 src={user.user_metadata.avatar_url || user.user_metadata.picture}
                 alt=""
-                className="w-6 h-6 rounded-full object-cover border border-amber-500/40"
+                className="w-6 h-6 rounded-full object-cover border border-accent/40"
               />
             ) : (
               <div className="w-6 h-6 rounded-full bg-accent text-black font-bold text-[10px] flex items-center justify-center">

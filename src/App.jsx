@@ -15,10 +15,11 @@ import MobileHeader        from './components/shared/MobileHeader.jsx';
 import MobileSearchOverlay from './components/shared/MobileSearchOverlay.jsx';
 
 import AuthModal          from './components/shared/AuthModal.jsx';
-import { ThemeProvider }   from './context/ThemeContext.jsx';
+import { ThemeProvider, useTheme }   from './context/ThemeContext.jsx';
 
 function AppShell() {
   const { view, navState, currentSong, isSettingsOpen, setIsSettingsOpen, streamToast } = usePlayer();
+  const { themeMode } = useTheme();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   // Close mobile search on view change
@@ -28,23 +29,28 @@ function AppShell() {
 
   return (
     <div className="flex h-[100dvh] w-screen overflow-hidden bg-[#0e0e0e] text-[#f3f3f5] relative">
-      {/* ── Minimalist Background Engine (Dynamic Ambient Lighting & Cover Art Blur) ────────── */}
+      {/* ── Minimalist Background Engine (Monochrome Base / Conditional Ambient Glow) ────────── */}
       <div aria-hidden="true" className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[#0e0e0e]">
-        {/* Dynamic theme radial glow layers */}
-        <div
-          className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full transition-all duration-1000 ease-out opacity-25 blur-[120px]"
-          style={{
-            background: 'radial-gradient(circle, var(--accent-color, #f59e0b) 0%, transparent 70%)',
-          }}
-        />
-        <div
-          className="absolute -bottom-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full transition-all duration-1000 ease-out opacity-20 blur-[130px]"
-          style={{
-            background: 'radial-gradient(circle, var(--accent-color, #f59e0b) 0%, transparent 70%)',
-          }}
-        />
+        {/* Dynamic / Custom theme radial glow layers (disabled in default monochrome mode) */}
+        {themeMode !== 'default' && (
+          <>
+            <div
+              className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] rounded-full transition-all duration-1000 ease-out opacity-25 blur-[120px]"
+              style={{
+                background: 'radial-gradient(circle, var(--accent-color, #ffffff) 0%, transparent 70%)',
+              }}
+            />
+            <div
+              className="absolute -bottom-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full transition-all duration-1000 ease-out opacity-20 blur-[130px]"
+              style={{
+                background: 'radial-gradient(circle, var(--accent-color, #ffffff) 0%, transparent 70%)',
+              }}
+            />
+          </>
+        )}
 
-        {currentSong?.cover || currentSong?.thumbnail ? (
+        {/* Dynamic Cover Art Atmosphere (active strictly in 'dynamic' mode) */}
+        {themeMode === 'dynamic' && (currentSong?.cover || currentSong?.thumbnail) ? (
           <div
             className="absolute inset-[-20%] bg-cover bg-center transition-all duration-1000 ease-out opacity-20"
             style={{
@@ -56,7 +62,7 @@ function AppShell() {
         ) : null}
 
         {/* Crisp readability mask with dark charcoal tint */}
-        <div className="absolute inset-0 bg-[#0e0e0e]/80" />
+        <div className="absolute inset-0 bg-[#0e0e0e]/85" />
       </div>
 
       {/* ── Mobile Branded Header (< md — hidden on desktop & LyricsView) ── */}

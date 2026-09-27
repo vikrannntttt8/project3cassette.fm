@@ -17,7 +17,7 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
       onClick={onPlay}
       className={`group flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-150 cursor-pointer min-h-[52px] select-none ${
         isActive
-          ? 'bg-amber-500/15 text-amber-300'
+          ? 'bg-accent/15 text-accent'
           : 'bg-[#18181a]/55 hover:bg-[#18181a] text-white'
       }`}
     >
@@ -26,12 +26,12 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
         {isActive && isPlaying ? (
           <div className="flex items-end gap-[2px] h-3.5 w-3.5">
             {[...Array(3)].map((_, i) => (
-              <span key={i} className="visualizer-bar w-[2.5px] bg-amber-400 rounded-full" />
+              <span key={i} className="visualizer-bar w-[2.5px] bg-accent rounded-full" />
             ))}
           </div>
         ) : (
           <>
-            <span className={`text-[12px] font-mono group-hover:hidden ${isActive ? 'text-amber-400 font-bold' : 'text-neutral-500'}`}>
+            <span className={`text-[12px] font-mono group-hover:hidden ${isActive ? 'text-accent font-bold' : 'text-neutral-500'}`}>
               {index + 1}
             </span>
             <span
@@ -60,7 +60,7 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
         <MarqueeText
           text={song.title}
           className={`text-[13.5px] font-semibold leading-tight ${
-            isActive ? 'text-amber-300 font-bold' : 'text-white'
+            isActive ? 'text-accent font-bold' : 'text-white'
           }`}
         />
         <ArtistLinks
@@ -94,7 +94,7 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
             toggleLike(song);
           }}
           className={`p-1.5 rounded-full transition-transform active:scale-90 min-w-[34px] min-h-[34px] flex items-center justify-center cursor-pointer ${
-            liked ? 'text-amber-500' : 'text-neutral-500 hover:text-white'
+            liked ? 'text-accent' : 'text-neutral-500 hover:text-white'
           }`}
           title={liked ? 'Unlike' : 'Like'}
         >

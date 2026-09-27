@@ -11,7 +11,7 @@ export default function LyricsView() {
   return (
     <div className="h-full w-full flex flex-col overflow-hidden">
       {/* ── Minimal header ─────────────────────────────────────────── */}
-      <header className="flex-shrink-0 flex items-center justify-between px-4 sm:px-8 lg:px-10 py-3 sm:py-5 h-12 sm:h-14">
+      <header className="flex-shrink-0 flex items-center justify-between px-4 sm:px-8 lg:px-10 py-3 sm:py-5 pt-safe min-h-[48px] sm:min-h-[56px]">
         {/* Back to home */}
         <button
           onClick={toggleView}

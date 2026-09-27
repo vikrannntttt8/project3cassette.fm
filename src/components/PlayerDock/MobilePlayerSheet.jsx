@@ -136,7 +136,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
       </div>
 
       {/* ── Center Content Area ────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col justify-between px-6 py-4 min-h-0 overflow-y-auto no-scrollbar">
+      <div className="flex-1 flex flex-col justify-between px-6 pt-2 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] min-h-0 overflow-y-auto no-scrollbar">
         {/* ── Mode 1: Main Player View ─────────────────────────────── */}
         {activeTab === 'player' && (
           <div className="flex-1 flex flex-col justify-between max-w-sm mx-auto w-full py-2">

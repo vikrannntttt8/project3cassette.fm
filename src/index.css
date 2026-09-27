@@ -62,9 +62,14 @@
   --accent-hover: #e4e4e7;
   --accent-subtle: rgba(255, 255, 255, 0.10);
   --accent-border: rgba(255, 255, 255, 0.20);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
   --mobile-nav-h: 56px;
   --mobile-header-h: 56px;
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mobile-header-total-h: calc(var(--mobile-header-h) + var(--safe-top));
+  --mobile-bottom-total-h: calc(var(--mobile-nav-h) + var(--safe-bottom));
 }
 
 @layer utilities {
@@ -267,28 +272,22 @@ input[type='range'].volume-slider::-webkit-slider-thumb {
 }
 
 /* Bottom nav + header height tokens */
-:root {
-  --mobile-nav-h: 56px;
-  --mobile-header-h: 56px;
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-}
-
 @media (max-width: 767px) {
   /* Floating mini player dock on mobile, stacked cleanly above mobile bottom nav */
   .player-dock-wrap {
     left: 0.625rem !important;
     right: 0.625rem !important;
-    bottom: calc(var(--mobile-nav-h) + var(--safe-bottom) + 0.5rem) !important;
+    bottom: calc(var(--mobile-nav-h, 56px) + env(safe-area-inset-bottom, 0px) + 0.625rem) !important;
   }
 
   .player-dock-inner {
     padding: 0.5rem 0.85rem !important;
     border-radius: 1.25rem !important;
-    background: rgba(24, 24, 26, 0.92) !important;
-    backdrop-filter: blur(24px) !important;
-    -webkit-backdrop-filter: blur(24px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.09) !important;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;
+    background: rgba(24, 24, 26, 0.95) !important;
+    backdrop-filter: blur(28px) !important;
+    -webkit-backdrop-filter: blur(28px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.10) !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7) !important;
     gap: 0.625rem !important;
   }
 
@@ -317,12 +316,12 @@ input[type='range'].volume-slider::-webkit-slider-thumb {
 
   /* Mobile bottom navigation bar safe-area padding */
   .mobile-bottom-nav {
-    padding-bottom: var(--safe-bottom);
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   }
 
   /* Lyrics view footer safe-area */
   .lyrics-footer {
-    padding-bottom: calc(0.75rem + var(--safe-bottom));
+    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 
@@ -368,11 +367,48 @@ input[type='range'].volume-slider::-webkit-slider-thumb {
   }
 }
 
-/* Safe-area padding utility class */
-.pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+/* Safe-area padding and positioning utility classes */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px) !important;
 }
 
-.pt-safe {
-  padding-top: env(safe-area-inset-top, 0px);
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+}
+
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px) !important;
+}
+
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px) !important;
+}
+
+.top-safe {
+  top: env(safe-area-inset-top, 0px) !important;
+}
+
+.bottom-safe {
+  bottom: env(safe-area-inset-bottom, 0px) !important;
+}
+
+.h-safe-screen {
+  height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.min-h-safe-screen {
+  min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* Scroll container mobile padding for top header + bottom dock & nav */
+.mobile-view-container {
+  padding-top: calc(var(--mobile-header-h, 56px) + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(var(--mobile-nav-h, 56px) + env(safe-area-inset-bottom, 0px) + 5.5rem);
+}
+
+@media (min-width: 768px) {
+  .mobile-view-container {
+    padding-top: 0;
+    padding-bottom: 5rem;
+  }
 }

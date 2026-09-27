@@ -252,7 +252,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
       </div>
 
       {/* ── Search Results Body ─────────────────────────────────────── */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 pb-36 space-y-3 no-scrollbar">
+      <div className="flex-1 overflow-y-auto px-4 py-3 pb-[calc(9rem+env(safe-area-inset-bottom,0px))] space-y-3 no-scrollbar">
         {loading && (
           <div className="flex flex-col gap-3 pt-2 animate-fade-in">
             {/* Searching status pill */}

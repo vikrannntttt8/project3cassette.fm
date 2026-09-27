@@ -92,7 +92,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
   const currentItem = pl || alb;
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto pt-[calc(var(--mobile-header-h)+var(--safe-top))] md:pt-0 no-scrollbar bg-[#0e0e0e]">
+    <div className="h-full flex flex-col overflow-y-auto pt-[calc(var(--mobile-header-h)+var(--safe-top)+0.5rem)] md:pt-0 no-scrollbar bg-[#0e0e0e]">
       {/* ── Header (Flush Non-Sticky) ───────────────────────── */}
       <header className="px-4 sm:px-6 md:px-8 py-4 bg-[#0e0e0e] border-b border-white/5 flex-shrink-0">
         <div className="flex items-center gap-4">
@@ -154,7 +154,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
       </header>
 
       {/* ── Main content ─────────────────────────────────────── */}
-      <main className="flex-1 px-4 sm:px-6 md:px-8 py-5 pb-[calc(var(--mobile-nav-h)+var(--safe-bottom)+5.5rem)] md:pb-20">
+      <main className="flex-1 px-4 sm:px-6 md:px-8 py-5 pb-[calc(var(--mobile-nav-h)+var(--safe-bottom)+7rem)] md:pb-20">
         {/* Detail view for Playlist */}
         {activePlaylist && pl && (
           <CollectionDetail

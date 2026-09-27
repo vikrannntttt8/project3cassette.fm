@@ -62,14 +62,21 @@
   --accent-hover: #e4e4e7;
   --accent-subtle: rgba(255, 255, 255, 0.10);
   --accent-border: rgba(255, 255, 255, 0.20);
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: max(env(safe-area-inset-top, 0px), 44px);
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), 12px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --mobile-nav-h: 56px;
-  --mobile-header-h: 56px;
+  --mobile-header-h: 52px;
   --mobile-header-total-h: calc(var(--mobile-header-h) + var(--safe-top));
   --mobile-bottom-total-h: calc(var(--mobile-nav-h) + var(--safe-bottom));
+}
+
+@media (min-width: 768px) {
+  :root {
+    --safe-top: 0px;
+    --safe-bottom: 0px;
+  }
 }
 
 @layer utilities {
@@ -273,11 +280,11 @@ input[type='range'].volume-slider::-webkit-slider-thumb {
 
 /* Bottom nav + header height tokens */
 @media (max-width: 767px) {
-  /* Floating mini player dock on mobile, stacked cleanly above mobile bottom nav */
+  /* Floating mini player dock on mobile, stacked cleanly above mobile bottom nav with zero overlap */
   .player-dock-wrap {
     left: 0.625rem !important;
     right: 0.625rem !important;
-    bottom: calc(var(--mobile-nav-h, 56px) + env(safe-area-inset-bottom, 0px) + 0.625rem) !important;
+    bottom: calc(var(--mobile-nav-h, 56px) + var(--safe-bottom, 12px) + 0.625rem) !important;
   }
 
   .player-dock-inner {
@@ -316,12 +323,12 @@ input[type='range'].volume-slider::-webkit-slider-thumb {
 
   /* Mobile bottom navigation bar safe-area padding */
   .mobile-bottom-nav {
-    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    padding-bottom: var(--safe-bottom, 12px) !important;
   }
 
   /* Lyrics view footer safe-area */
   .lyrics-footer {
-    padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(0.75rem + var(--safe-bottom, 12px)) !important;
   }
 }
 
@@ -369,41 +376,41 @@ input[type='range'].volume-slider::-webkit-slider-thumb {
 
 /* Safe-area padding and positioning utility classes */
 .pt-safe {
-  padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-top: var(--safe-top, 44px) !important;
 }
 
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  padding-bottom: var(--safe-bottom, 12px) !important;
 }
 
 .pl-safe {
-  padding-left: env(safe-area-inset-left, 0px) !important;
+  padding-left: var(--safe-left, 0px) !important;
 }
 
 .pr-safe {
-  padding-right: env(safe-area-inset-right, 0px) !important;
+  padding-right: var(--safe-right, 0px) !important;
 }
 
 .top-safe {
-  top: env(safe-area-inset-top, 0px) !important;
+  top: var(--safe-top, 44px) !important;
 }
 
 .bottom-safe {
-  bottom: env(safe-area-inset-bottom, 0px) !important;
+  bottom: var(--safe-bottom, 12px) !important;
 }
 
 .h-safe-screen {
-  height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+  height: calc(100dvh - var(--safe-top, 0px) - var(--safe-bottom, 0px)) !important;
 }
 
 .min-h-safe-screen {
-  min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+  min-height: calc(100dvh - var(--safe-top, 0px) - var(--safe-bottom, 0px)) !important;
 }
 
 /* Scroll container mobile padding for top header + bottom dock & nav */
 .mobile-view-container {
-  padding-top: calc(var(--mobile-header-h, 56px) + env(safe-area-inset-top, 0px));
-  padding-bottom: calc(var(--mobile-nav-h, 56px) + env(safe-area-inset-bottom, 0px) + 5.5rem);
+  padding-top: calc(var(--mobile-header-h, 52px) + var(--safe-top, 44px) + 0.5rem);
+  padding-bottom: calc(var(--mobile-nav-h, 56px) + var(--safe-bottom, 12px) + 7rem);
 }
 
 @media (min-width: 768px) {

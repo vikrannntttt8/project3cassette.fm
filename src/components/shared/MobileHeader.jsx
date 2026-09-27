@@ -21,7 +21,7 @@ export default function MobileHeader({ onSearchClick }) {
 
   return (
     <header
-      className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 bg-[#0e0e0e]/97 backdrop-blur-2xl border-b border-white/10 select-none pt-safe pb-1.5"
+      className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 bg-[#0e0e0e]/97 backdrop-blur-2xl border-b border-white/10 select-none pt-safe pb-2"
       aria-label="cassette.fm mobile header"
     >
       {/* Brand logo — left aligned */}

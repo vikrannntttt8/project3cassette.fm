@@ -45,7 +45,7 @@ export default function MobileBottomNav() {
   return (
     <nav
       className="mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0e0e0e]/97 backdrop-blur-2xl border-t border-white/10 select-none"
-      style={{ paddingBottom: 'var(--safe-bottom, 0px)' }}
+      style={{ paddingBottom: 'var(--safe-bottom, 12px)' }}
       aria-label="Mobile navigation"
     >
       <div className="flex items-stretch justify-around max-w-md mx-auto" style={{ height: 'var(--mobile-nav-h, 56px)' }}>

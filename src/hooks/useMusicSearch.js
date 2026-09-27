@@ -1,18 +1,17 @@
 import { useState, useCallback, useRef } from 'react';
 import { apiUrl } from '../utils/apiConfig.js';
-import { searchAll, searchSongs, searchAlbums, searchArtists } from '../utils/saavn.js';
 import { FALLBACK_HOME_FEED } from '../data/fallbackFeed.js';
 
 export const SEARCH_TABS = ['all', 'songs', 'albums', 'artists'];
 
 /**
- * useMusicSearch — High-performance YouTube Music / Innertube search hook
+ * useMusicSearch — High-performance YouTube Music search hook
  *
- * Features:
- * - 450ms Debounced input dispatch to eliminate keystroke spam.
- * - In-flight AbortController cancellation preventing stale race conditions.
- * - Duplicate execution guards for multiple submits.
- * - Multi-tier client fallback resilience.
+ * Direct, single-endpoint search with:
+ * - 450ms Debounce delay
+ * - In-flight AbortController cancellation
+ * - Local offline catalog fallback (no external proxy waterfalls)
+ * - Safe concurrent submit guards
  */
 export function useMusicSearch() {
   const [results, setResults] = useState(null); // null = not searched yet
@@ -25,7 +24,7 @@ export function useMusicSearch() {
   const abortControllerRef = useRef(null);
   const inFlightRef = useRef({ query: '', tab: '' });
 
-  /** Execute a search for the current query and given tab */
+  /** Execute search against single /api/search endpoint */
   const executeSearch = useCallback(async (q, tab) => {
     const trimmed = q.trim();
     if (!trimmed) {
@@ -52,66 +51,45 @@ export function useMusicSearch() {
       const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(trimmed)}&type=${tab}`), {
         signal: controller.signal,
       });
-      if (!res.ok) throw new Error(`Search failed (${res.status})`);
+
+      if (!res.ok) {
+        throw new Error(`Search request failed with status ${res.status}`);
+      }
+
       const data = await res.json();
-      
-      if (Array.isArray(data) && data.length > 0) {
+
+      // Handle server error response
+      if (data && data.success === false) {
+        throw new Error(data.error || 'Search service error');
+      }
+
+      // Handle Array of results
+      const rawList = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+
+      if (rawList.length > 0) {
         if (tab === 'all') {
-          const songs = data.filter(item => !item.type || item.type === 'song');
-          const albums = data.filter(item => item.type === 'album');
-          const artists = data.filter(item => item.type === 'artist');
           setResults({
-            songs,
-            albums,
-            artists,
+            songs: rawList.filter(item => !item.type || item.type === 'song'),
+            albums: rawList.filter(item => item.type === 'album'),
+            artists: rawList.filter(item => item.type === 'artist'),
             playlists: [],
           });
           return;
         }
-        setResults(data);
+        setResults(rawList);
         return;
       } else if (data && typeof data === 'object' && !Array.isArray(data) && (data.songs?.length || data.albums?.length || data.artists?.length)) {
         setResults(data);
         return;
       }
-      
-      // If server returned 0 results or empty, invoke multi-tier client fallback
-      throw new Error('Empty server search result');
+
+      // If empty results from server, check local fallback catalog
+      throw new Error('No direct search results');
     } catch (err) {
       if (err.name === 'AbortError') return;
-      console.warn('[useMusicSearch] Server search failed or empty, attempting client-side fallback:', err.message);
-      
-      try {
-        if (tab === 'songs' || tab === 'song') {
-          const songs = await searchSongs(trimmed, 20);
-          if (songs && songs.length) {
-            setResults(songs);
-            return;
-          }
-        } else if (tab === 'albums' || tab === 'album') {
-          const albums = await searchAlbums(trimmed, 20);
-          if (albums && albums.length) {
-            setResults(albums);
-            return;
-          }
-        } else if (tab === 'artists' || tab === 'artist') {
-          const artists = await searchArtists(trimmed, 20);
-          if (artists && artists.length) {
-            setResults(artists);
-            return;
-          }
-        } else {
-          const res = await searchAll(trimmed);
-          if (res && (res.songs?.length || res.albums?.length || res.artists?.length)) {
-            setResults(res);
-            return;
-          }
-        }
-      } catch (fallbackErr) {
-        console.warn('[useMusicSearch] Secondary fallback failed:', fallbackErr);
-      }
+      console.warn('[useMusicSearch] Server search note:', err.message);
 
-      // Tier 3: Local catalog filter fallback
+      // Clean local catalog filter fallback (Zero external network proxy calls)
       try {
         const cleanQ = trimmed.toLowerCase();
         const allTracks = FALLBACK_HOME_FEED.featuredTracks || [];
@@ -144,15 +122,15 @@ export function useMusicSearch() {
         });
 
         if (tab === 'songs') {
-          setResults(matchedSongs.length ? matchedSongs : allTracks.slice(0, 8));
+          setResults(matchedSongs.length ? matchedSongs : []);
         } else if (tab === 'albums') {
-          setResults(matchedAlbums.length ? matchedAlbums : allAlbums.slice(0, 4));
+          setResults(matchedAlbums.length ? matchedAlbums : []);
         } else if (tab === 'artists') {
           setResults(matchedArtists);
         } else {
           setResults({
-            songs: matchedSongs.length ? matchedSongs : allTracks.slice(0, 8),
-            albums: matchedAlbums.length ? matchedAlbums : allAlbums.slice(0, 4),
+            songs: matchedSongs,
+            albums: matchedAlbums,
             artists: matchedArtists,
             playlists: [],
           });
@@ -178,19 +156,17 @@ export function useMusicSearch() {
       setError(null);
       return;
     }
-    // Set loading preview state early for responsive feel
     setLoading(true);
     debounceRef.current = setTimeout(() => {
       executeSearch(trimmed, activeTab);
     }, 450);
   }, [activeTab, executeSearch]);
 
-  /** Immediate search submit (e.g. on Enter key or submit button click) */
+  /** Immediate search submit (Enter key or button) */
   const submitSearch = useCallback((q = query) => {
     clearTimeout(debounceRef.current);
     const trimmed = q.trim();
     if (!trimmed) return;
-    // Guard against duplicate execution if already searching same query & tab
     if (loading && inFlightRef.current.query === trimmed && inFlightRef.current.tab === activeTab) {
       return;
     }

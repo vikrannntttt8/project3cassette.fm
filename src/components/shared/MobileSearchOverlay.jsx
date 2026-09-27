@@ -3,7 +3,6 @@ import { usePlayer } from '../../context/PlayerContext.jsx';
 import { formatTime } from '../../utils/timeFormat.js';
 import { useDebounce } from '../../hooks/useDebounce.js';
 import { apiUrl } from '../../utils/apiConfig.js';
-import { searchAll, searchSongs, searchAlbums, searchArtists } from '../../utils/saavn.js';
 import { FALLBACK_HOME_FEED } from '../../data/fallbackFeed.js';
 import ArtistLinks from './ArtistLinks.jsx';
 
@@ -77,16 +76,22 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
       if (!res.ok) throw new Error('Search request failed');
       const data = await res.json();
       
-      if (Array.isArray(data) && data.length > 0) {
+      if (data && data.success === false) {
+        throw new Error(data.error || 'Search error');
+      }
+
+      const rawList = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+
+      if (rawList.length > 0) {
         if (tab === 'all') {
           setResults({
-            songs: data.filter(item => !item.type || item.type === 'song'),
-            albums: data.filter(item => item.type === 'album'),
-            artists: data.filter(item => item.type === 'artist'),
+            songs: rawList.filter(item => !item.type || item.type === 'song'),
+            albums: rawList.filter(item => item.type === 'album'),
+            artists: rawList.filter(item => item.type === 'artist'),
           });
           return;
         }
-        setResults(data);
+        setResults(rawList);
         return;
       } else if (data && typeof data === 'object' && !Array.isArray(data) && (data.songs?.length || data.albums?.length || data.artists?.length)) {
         setResults(data);
@@ -96,28 +101,9 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
       throw new Error('Empty server search result');
     } catch (err) {
       if (err.name === 'AbortError') return;
-      console.warn('[MobileSearchOverlay] Server search error, attempting client fallback:', err);
+      console.warn('[MobileSearchOverlay] Server search note:', err.message);
 
-      try {
-        if (tab === 'songs' || tab === 'song') {
-          const songs = await searchSongs(trimmed, 20);
-          if (songs && songs.length) { setResults(songs); return; }
-        } else if (tab === 'albums' || tab === 'album') {
-          const albums = await searchAlbums(trimmed, 20);
-          if (albums && albums.length) { setResults(albums); return; }
-        } else if (tab === 'artists' || tab === 'artist') {
-          const artists = await searchArtists(trimmed, 20);
-          if (artists && artists.length) { setResults(artists); return; }
-        } else {
-          const res = await searchAll(trimmed);
-          if (res && (res.songs?.length || res.albums?.length || res.artists?.length)) {
-            setResults(res);
-            return;
-          }
-        }
-      } catch {}
-
-      // Local fallback from curated catalog
+      // Local fallback from curated catalog (No external proxy calls)
       try {
         const cleanQ = trimmed.toLowerCase();
         const allTracks = FALLBACK_HOME_FEED.featuredTracks || [];
@@ -150,15 +136,15 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
         });
 
         if (tab === 'songs') {
-          setResults(matchedSongs.length ? matchedSongs : allTracks.slice(0, 8));
+          setResults(matchedSongs);
         } else if (tab === 'albums') {
-          setResults(matchedAlbums.length ? matchedAlbums : allAlbums.slice(0, 4));
+          setResults(matchedAlbums);
         } else if (tab === 'artists') {
           setResults(matchedArtists);
         } else {
           setResults({
-            songs: matchedSongs.length ? matchedSongs : allTracks.slice(0, 8),
-            albums: matchedAlbums.length ? matchedAlbums : allAlbums.slice(0, 4),
+            songs: matchedSongs,
+            albums: matchedAlbums,
             artists: matchedArtists,
           });
         }

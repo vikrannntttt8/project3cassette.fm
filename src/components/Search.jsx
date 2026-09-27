@@ -70,8 +70,15 @@ export default function Search({ onSelectTrack, onArtistClick }) {
       });
       if (!res.ok) throw new Error(`Search failed (${res.status})`);
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        setResults(data);
+      
+      if (data && data.success === false) {
+        throw new Error(data.error || 'Search error');
+      }
+
+      const rawList = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+
+      if (rawList.length > 0) {
+        setResults(rawList);
         return;
       } else if (data && typeof data === 'object' && !Array.isArray(data)) {
         const list = [
@@ -79,32 +86,15 @@ export default function Search({ onSelectTrack, onArtistClick }) {
           ...(data.albums || []),
           ...(data.artists || []),
         ];
-        setResults(list);
-        return;
+        if (list.length > 0) {
+          setResults(list);
+          return;
+        }
       }
       throw new Error('Empty results');
     } catch (err) {
       if (err.name === 'AbortError') return;
-      console.warn('[Search] Server search failed, attempting fallback:', err);
-      try {
-        const { searchAll, searchSongs, searchAlbums, searchArtists } = await import('../utils/saavn.js');
-        if (tab === 'songs' || tab === 'song') {
-          const songs = await searchSongs(trimmed, 20);
-          if (songs && songs.length) { setResults(songs); return; }
-        } else if (tab === 'albums' || tab === 'album') {
-          const albums = await searchAlbums(trimmed, 20);
-          if (albums && albums.length) { setResults(albums); return; }
-        } else if (tab === 'artists' || tab === 'artist') {
-          const artists = await searchArtists(trimmed, 20);
-          if (artists && artists.length) { setResults(artists); return; }
-        } else {
-          const res = await searchAll(trimmed);
-          if (res) {
-            const list = [...(res.songs || []), ...(res.albums || []), ...(res.artists || [])];
-            if (list.length) { setResults(list); return; }
-          }
-        }
-      } catch {}
+      console.warn('[Search] Server search note:', err.message);
 
       try {
         const { FALLBACK_HOME_FEED } = await import('../data/fallbackFeed.js');
@@ -113,7 +103,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
         const matched = allTracks.filter(t =>
           t.title?.toLowerCase().includes(cleanQ) || t.artist?.toLowerCase().includes(cleanQ)
         );
-        setResults(matched.length ? matched : allTracks.slice(0, 10));
+        setResults(matched);
       } catch {
         setError('No results found.');
       }

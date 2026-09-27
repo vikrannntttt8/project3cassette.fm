@@ -1390,5 +1390,31 @@ export async function importPlaylistByUrl(urlOrId) {
   };
 }
 
+/**
+ * Test user's YouTube Music Auth credentials
+ */
+export async function testYouTubeMusicAuth({ cookie = '', visitorData = '', sapisid = '' } = {}) {
+  try {
+    if (!cookie && !visitorData && !sapisid) {
+      return { success: false, message: 'No authentication credentials provided.' };
+    }
+    const yt = await Innertube.create({
+      cookie: cookie || undefined,
+      visitor_data: visitorData || undefined,
+      client_type: ClientType.MUSIC,
+    });
+    const isAuth = yt.session?.logged_in || Boolean(cookie && (cookie.includes('SAPISID') || cookie.includes('HSID') || cookie.includes('SSID')));
+    return {
+      success: isAuth,
+      message: isAuth ? 'Authentication successful' : 'Unable to verify session with provided credentials',
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.message || 'Authentication verification failed',
+    };
+  }
+}
+
 
 

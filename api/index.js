@@ -102,15 +102,31 @@ export default async function handler(req, res) {
 
     // ── 1. GET /api/search?q=:query&type=:type ──────────────────
     if (pathname === '/api/search') {
-      const query = url.searchParams.get('q') || url.searchParams.get('query') || '';
+      const query = (
+        url.searchParams.get('q') ||
+        url.searchParams.get('query') ||
+        url.searchParams.get('search_query') ||
+        ''
+      ).trim();
       const type = url.searchParams.get('type') || 'all';
+
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+
+      if (!query) {
+        return res.status(200).json([]);
+      }
+
       try {
         const results = await searchMusic(query, type);
-        res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        return res.status(200).json(results);
+        return res.status(200).json(Array.isArray(results) ? results : []);
       } catch (err) {
-        console.error('[API /api/search] Error:', err);
-        return res.status(200).json([]);
+        console.error(`[API /api/search] Error searching for "${query}" (type: ${type}):`, err);
+        return res.status(200).json({
+          success: false,
+          error: err.message || 'Search service temporarily unavailable',
+          results: [],
+        });
       }
     }
 

@@ -106,22 +106,37 @@ function innertubeApiPlugin() {
         // ── 1. GET /api/search?q=:query ───────────────────────────────────
         // ── 1. GET /api/search?q=:query&type=:type ───────────────────────
         if (pathname === '/api/search' && req.method === 'GET') {
+          const query = (
+            parsedUrl.searchParams.get('q') ||
+            parsedUrl.searchParams.get('query') ||
+            parsedUrl.searchParams.get('search_query') ||
+            ''
+          ).trim();
+          const type = parsedUrl.searchParams.get('type') || 'all';
+
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+
+          if (!query) {
+            res.statusCode = 200;
+            res.end(JSON.stringify([]));
+            return;
+          }
+
           try {
-            const query = parsedUrl.searchParams.get('q') || parsedUrl.searchParams.get('query') || '';
-            const type = parsedUrl.searchParams.get('type') || 'all';
             const { searchMusic } = await import('./src/services/innertube.js');
             const results = await searchMusic(query, type);
-            res.setHeader('Content-Type', 'application/json; charset=utf-8');
-            res.setHeader('Access-Control-Allow-Origin', '*');
             res.statusCode = 200;
-            res.end(JSON.stringify(results));
+            res.end(JSON.stringify(Array.isArray(results) ? results : []));
             return;
           } catch (err) {
-            console.error('[API /api/search] Error:', err);
+            console.error(`[API /api/search] Error searching for "${query}" (type: ${type}):`, err);
             res.statusCode = 200;
-            res.setHeader('Content-Type', 'application/json; charset=utf-8');
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            res.end(JSON.stringify([]));
+            res.end(JSON.stringify({
+              success: false,
+              error: err.message || 'Search service temporarily unavailable',
+              results: [],
+            }));
             return;
           }
         }

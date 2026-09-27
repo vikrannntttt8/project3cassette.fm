@@ -252,31 +252,31 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                   <div
                     key={item.id || item.browseId || idx}
                     onClick={() => handleArtistNavigation(item.name, item.browseId || item.id)}
-                    className="group flex items-center justify-between p-3 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                    className="group flex items-center justify-between px-3 py-2 min-h-[48px] hover:bg-white/[0.04] transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <ImageWithFallback
                         src={item.thumbnail}
                         alt={item.name}
                         icon="person"
-                        iconClassName="text-white/50 text-[24px]"
-                        className="w-12 h-12 aspect-square rounded-full overflow-hidden object-cover flex-shrink-0 border border-[#262626] group-hover:border-white transition-colors"
+                        iconClassName="text-white/50 text-[20px]"
+                        className="w-10 h-10 aspect-square rounded-full overflow-hidden object-cover flex-shrink-0 border border-[#262626] group-hover:border-white transition-colors"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-label-md font-semibold text-white truncate group-hover:underline transition-colors">
+                          <span className="text-[13.5px] font-semibold text-white truncate group-hover:underline transition-colors">
                             {item.name}
                           </span>
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#111111] text-[#888888] border border-[#333333] flex-shrink-0">
                             Artist
                           </span>
                         </div>
-                        <p className="text-body-sm text-[#888888] truncate mt-0.5">
+                        <p className="text-[11.5px] text-[#888888] truncate mt-0.5">
                           View profile & discography
                         </p>
                       </div>
                     </div>
-                    <span className="material-symbols-outlined text-[20px] text-[#666666] group-hover:text-white transition-colors">
+                    <span className="material-symbols-outlined text-[18px] text-[#666666] group-hover:text-white transition-colors">
                       chevron_right
                     </span>
                   </div>
@@ -289,33 +289,33 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                   <div
                     key={item.id || item.browseId || idx}
                     onClick={() => handleAlbumNavigation(item)}
-                    className="group flex items-center justify-between p-3 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                    className="group flex items-center justify-between px-3 py-2 min-h-[48px] hover:bg-white/[0.04] transition-colors cursor-pointer"
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <ImageWithFallback
                         src={item.thumbnail || item.cover}
                         alt={item.title}
                         icon="album"
-                        iconClassName="text-white/40 text-[24px]"
-                        className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-[#262626] group-hover:scale-105 transition-transform"
+                        iconClassName="text-white/40 text-[20px]"
+                        className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-[#262626] group-hover:scale-105 transition-transform"
                       />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-label-md font-semibold text-white truncate group-hover:underline transition-colors">
+                          <span className="text-[13.5px] font-semibold text-white truncate group-hover:underline transition-colors">
                             {item.title}
                           </span>
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#111111] text-[#888888] border border-[#333333] flex-shrink-0">
                             Album
                           </span>
                         </div>
-                        <p className="text-body-sm text-[#888888] truncate mt-0.5">
+                        <p className="text-[11.5px] text-[#888888] truncate mt-0.5">
                           {item.artist} {item.year ? `• ${item.year}` : ''}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-[#888888] group-hover:text-white transition-colors">
                       <span className="text-label-sm font-medium hidden sm:inline">Play Album</span>
-                      <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+                      <span className="material-symbols-outlined text-[18px]">chevron_right</span>
                     </div>
                   </div>
                 );
@@ -327,19 +327,19 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                 <div
                   key={track.id || track.videoId || idx}
                   onClick={() => handleTrackClick(track)}
-                  className="group flex items-center justify-between p-3 hover:bg-white/[0.04] transition-colors cursor-pointer"
+                  className="group flex items-center justify-between px-3 py-2 min-h-[48px] hover:bg-white/[0.04] transition-colors cursor-pointer"
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-900 border border-[#262626]">
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-900 border border-[#262626]">
                       <ImageWithFallback
                         src={track.thumbnail || track.cover}
                         alt={track.title}
                         icon="music_note"
-                        iconClassName="text-white/40 text-[22px]"
+                        iconClassName="text-white/40 text-[18px]"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <span className="material-symbols-outlined text-white text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        <span className="material-symbols-outlined text-white text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                           play_arrow
                         </span>
                       </div>
@@ -352,7 +352,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                             e.stopPropagation();
                             routeToSongEntity(track);
                           }}
-                          className="text-label-md font-semibold text-white truncate hover:underline transition-colors"
+                          className="text-[13.5px] font-semibold text-white truncate hover:underline transition-colors"
                           title={`View album / single details for "${track.title}"`}
                         >
                           {track.title}
@@ -367,7 +367,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                             className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#111111] text-[#888888] hover:text-white border border-[#333333] hover:border-[#666666] flex-shrink-0 transition-colors"
                             title="Open Single / Video View"
                           >
-                            <span className="material-symbols-outlined text-[12px]">smart_display</span>
+                            <span className="material-symbols-outlined text-[11px]">smart_display</span>
                             <span>{track.isMusicVideo ? 'Video' : 'Single'}</span>
                           </button>
                         ) : track.isOfficial ? (
@@ -381,7 +381,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1 text-body-sm text-[#888888] truncate mt-0.5">
+                      <div className="flex items-center gap-1 text-[11.5px] text-[#888888] truncate mt-0.5">
                         <ArtistLinks
                           artists={track.artists}
                           artist={track.artist}
@@ -409,7 +409,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-3">
+                  <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0 ml-2">
                     {/* View Single/Video details button */}
                     <button
                       type="button"
@@ -417,10 +417,10 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                         e.stopPropagation();
                         routeToSongEntity(track);
                       }}
-                      className="p-1.5 rounded-full hover:bg-white/10 text-[#888888] hover:text-white transition-colors"
+                      className="p-1 rounded-full hover:bg-white/10 text-[#888888] hover:text-white transition-colors"
                       title="View Release Details"
                     >
-                      <span className="material-symbols-outlined text-[19px]">open_in_new</span>
+                      <span className="material-symbols-outlined text-[18px]">open_in_new</span>
                     </button>
 
                     {/* Like button */}

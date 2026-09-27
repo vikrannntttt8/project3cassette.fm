@@ -102,25 +102,25 @@ export default function AlbumView({ browseId, initialData }) {
       {data && !loading && (
         <>
           {/* Header Banner */}
-          <div className="relative rounded-3xl overflow-hidden bg-[#0a0a0a] border border-[#222222] p-6 sm:p-8 shadow-2xl">
-            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 sm:gap-8">
+          <div className="relative rounded-2xl overflow-hidden bg-[#0a0a0a] border border-[#222222] p-4 sm:p-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-6">
               <ImageWithFallback
                 src={data.thumbnail || data.cover}
                 alt={data.title}
                 icon="album"
-                iconClassName="text-white/30 text-[64px]"
-                className="w-48 h-48 sm:w-56 sm:h-56 rounded-2xl object-cover border border-[#262626] shadow-2xl flex-shrink-0"
+                iconClassName="text-white/30 text-[48px]"
+                className="w-32 h-32 sm:w-44 sm:h-44 rounded-xl object-cover border border-[#262626] shadow-xl flex-shrink-0"
               />
 
-              <div className="flex-1 text-center sm:text-left min-w-0 space-y-2.5">
-                <span className="inline-block text-[11px] font-semibold uppercase tracking-wider text-[#888888] px-2.5 py-0.5 rounded-full bg-[#141414] border border-[#333333]">
+              <div className="flex-1 text-center sm:text-left min-w-0 space-y-2">
+                <span className="inline-block text-[10.5px] font-semibold uppercase tracking-wider text-[#888888] px-2 py-0.5 rounded-full bg-[#141414] border border-[#333333]">
                   Album Release
                 </span>
-                <h1 className="text-headline-lg sm:text-display-sm font-extrabold text-white tracking-tight leading-tight">
+                <h1 className="text-headline-md sm:text-headline-lg font-extrabold text-white tracking-tight leading-tight">
                   {data.title}
                 </h1>
 
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-body-md text-white/80">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-body-sm text-white/80">
                   <ArtistLinks
                     artists={data.artists}
                     artist={data.artist}
@@ -143,19 +143,19 @@ export default function AlbumView({ browseId, initialData }) {
                 </div>
 
                 {data.description && (
-                  <p className="text-body-sm text-[#888888] line-clamp-2 max-w-xl">
+                  <p className="text-body-xs text-[#888888] line-clamp-2 max-w-xl">
                     {data.description}
                   </p>
                 )}
 
                 {/* Primary Play Album Action */}
                 {data.tracks && data.tracks.length > 0 && (
-                  <div className="pt-3">
+                  <div className="pt-2">
                     <button
                       onClick={() => handlePlayAlbum(0)}
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-black font-semibold text-label-lg shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                      className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-black font-bold text-label-md shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                         play_arrow
                       </span>
                       Play Album
@@ -168,35 +168,35 @@ export default function AlbumView({ browseId, initialData }) {
 
           {/* Tracklist Table */}
           {data.tracks && data.tracks.length > 0 && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between px-2">
-                <h2 className="text-label-lg font-bold text-white uppercase tracking-wider">
+            <section className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-label-md font-bold text-white uppercase tracking-wider">
                   Tracklist
                 </h2>
-                <span className="text-label-sm text-[#888888]">Duration</span>
+                <span className="text-label-xs text-[#888888]">Duration</span>
               </div>
 
-              <div className="divide-y divide-[#1a1a1a] rounded-2xl bg-[#050505] border border-[#222222] overflow-hidden shadow-2xl">
+              <div className="divide-y divide-[#1a1a1a] rounded-xl bg-[#050505] border border-[#222222] overflow-hidden shadow-xl">
                 {data.tracks.map((track, idx) => {
                   const isCurrent = currentSong?.videoId === track.videoId || currentSong?.id === track.id;
                   return (
                     <div
                       key={track.id || idx}
                       onClick={() => handleTrackClick(track, idx)}
-                      className={`group flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer min-h-[50px] select-none ${
-                        isCurrent ? 'bg-accent/15 text-accent' : 'bg-[#18181a]/55 hover:bg-[#18181a] text-white'
+                      className={`group flex items-center justify-between px-3 py-2 transition-all cursor-pointer min-h-[46px] select-none ${
+                        isCurrent ? 'bg-accent/15 text-accent' : 'bg-[#18181a]/45 hover:bg-[#18181a] text-white'
                       }`}
                     >
-                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        <div className="w-7 text-center text-label-md font-mono text-neutral-500 flex-shrink-0 flex items-center justify-center">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-6 text-center text-label-sm font-mono text-neutral-500 flex-shrink-0 flex items-center justify-center">
                           {isCurrent && isPlaying ? (
-                            <span className="material-symbols-outlined text-accent text-[18px]">
+                            <span className="material-symbols-outlined text-accent text-[17px]">
                               graphic_eq
                             </span>
                           ) : (
                             <>
                               <span className="group-hover:hidden">{track.trackNumber || idx + 1}</span>
-                              <span className="hidden group-hover:inline text-white material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                              <span className="hidden group-hover:inline text-white material-symbols-outlined text-[17px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                                 play_arrow
                               </span>
                             </>
@@ -205,7 +205,7 @@ export default function AlbumView({ browseId, initialData }) {
 
                         <div className="min-w-0 flex-1 overflow-hidden">
                           <p
-                            className={`text-label-md font-semibold truncate whitespace-nowrap overflow-hidden text-ellipsis transition-colors ${
+                            className={`text-label-md font-semibold truncate whitespace-nowrap overflow-hidden text-ellipsis transition-colors leading-tight ${
                               isCurrent ? 'text-accent font-bold' : 'text-white'
                             }`}
                             title={track.title}
@@ -221,7 +221,7 @@ export default function AlbumView({ browseId, initialData }) {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-3">
+                      <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
                         {/* Like button */}
                         <button
                           type="button"
@@ -234,7 +234,7 @@ export default function AlbumView({ browseId, initialData }) {
                           }`}
                           title={isLiked(track.id) ? 'Unlike' : 'Like'}
                         >
-                          <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: `'FILL' ${isLiked(track.id) ? 1 : 0}` }}>
+                          <span className="material-symbols-outlined text-[17px]" style={{ fontVariationSettings: `'FILL' ${isLiked(track.id) ? 1 : 0}` }}>
                             favorite
                           </span>
                         </button>

@@ -141,37 +141,37 @@ export default function ArtistView({ browseId, artistName }) {
       {data && !loading && (
         <>
           {/* Hero Banner */}
-          <div className="relative rounded-3xl overflow-hidden bg-[#0a0a0a] border border-[#222222] p-6 sm:p-10 shadow-2xl">
-            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-6 sm:gap-8">
+          <div className="relative rounded-2xl overflow-hidden bg-[#0a0a0a] border border-[#222222] p-4 sm:p-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-6">
               <ImageWithFallback
                 src={data.thumbnail}
                 alt={data.name}
                 icon="person"
-                iconClassName="text-white/30 text-[64px]"
-                className="w-36 h-36 sm:w-48 sm:h-48 aspect-square rounded-full overflow-hidden object-cover border-2 border-[#333333] shadow-2xl flex-shrink-0"
+                iconClassName="text-white/30 text-[48px]"
+                className="w-28 h-28 sm:w-40 sm:h-40 aspect-square rounded-full overflow-hidden object-cover border-2 border-[#333333] shadow-xl flex-shrink-0"
               />
 
-              <div className="flex-1 text-center sm:text-left min-w-0 space-y-2.5">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#141414] border border-[#333333] text-[#888888] text-[11px] font-semibold uppercase tracking-wider">
-                  <span className="material-symbols-outlined text-[14px]">verified</span>
+              <div className="flex-1 text-center sm:text-left min-w-0 space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#141414] border border-[#333333] text-[#888888] text-[10.5px] font-semibold uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-[13px]">verified</span>
                   Verified Artist
                 </div>
-                <h1 className="text-display-sm sm:text-display-md font-extrabold text-white tracking-tight truncate">
+                <h1 className="text-headline-md sm:text-headline-lg font-extrabold text-white tracking-tight truncate">
                   {data.name}
                 </h1>
                 {data.description && (
-                  <p className="text-body-sm sm:text-body-md text-[#888888] line-clamp-3 max-w-2xl">
+                  <p className="text-body-xs text-[#888888] line-clamp-2 max-w-2xl">
                     {data.description}
                   </p>
                 )}
 
                 {data.topSongs && data.topSongs.length > 0 && (
-                  <div className="pt-2 flex items-center justify-center sm:justify-start gap-3">
+                  <div className="pt-1.5 flex items-center justify-center sm:justify-start gap-3">
                     <button
                       onClick={() => handlePlaySong(data.topSongs[0], 0)}
-                      className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-white hover:bg-neutral-200 text-black font-semibold text-label-lg shadow-xl hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                      className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-black font-bold text-label-md shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                         play_arrow
                       </span>
                       Play Top Songs
@@ -184,16 +184,16 @@ export default function ArtistView({ browseId, artistName }) {
 
           {/* ── 1. Top Songs (Expandable) ── */}
           {data.topSongs && data.topSongs.length > 0 && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-headline-sm font-bold text-white flex items-center gap-2">
-                  <span className="material-symbols-outlined text-white text-[22px]">bar_chart</span>
+            <section className="space-y-3">
+              <div className="flex items-center justify-between px-1">
+                <h2 className="text-label-md font-bold text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-white text-[18px]">bar_chart</span>
                   Top Songs
                 </h2>
-                <span className="text-body-sm text-[#888888]">{data.topSongs.length} tracks available</span>
+                <span className="text-label-xs text-[#888888]">{data.topSongs.length} tracks</span>
               </div>
 
-              <div className="divide-y divide-[#1a1a1a] rounded-2xl bg-[#050505] border border-[#222222] overflow-hidden shadow-2xl">
+              <div className="divide-y divide-[#1a1a1a] rounded-xl bg-[#050505] border border-[#222222] overflow-hidden shadow-xl">
                 {visibleSongs.map((track, idx) => {
                   const isCurrent = currentSong?.videoId === track.videoId || currentSong?.id === track.id;
                   const liked = isLiked(track.id);
@@ -202,20 +202,20 @@ export default function ArtistView({ browseId, artistName }) {
                     <div
                       key={track.id || idx}
                       onClick={() => handlePlaySong(track, idx)}
-                      className={`group flex items-center justify-between p-3.5 hover:bg-white/[0.04] transition-colors cursor-pointer ${
+                      className={`group flex items-center justify-between px-3 py-2 hover:bg-white/[0.04] transition-colors cursor-pointer min-h-[46px] ${
                         isCurrent ? 'bg-white/10' : ''
                       }`}
                     >
-                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        <div className="w-7 text-center text-label-md font-mono text-[#888888] flex-shrink-0 flex items-center justify-center">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-6 text-center text-label-sm font-mono text-[#888888] flex-shrink-0 flex items-center justify-center">
                           {isCurrent && isPlaying ? (
-                            <span className="material-symbols-outlined text-white text-[20px] animate-pulse">
+                            <span className="material-symbols-outlined text-white text-[18px] animate-pulse">
                               volume_up
                             </span>
                           ) : (
                             <>
                               <span className="group-hover:hidden">{idx + 1}</span>
-                              <span className="hidden group-hover:inline text-white material-symbols-outlined text-[20px]">
+                              <span className="hidden group-hover:inline text-white material-symbols-outlined text-[18px]">
                                 play_arrow
                               </span>
                             </>
@@ -226,8 +226,8 @@ export default function ArtistView({ browseId, artistName }) {
                           src={track.thumbnail || track.cover}
                           alt={track.title}
                           icon="music_note"
-                          iconClassName="text-white/30 text-[20px]"
-                          className="w-11 h-11 rounded-lg object-cover flex-shrink-0 shadow-sm border border-[#262626]"
+                          iconClassName="text-white/30 text-[18px]"
+                          className="w-10 h-10 rounded-lg object-cover flex-shrink-0 shadow-sm border border-[#262626]"
                         />
 
                         <div className="min-w-0 flex-1 overflow-hidden">
@@ -236,7 +236,7 @@ export default function ArtistView({ browseId, artistName }) {
                               e.stopPropagation();
                               routeToSongEntity(track);
                             }}
-                            className={`text-label-md font-medium truncate whitespace-nowrap overflow-hidden text-ellipsis transition-colors hover:underline cursor-pointer ${
+                            className={`text-label-md font-medium truncate whitespace-nowrap overflow-hidden text-ellipsis transition-colors hover:underline cursor-pointer leading-tight ${
                               isCurrent ? 'text-white font-bold' : 'text-white'
                             }`}
                             title={`View "${track.title}"`}

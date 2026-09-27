@@ -467,20 +467,20 @@ function CollectionDetail({ item, type, currentSong, isPlaying, onPlaySong, onRe
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex items-end gap-6 flex-wrap sm:flex-nowrap">
-        <div className="w-36 h-36 rounded-2xl overflow-hidden bg-[#161616] border border-[#222222] flex-shrink-0 shadow-2xl">
+      <div className="flex items-center sm:items-end gap-4 sm:gap-6 flex-wrap sm:flex-nowrap p-4 sm:p-5 rounded-2xl bg-[#101012] border border-white/5 shadow-xl">
+        <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-xl overflow-hidden bg-[#161616] border border-[#222222] flex-shrink-0 shadow-lg">
           {item.thumbnail ? (
             <img src={item.thumbnail} className="w-full h-full object-cover" alt="" />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <span className="material-symbols-outlined text-white/20 text-[56px]">
+              <span className="material-symbols-outlined text-white/20 text-[44px]">
                 {type === 'album' ? 'album' : 'queue_music'}
               </span>
             </div>
           )}
         </div>
-        <div className="flex flex-col gap-2 min-w-0 flex-1">
-          <span className="text-label-sm uppercase tracking-widest text-on-surface-variant font-semibold">
+        <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+          <span className="text-label-xs uppercase tracking-wider text-neutral-400 font-semibold">
             {type === 'album' ? 'Custom Album' : 'Custom Playlist'}
           </span>
           {editing ? (
@@ -493,31 +493,31 @@ function CollectionDetail({ item, type, currentSong, isPlaying, onPlaySong, onRe
                 className="bg-white/5 border border-white/30 rounded-lg px-3 py-1 text-white text-headline-md outline-none"
               />
               <button onClick={handleRename} className="text-white hover:text-neutral-300 transition-colors">
-                <span className="material-symbols-outlined text-[22px]">check</span>
+                <span className="material-symbols-outlined text-[20px]">check</span>
               </button>
             </div>
           ) : (
             <button onClick={() => setEditing(true)} className="text-left group">
-              <h2 className="text-headline-xl font-bold text-white tracking-tight group-hover:text-neutral-300 transition-colors">{item.title}</h2>
+              <h2 className="text-headline-md sm:text-headline-lg font-bold text-white tracking-tight group-hover:text-neutral-300 transition-colors leading-tight">{item.title}</h2>
             </button>
           )}
-          <p className="text-body-md text-on-surface-variant">
+          <p className="text-body-sm text-neutral-400">
             {item.artist ? `${item.artist} · ` : ''}{item.songs.length} songs
           </p>
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center gap-2.5 mt-1.5">
             <button
               onClick={onPlayAll}
               disabled={!item.songs.length}
-              className="flex items-center gap-2 px-5 py-2 rounded-full bg-white text-black font-semibold text-label-lg hover:scale-105 active:scale-95 transition-all disabled:opacity-40"
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white text-black font-bold text-label-md hover:scale-105 active:scale-95 transition-all disabled:opacity-40"
             >
-              <span className="material-symbols-outlined text-[20px]" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
+              <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
               Play All
             </button>
             <button
               onClick={onDelete}
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/8 text-on-surface-variant hover:bg-red-500/20 hover:text-red-400 transition-all text-label-md"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/8 text-neutral-400 hover:bg-red-500/20 hover:text-red-400 transition-all text-label-sm"
             >
-              <span className="material-symbols-outlined text-[18px]">delete</span>
+              <span className="material-symbols-outlined text-[16px]">delete</span>
               Delete
             </button>
           </div>

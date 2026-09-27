@@ -529,19 +529,19 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
   return (
     <div
       onClick={onPlay}
-      className={`group flex items-center gap-3.5 px-3.5 py-2.5 rounded-2xl transition-all duration-150 cursor-pointer min-h-[58px] select-none ${
+      className={`group flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-150 cursor-pointer min-h-[48px] select-none ${
         isActive
           ? 'bg-accent/15 text-accent border border-accent/20'
-          : 'bg-[#18181a]/50 hover:bg-[#18181a] text-white border border-transparent hover:border-white/5'
+          : 'bg-[#18181a]/45 hover:bg-[#18181a] text-white border border-transparent hover:border-white/5'
       }`}
     >
-      {/* 48px YouTube Music Style Artwork */}
-      <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-[#222225] border border-white/5">
+      {/* 40px Artwork */}
+      <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-[#222225] border border-white/5">
         {song.thumbnail ? (
           <img src={song.thumbnail} alt={song.title} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="material-symbols-outlined text-white/30 text-[20px]">music_note</span>
+            <span className="material-symbols-outlined text-white/30 text-[18px]">music_note</span>
           </div>
         )}
         <div
@@ -550,12 +550,12 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
           }`}
         >
           {isActive && isPlaying ? (
-            <span className="material-symbols-outlined text-accent text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <span className="material-symbols-outlined text-accent text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
               graphic_eq
             </span>
           ) : (
             <span
-              className="material-symbols-outlined text-white text-[20px]"
+              className="material-symbols-outlined text-white text-[18px]"
               style={{ fontVariationSettings: "'FILL' 1" }}
             >
               play_arrow
@@ -567,14 +567,14 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
       {/* Meta Text */}
       <div className="flex-1 min-w-0 flex flex-col justify-center overflow-hidden">
         <p
-          className={`font-semibold text-white text-[14px] leading-snug tracking-tight truncate whitespace-nowrap overflow-hidden text-ellipsis ${
+          className={`font-semibold text-white text-[13.5px] leading-tight tracking-tight truncate whitespace-nowrap overflow-hidden text-ellipsis ${
             isActive ? 'text-accent font-bold' : ''
           }`}
           title={song.title}
         >
           {song.title}
         </p>
-        <div className="flex items-center gap-1.5 text-[12px] text-neutral-400 font-normal truncate mt-0.5">
+        <div className="flex items-center gap-1.5 text-[11.5px] text-neutral-400 font-normal truncate mt-0.5">
           <ArtistLinks
             artists={song.artists}
             artist={song.artist}
@@ -593,21 +593,21 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 flex-shrink-0 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-0.5 flex-shrink-0 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             toggleLike(song);
           }}
-          className={`p-2 rounded-full transition-transform active:scale-90 min-w-[36px] min-h-[36px] flex items-center justify-center cursor-pointer ${
+          className={`p-1.5 rounded-full transition-transform active:scale-90 min-w-[32px] min-h-[32px] flex items-center justify-center cursor-pointer ${
             liked ? 'text-accent' : 'text-neutral-400 hover:text-white'
           }`}
           title={liked ? 'Unlike' : 'Like'}
           aria-label={liked ? 'Unlike' : 'Like'}
         >
           <span
-            className="material-symbols-outlined text-[19px]"
+            className="material-symbols-outlined text-[18px]"
             style={{ fontVariationSettings: `'FILL' ${liked ? 1 : 0}` }}
           >
             favorite
@@ -615,7 +615,7 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
         </button>
         <TrackContextMenu track={song} onAddToPlaylist={onAddToPlaylist} />
       </div>
-      <span className="text-[11.5px] text-neutral-500 font-mono min-w-[32px] text-right hidden xs:inline">
+      <span className="text-[11px] text-neutral-500 font-mono min-w-[28px] text-right hidden xs:inline">
         {formatTime(song.duration)}
       </span>
     </div>
@@ -859,7 +859,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
 
   // 5. Default: All Feed View
   return (
-    <div className="flex flex-col gap-9">
+    <div className="flex flex-col gap-6 sm:gap-8">
       {/* ── 1. Listen Again (If history exists) ──── */}
       {history && history.length > 0 && (
         <section className="flex flex-col gap-3">

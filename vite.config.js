@@ -118,9 +118,10 @@ function innertubeApiPlugin() {
             return;
           } catch (err) {
             console.error('[API /api/search] Error:', err);
-            res.statusCode = 500;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: err.message }));
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.end(JSON.stringify([]));
             return;
           }
         }

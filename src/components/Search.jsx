@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useDebounce } from '../hooks/useDebounce.js';
 import { usePlayer } from '../context/PlayerContext.jsx';
 import { formatDuration } from '../utils/timeFormat.js';
+import { apiUrl } from '../utils/apiConfig.js';
 import AddToPlaylistMenu from './shared/AddToPlaylistMenu.jsx';
 import ImageWithFallback from './shared/ImageWithFallback.jsx';
 import TrackContextMenu from './shared/TrackContextMenu.jsx';
@@ -40,7 +41,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
   const debouncedQuery = useDebounce(searchTerm, 200);
   const abortControllerRef = useRef(null);
 
-  const fetchResults = useCallback((query, tab) => {
+  const fetchResults = useCallback(async (query, tab) => {
     const trimmed = query.trim();
     if (!trimmed) {
       setResults([]);
@@ -59,23 +60,62 @@ export default function Search({ onSelectTrack, onArtistClick }) {
     setLoading(true);
     setError(null);
 
-    fetch(`/api/search?q=${encodeURIComponent(trimmed)}&type=${tab}`, {
-      signal: abortController.signal,
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Search failed (${res.status})`);
-        return res.json();
-      })
-      .then((data) => {
-        setResults(Array.isArray(data) ? data : []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (err.name === 'AbortError') return;
-        console.error('[Search] Fetch error:', err);
-        setError(err.message || 'Failed to fetch results');
-        setLoading(false);
+    try {
+      const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(trimmed)}&type=${tab}`), {
+        signal: abortController.signal,
       });
+      if (!res.ok) throw new Error(`Search failed (${res.status})`);
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        setResults(data);
+        return;
+      } else if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const list = [
+          ...(data.songs || []),
+          ...(data.albums || []),
+          ...(data.artists || []),
+        ];
+        setResults(list);
+        return;
+      }
+      throw new Error('Empty results');
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.warn('[Search] Server search failed, attempting fallback:', err);
+      try {
+        const { searchAll, searchSongs, searchAlbums, searchArtists } = await import('../utils/saavn.js');
+        if (tab === 'songs' || tab === 'song') {
+          const songs = await searchSongs(trimmed, 20);
+          if (songs && songs.length) { setResults(songs); return; }
+        } else if (tab === 'albums' || tab === 'album') {
+          const albums = await searchAlbums(trimmed, 20);
+          if (albums && albums.length) { setResults(albums); return; }
+        } else if (tab === 'artists' || tab === 'artist') {
+          const artists = await searchArtists(trimmed, 20);
+          if (artists && artists.length) { setResults(artists); return; }
+        } else {
+          const res = await searchAll(trimmed);
+          if (res) {
+            const list = [...(res.songs || []), ...(res.albums || []), ...(res.artists || [])];
+            if (list.length) { setResults(list); return; }
+          }
+        }
+      } catch {}
+
+      try {
+        const { FALLBACK_HOME_FEED } = await import('../data/fallbackFeed.js');
+        const cleanQ = trimmed.toLowerCase();
+        const allTracks = FALLBACK_HOME_FEED.featuredTracks || [];
+        const matched = allTracks.filter(t =>
+          t.title?.toLowerCase().includes(cleanQ) || t.artist?.toLowerCase().includes(cleanQ)
+        );
+        setResults(matched.length ? matched : allTracks.slice(0, 10));
+      } catch {
+        setError('No results found.');
+      }
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {

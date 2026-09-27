@@ -3,6 +3,8 @@ import { usePlayer } from '../../context/PlayerContext.jsx';
 import { formatTime } from '../../utils/timeFormat.js';
 import { useDebounce } from '../../hooks/useDebounce.js';
 import { apiUrl } from '../../utils/apiConfig.js';
+import { searchAll, searchSongs, searchAlbums, searchArtists } from '../../utils/saavn.js';
+import { FALLBACK_HOME_FEED } from '../../data/fallbackFeed.js';
 import ArtistLinks from './ArtistLinks.jsx';
 
 const SEARCH_TABS = [
@@ -70,10 +72,95 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
       );
       if (!res.ok) throw new Error('Search request failed');
       const data = await res.json();
-      setResults(data);
+      
+      if (Array.isArray(data) && data.length > 0) {
+        if (tab === 'all') {
+          setResults({
+            songs: data.filter(item => !item.type || item.type === 'song'),
+            albums: data.filter(item => item.type === 'album'),
+            artists: data.filter(item => item.type === 'artist'),
+          });
+          return;
+        }
+        setResults(data);
+        return;
+      } else if (data && typeof data === 'object' && !Array.isArray(data) && (data.songs?.length || data.albums?.length || data.artists?.length)) {
+        setResults(data);
+        return;
+      }
+
+      throw new Error('Empty server search result');
     } catch (err) {
       if (err.name === 'AbortError') return;
-      setError('Search encountered an error.');
+      console.warn('[MobileSearchOverlay] Server search error, attempting client fallback:', err);
+
+      try {
+        if (tab === 'songs' || tab === 'song') {
+          const songs = await searchSongs(trimmed, 20);
+          if (songs && songs.length) { setResults(songs); return; }
+        } else if (tab === 'albums' || tab === 'album') {
+          const albums = await searchAlbums(trimmed, 20);
+          if (albums && albums.length) { setResults(albums); return; }
+        } else if (tab === 'artists' || tab === 'artist') {
+          const artists = await searchArtists(trimmed, 20);
+          if (artists && artists.length) { setResults(artists); return; }
+        } else {
+          const res = await searchAll(trimmed);
+          if (res && (res.songs?.length || res.albums?.length || res.artists?.length)) {
+            setResults(res);
+            return;
+          }
+        }
+      } catch {}
+
+      // Local fallback from curated catalog
+      try {
+        const cleanQ = trimmed.toLowerCase();
+        const allTracks = FALLBACK_HOME_FEED.featuredTracks || [];
+        const allAlbums = FALLBACK_HOME_FEED.trendingAlbums || [];
+
+        const matchedSongs = allTracks.filter(t => 
+          t.title?.toLowerCase().includes(cleanQ) || 
+          t.artist?.toLowerCase().includes(cleanQ) ||
+          t.album?.toLowerCase().includes(cleanQ)
+        );
+
+        const matchedAlbums = allAlbums.filter(a =>
+          a.title?.toLowerCase().includes(cleanQ) ||
+          a.artist?.toLowerCase().includes(cleanQ)
+        );
+
+        const matchedArtists = [];
+        const artistSet = new Set();
+        allTracks.forEach(t => {
+          if (t.artist && t.artist.toLowerCase().includes(cleanQ) && !artistSet.has(t.artist)) {
+            artistSet.add(t.artist);
+            matchedArtists.push({
+              id: t.artistId || `art_${t.id}`,
+              name: t.artist,
+              title: t.artist,
+              thumbnail: t.thumbnail || t.cover,
+              type: 'artist'
+            });
+          }
+        });
+
+        if (tab === 'songs') {
+          setResults(matchedSongs.length ? matchedSongs : allTracks.slice(0, 8));
+        } else if (tab === 'albums') {
+          setResults(matchedAlbums.length ? matchedAlbums : allAlbums.slice(0, 4));
+        } else if (tab === 'artists') {
+          setResults(matchedArtists);
+        } else {
+          setResults({
+            songs: matchedSongs.length ? matchedSongs : allTracks.slice(0, 8),
+            albums: matchedAlbums.length ? matchedAlbums : allAlbums.slice(0, 4),
+            artists: matchedArtists,
+          });
+        }
+      } catch {
+        setError('Search encountered an error.');
+      }
     } finally {
       setLoading(false);
     }
@@ -103,7 +190,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
     <div className="md:hidden fixed inset-0 z-[80] bg-[#0e0e0e] flex flex-col animate-fade-in text-white select-none">
       {/* ── Top Header with Search Input ────────────────────────────── */}
       <div className="flex items-center gap-2 px-3 py-2.5 bg-[#141416] border-b border-white/10 pt-safe">
-        <div className="flex-1 flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-[#1e1e22] border border-white/10 focus-within:border-amber-500 transition-colors">
+        <div className="flex-1 flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-[#1e1e22] border border-white/10 focus-within:border-accent transition-colors">
           <span className="material-symbols-outlined text-neutral-400 text-[20px] flex-shrink-0">
             search
           </span>
@@ -127,7 +214,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
 
         <button
           onClick={onClose}
-          className="px-3 py-2 text-amber-500 hover:text-amber-400 font-semibold text-[14px] cursor-pointer"
+          className="px-3 py-2 text-accent hover:opacity-80 font-semibold text-[14px] cursor-pointer"
         >
           Cancel
         </button>
@@ -141,7 +228,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1 px-3 py-1 rounded-full text-[12px] font-medium transition-all flex-shrink-0 ${
               activeTab === tab.id
-                ? 'bg-amber-500 text-black font-bold'
+                ? 'bg-accent text-black font-bold'
                 : 'bg-[#1c1c1e] text-neutral-400 border border-white/5 hover:text-white'
             }`}
           >
@@ -166,7 +253,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
 
         {error && (
           <div className="py-12 text-center text-neutral-400 text-body-sm">
-            <span className="material-symbols-outlined text-[36px] text-amber-500 mb-2 block">
+            <span className="material-symbols-outlined text-[36px] text-accent mb-2 block">
               error
             </span>
             {error}
@@ -190,7 +277,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
                 {/* Songs Shelf */}
                 {results.songs?.length > 0 && (
                   <div className="space-y-1">
-                    <p className="text-[11px] font-mono uppercase tracking-widest text-amber-500 font-bold mb-1">
+                    <p className="text-[11px] font-mono uppercase tracking-widest text-accent font-bold mb-1">
                       Songs
                     </p>
                     {results.songs.slice(0, 8).map((s) => (
@@ -210,7 +297,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
                 {/* Albums Shelf */}
                 {results.albums?.length > 0 && (
                   <div className="pt-3 space-y-2">
-                    <p className="text-[11px] font-mono uppercase tracking-widest text-amber-500 font-bold">
+                    <p className="text-[11px] font-mono uppercase tracking-widest text-accent font-bold">
                       Albums
                     </p>
                     <div className="grid grid-cols-2 gap-2.5">
@@ -224,7 +311,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
                           className="p-2.5 rounded-2xl bg-[#18181a] border border-white/5 flex items-center gap-2.5 cursor-pointer active:scale-95 transition-transform"
                         >
                           <img
-                            src={a.thumbnail}
+                            src={a.thumbnail || a.cover}
                             alt=""
                             className="w-12 h-12 rounded-xl object-cover flex-shrink-0"
                           />
@@ -241,7 +328,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
                 {/* Artists Shelf */}
                 {results.artists?.length > 0 && (
                   <div className="pt-3 space-y-2">
-                    <p className="text-[11px] font-mono uppercase tracking-widest text-amber-500 font-bold">
+                    <p className="text-[11px] font-mono uppercase tracking-widest text-accent font-bold">
                       Artists
                     </p>
                     <div className="grid grid-cols-2 gap-2.5">
@@ -255,7 +342,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
                           className="p-2.5 rounded-2xl bg-[#18181a] border border-white/5 flex items-center gap-2.5 cursor-pointer active:scale-95 transition-transform"
                         >
                           <img
-                            src={art.thumbnail}
+                            src={art.thumbnail || art.cover}
                             alt=""
                             className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                           />
@@ -268,22 +355,93 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
                     </div>
                   </div>
                 )}
+
+                {!results.songs?.length && !results.albums?.length && !results.artists?.length && (
+                  <div className="py-12 text-center text-neutral-400 text-body-sm">
+                    No results found for "{query}"
+                  </div>
+                )}
               </>
             )}
 
-            {activeTab === 'songs' && Array.isArray(results) && (
+            {activeTab === 'songs' && (
               <div className="space-y-1">
-                {results.map((s) => (
+                {(Array.isArray(results) ? results : results.songs || []).map((s) => (
                   <SongItem
                     key={s.id}
                     song={s}
                     isActive={currentSong?.id === s.id}
                     isPlaying={currentSong?.id === s.id && isPlaying}
                     liked={isLiked(s.id)}
-                    onPlay={() => handlePlay(s, results)}
+                    onPlay={() => handlePlay(s, Array.isArray(results) ? results : results.songs)}
                     onToggleLike={() => toggleLike(s)}
                   />
                 ))}
+                {((Array.isArray(results) ? results : results.songs || []).length === 0) && (
+                  <div className="py-12 text-center text-neutral-400 text-body-sm">
+                    No songs found for "{query}"
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'albums' && (
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
+                {(Array.isArray(results) ? results : results.albums || []).map((a) => (
+                  <div
+                    key={a.id}
+                    onClick={() => {
+                      routeToSongEntity({ ...a, albumId: a.id, album: a.title });
+                      onClose();
+                    }}
+                    className="p-2.5 rounded-2xl bg-[#18181a] border border-white/5 flex items-center gap-2.5 cursor-pointer active:scale-95 transition-transform"
+                  >
+                    <img
+                      src={a.thumbnail || a.cover}
+                      alt=""
+                      className="w-12 h-12 rounded-xl object-cover flex-shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-label-sm font-semibold text-white truncate">{a.title}</p>
+                      <p className="text-body-xs text-neutral-400 truncate">{a.artist}</p>
+                    </div>
+                  </div>
+                ))}
+                {((Array.isArray(results) ? results : results.albums || []).length === 0) && (
+                  <div className="col-span-2 py-12 text-center text-neutral-400 text-body-sm">
+                    No albums found for "{query}"
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'artists' && (
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
+                {(Array.isArray(results) ? results : results.artists || []).map((art) => (
+                  <div
+                    key={art.id}
+                    onClick={() => {
+                      routeToArtistEntity(art.title || art.name, art.id);
+                      onClose();
+                    }}
+                    className="p-2.5 rounded-2xl bg-[#18181a] border border-white/5 flex items-center gap-2.5 cursor-pointer active:scale-95 transition-transform"
+                  >
+                    <img
+                      src={art.thumbnail || art.cover}
+                      alt=""
+                      className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-label-sm font-semibold text-white truncate">{art.title || art.name}</p>
+                      <p className="text-body-xs text-neutral-400">Artist</p>
+                    </div>
+                  </div>
+                ))}
+                {((Array.isArray(results) ? results : results.artists || []).length === 0) && (
+                  <div className="col-span-2 py-12 text-center text-neutral-400 text-body-sm">
+                    No artists found for "{query}"
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -299,21 +457,21 @@ function SongItem({ song, isActive, isPlaying, liked, onPlay, onToggleLike }) {
       onClick={onPlay}
       className={`flex items-center justify-between p-2.5 rounded-2xl transition-all cursor-pointer ${
         isActive
-          ? 'bg-amber-500/15 border border-amber-500/40'
+          ? 'bg-accent/15 border border-accent/40'
           : 'bg-[#18181a] border border-white/5 active:bg-[#222225]'
       }`}
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-[#222225] flex-shrink-0">
-          <img src={song.thumbnail} alt="" className="w-full h-full object-cover" />
+          <img src={song.thumbnail || song.cover} alt="" className="w-full h-full object-cover" />
           {isActive && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
               {isPlaying ? (
-                <span className="material-symbols-outlined text-amber-400 text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                <span className="material-symbols-outlined text-accent text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                   graphic_eq
                 </span>
               ) : (
-                <span className="material-symbols-outlined text-amber-400 text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                <span className="material-symbols-outlined text-accent text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                   play_arrow
                 </span>
               )}
@@ -321,7 +479,7 @@ function SongItem({ song, isActive, isPlaying, liked, onPlay, onToggleLike }) {
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className={`text-[13.5px] font-semibold truncate ${isActive ? 'text-amber-300' : 'text-white'}`}>
+          <p className={`text-[13.5px] font-semibold truncate ${isActive ? 'text-accent' : 'text-white'}`}>
             {song.title}
           </p>
           <ArtistLinks
@@ -339,7 +497,7 @@ function SongItem({ song, isActive, isPlaying, liked, onPlay, onToggleLike }) {
             e.stopPropagation();
             onToggleLike();
           }}
-          className={`p-1.5 rounded-full ${liked ? 'text-amber-500' : 'text-neutral-500'}`}
+          className={`p-1.5 rounded-full ${liked ? 'text-accent' : 'text-neutral-500'}`}
         >
           <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: liked ? "'FILL' 1" : "'FILL' 0" }}>
             favorite

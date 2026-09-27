@@ -190,85 +190,131 @@ export async function searchMusic(query, type = 'all') {
   const yt = await getInnertube();
   const q = query.trim();
 
+  // Helper for general YouTube video search fallback
+  const searchGeneralVideos = async (limit = 20) => {
+    try {
+      const searchResults = await yt.search(q, { type: 'video' });
+      const contents = searchResults.videos || searchResults.contents || [];
+      return contents.slice(0, limit).map((v) => {
+        const id = v.id || v.video_id || '';
+        const title = typeof v.title === 'string' ? v.title : (v.title?.text || 'Unknown Title');
+        const artist = typeof v.author === 'string' ? v.author : (v.author?.name || v.owner?.name || 'Unknown Artist');
+        const duration = typeof v.duration?.seconds === 'number' ? v.duration.seconds : (Number(v.duration) || 0);
+        const thumbnail = resolveThumbnail(v, id);
+        return {
+          id,
+          videoId: id,
+          title,
+          artist,
+          duration,
+          thumbnail,
+          cover: thumbnail,
+          thumbnailUrl: thumbnail,
+          isOfficial: false,
+          type: 'song',
+        };
+      }).filter((t) => t.id && t.id.length >= 10);
+    } catch (e) {
+      console.warn('[Innertube] YouTube general video search fallback failed:', e);
+      return [];
+    }
+  };
+
   // ── Tab: Songs ──────────────────────────────────────────────────────────
   if (type === 'songs' || type === 'song') {
-    const searchResults = await yt.music.search(q, { type: 'song' });
-    const contents = searchResults.songs?.contents || searchResults.contents || [];
-    const songs = contents.map(parseSongItem).filter((t) => t.id && t.id.length >= 10);
+    try {
+      const searchResults = await yt.music.search(q, { type: 'song' });
+      const contents = searchResults.songs?.contents || searchResults.contents || [];
+      const songs = contents.map(parseSongItem).filter((t) => t.id && t.id.length >= 10);
 
-    const qLower = q.toLowerCase();
-    const wantsRemixOrSlowed = qLower.includes('slow') || qLower.includes('reverb') || qLower.includes('remix') || qLower.includes('cover');
+      const qLower = q.toLowerCase();
+      const wantsRemixOrSlowed = qLower.includes('slow') || qLower.includes('reverb') || qLower.includes('remix') || qLower.includes('cover');
 
-    // Filter out fan edits, slow-reverb uploads if not explicitly searched
-    const filtered = wantsRemixOrSlowed
-      ? songs
-      : songs.filter((s) => {
-          const tLower = s.title.toLowerCase();
-          return !tLower.includes('slowed') &&
-                 !tLower.includes('reverb') &&
-                 !tLower.includes('fan made') &&
-                 !tLower.includes('remake') &&
-                 !tLower.includes('8d audio');
-        });
+      // Filter out fan edits, slow-reverb uploads if not explicitly searched
+      const filtered = wantsRemixOrSlowed
+        ? songs
+        : songs.filter((s) => {
+            const tLower = s.title.toLowerCase();
+            return !tLower.includes('slowed') &&
+                   !tLower.includes('reverb') &&
+                   !tLower.includes('fan made') &&
+                   !tLower.includes('remake') &&
+                   !tLower.includes('8d audio');
+          });
 
-    // Bubble official releases to top
-    filtered.sort((a, b) => {
-      if (a.isOfficial && !b.isOfficial) return -1;
-      if (!a.isOfficial && b.isOfficial) return 1;
-      return 0;
-    });
+      // Bubble official releases to top
+      filtered.sort((a, b) => {
+        if (a.isOfficial && !b.isOfficial) return -1;
+        if (!a.isOfficial && b.isOfficial) return 1;
+        return 0;
+      });
 
-    return filtered;
+      if (filtered.length > 0) return filtered;
+    } catch (err) {
+      console.warn('[Innertube] YouTube Music song search failed, trying general search:', err);
+    }
+
+    return await searchGeneralVideos(20);
   }
 
   // ── Tab: Albums ─────────────────────────────────────────────────────────
   if (type === 'albums' || type === 'album') {
-    const searchResults = await yt.music.search(q, { type: 'album' });
-    const contents = searchResults.albums?.contents || searchResults.contents || [];
+    try {
+      const searchResults = await yt.music.search(q, { type: 'album' });
+      const contents = searchResults.albums?.contents || searchResults.contents || [];
 
-    return contents.map((a) => {
-      const id = a.id || '';
-      const title = a.title || 'Unknown Album';
-      const firstArtist = Array.isArray(a.artists) && a.artists.length > 0 ? a.artists[0] : null;
-      const artist = a.artists?.map((x) => x.name).filter(Boolean).join(', ') || a.author?.name || 'Unknown Artist';
-      const artistId = firstArtist?.channel_id || firstArtist?.id || undefined;
-      const year = a.year || '';
-      const thumbnail = resolveThumbnail(a);
+      return contents.map((a) => {
+        const id = a.id || '';
+        const title = a.title || 'Unknown Album';
+        const firstArtist = Array.isArray(a.artists) && a.artists.length > 0 ? a.artists[0] : null;
+        const artist = a.artists?.map((x) => x.name).filter(Boolean).join(', ') || a.author?.name || 'Unknown Artist';
+        const artistId = firstArtist?.channel_id || firstArtist?.id || undefined;
+        const year = a.year || '';
+        const thumbnail = resolveThumbnail(a);
 
-      return {
-        id,
-        browseId: id,
-        title,
-        artist,
-        artistId,
-        year,
-        thumbnail,
-        cover: thumbnail,
-        type: 'album',
-      };
-    }).filter((a) => a.id);
+        return {
+          id,
+          browseId: id,
+          title,
+          artist,
+          artistId,
+          year,
+          thumbnail,
+          cover: thumbnail,
+          type: 'album',
+        };
+      }).filter((a) => a.id);
+    } catch (err) {
+      console.warn('[Innertube] Album search error:', err);
+      return [];
+    }
   }
 
   // ── Tab: Artists ────────────────────────────────────────────────────────
   if (type === 'artists' || type === 'artist') {
-    const searchResults = await yt.music.search(q, { type: 'artist' });
-    const contents = searchResults.artists?.contents || searchResults.contents || [];
+    try {
+      const searchResults = await yt.music.search(q, { type: 'artist' });
+      const contents = searchResults.artists?.contents || searchResults.contents || [];
 
-    return contents.map((art) => {
-      const id = art.id || '';
-      const name = art.name || art.title || 'Unknown Artist';
-      const thumbnail = resolveThumbnail(art);
+      return contents.map((art) => {
+        const id = art.id || '';
+        const name = art.name || art.title || 'Unknown Artist';
+        const thumbnail = resolveThumbnail(art);
 
-      return {
-        id,
-        browseId: id,
-        name,
-        title: name,
-        thumbnail,
-        cover: thumbnail,
-        type: 'artist',
-      };
-    }).filter((art) => art.id);
+        return {
+          id,
+          browseId: id,
+          name,
+          title: name,
+          thumbnail,
+          cover: thumbnail,
+          type: 'artist',
+        };
+      }).filter((art) => art.id);
+    } catch (err) {
+      console.warn('[Innertube] Artist search error:', err);
+      return [];
+    }
   }
 
   // ── Tab: All (Mix official songs, albums, and artists) ───────────────────
@@ -279,9 +325,13 @@ export async function searchMusic(query, type = 'all') {
       yt.music.search(q, { type: 'artist' }),
     ]);
 
-    const songs = (songRes.status === 'fulfilled' ? (songRes.value.songs?.contents || songRes.value.contents || []) : [])
+    let songs = (songRes.status === 'fulfilled' ? (songRes.value.songs?.contents || songRes.value.contents || []) : [])
       .map(parseSongItem)
       .filter((t) => t.id && t.id.length >= 10);
+
+    if (songs.length === 0) {
+      songs = await searchGeneralVideos(15);
+    }
 
     const albums = (albumRes.status === 'fulfilled' ? (albumRes.value.albums?.contents || albumRes.value.contents || []) : [])
       .map((a) => {
@@ -322,7 +372,7 @@ export async function searchMusic(query, type = 'all') {
     ];
   } catch (err) {
     console.error('[Innertube] Search all error:', err);
-    return [];
+    return await searchGeneralVideos(15);
   }
 }
 

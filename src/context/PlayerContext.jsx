@@ -127,6 +127,7 @@ export function PlayerProvider({ children }) {
     }
     return { view: 'home', currentId: null, extra: null };
   });
+  const [navHistory, setNavHistory] = useState([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeChip, setActiveChip] = useState('all');
 

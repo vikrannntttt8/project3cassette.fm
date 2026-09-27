@@ -847,11 +847,28 @@ export async function getWatchNext(videoId) {
       };
     }).filter((s) => s.id && s.id.length >= 10);
 
-    return songs;
+    if (songs.length > 0) {
+      return songs;
+    }
   } catch (err) {
     console.error('[Innertube] getWatchNext error:', err);
-    return [];
   }
+
+  // Graceful Radio Fallback: search for top tracks by current video info / artist
+  try {
+    const info = await yt.getBasicInfo(videoId);
+    const author = info.basic_info?.author || '';
+    const title = info.basic_info?.title || '';
+    const q = (author || title).replace(/\(.*\)|\[.*\]/g, '').trim();
+    if (q) {
+      const searchRes = await searchMusic(`${q} song`, 'songs');
+      return searchRes.filter((s) => s.id !== videoId).slice(0, 15);
+    }
+  } catch (fallbackErr) {
+    console.warn('[Innertube] Radio fallback search error:', fallbackErr);
+  }
+
+  return [];
 }
 
 /**

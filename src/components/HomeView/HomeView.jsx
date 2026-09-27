@@ -48,6 +48,7 @@ const HOME_CHIPS = [
 export default function HomeView() {
   const {
     loadSong,
+    playTrackNow,
     currentSong,
     isPlaying,
     togglePlay,
@@ -63,15 +64,19 @@ export default function HomeView() {
   // ── Play handlers ─────────────────────────────────────────────────
   const handlePlaySong = useCallback(
     (song, songList = null) => {
-      if (currentSong?.id === song.id) {
+      if (currentSong?.id === song.id || currentSong?.videoId === song.videoId) {
         togglePlay();
         return;
       }
-      const queue = songList || (results && activeTab === 'songs' ? results : null) || [song];
-      const idx = queue.findIndex((s) => s.id === song.id);
-      loadSong(song, queue, idx >= 0 ? idx : 0);
+      if (songList && Array.isArray(songList) && songList.length > 1) {
+        const idx = songList.findIndex((s) => (s.id || s.videoId) === (song.id || song.videoId));
+        loadSong(song, songList, idx >= 0 ? idx : 0);
+      } else {
+        // Automatically start radio mix for single song picks
+        playTrackNow(song);
+      }
     },
-    [currentSong, togglePlay, loadSong, results, activeTab]
+    [currentSong, togglePlay, loadSong, playTrackNow]
   );
 
   const handleAlbumClick = useCallback(

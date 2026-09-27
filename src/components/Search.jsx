@@ -23,6 +23,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
   const {
     navigateTo,
     loadSong,
+    playTrackNow,
     isLiked,
     toggleLike,
     handleEntityClick,
@@ -143,7 +144,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
     if (onSelectTrack) {
       onSelectTrack(track);
     } else {
-      loadSong(track, [track], 0);
+      playTrackNow(track);
     }
   };
 

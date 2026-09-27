@@ -44,10 +44,36 @@ export function PlayerProvider({ children }) {
   }, [queueIndex]);
 
   // ── Lyrics state ──────────────────────────────────────────────────
-  // ── Lyrics state ──────────────────────────────────────────────────
-  const [lrcString,    setLrcString]    = useState(DEMO_LRC);
-  const [lyricsSource, setLyricsSource] = useState('demo');
+  const [lrcString,     setLrcString]     = useState('');
+  const [lyricsSource,  setLyricsSource]  = useState('none');
   const [lyricsLoading, setLyricsLoading] = useState(false);
+
+  // Dedicated automatic & on-demand lyrics fetcher
+  const fetchLyricsForSong = useCallback(async (song) => {
+    if (!song || (!song.title && !song.id)) {
+      setLrcString('');
+      setLyricsSource('none');
+      setLyricsLoading(false);
+      return;
+    }
+
+    setLyricsLoading(true);
+    try {
+      const { lrc, source } = await fetchSongLyrics(song.id, song.title, song.artist);
+      if (currentSongRef.current?.id === song.id || currentSongRef.current?.videoId === song.videoId) {
+        setLrcString(lrc || '');
+        setLyricsSource(source || 'none');
+      }
+    } catch (err) {
+      console.warn('[Lyrics Engine] Fetch error:', err);
+      if (currentSongRef.current?.id === song.id) {
+        setLrcString('');
+        setLyricsSource('none');
+      }
+    } finally {
+      setLyricsLoading(false);
+    }
+  }, []);
 
   // Safe HTML5 History helpers that swallow SecurityErrors (e.g., during OAuth hash fragment handling)
   const safePushState = useCallback((state, title, url) => {
@@ -440,7 +466,7 @@ export function PlayerProvider({ children }) {
   }, [volume, isMuted]);
 
   // ── Helper to fetch recommendations and populate/append to queue ──
-  const populateWatchNextQueue = useCallback(async (track) => {
+  const populateWatchNextQueue = useCallback(async (track, isAppend = false) => {
     const targetVid = track?.videoId || track?.youtubeId || track?.id;
     if (!targetVid) return;
     try {
@@ -450,17 +476,56 @@ export function PlayerProvider({ children }) {
         if (Array.isArray(recommendations) && recommendations.length > 0) {
           setQueue((prevQueue) => {
             const currentVid = track.videoId || track.id;
-            // Filter out current song from recommendations to avoid duplicate playing
-            const fresh = recommendations.filter((r) => (r.videoId || r.id) !== currentVid);
+            const existingIds = new Set(
+              isAppend
+                ? prevQueue.map((r) => r.videoId || r.id)
+                : [currentVid]
+            );
+            const fresh = recommendations.filter((r) => !existingIds.has(r.videoId || r.id));
+            if (isAppend) {
+              return [...prevQueue, ...fresh];
+            }
             return [track, ...fresh];
           });
-          setQueueIndex(0);
+          if (!isAppend) {
+            setQueueIndex(0);
+          }
         }
       }
     } catch (err) {
       console.warn('[Watch Next] Failed to populate queue:', err);
     }
   }, []);
+
+  // ── Explicit Start Radio Engine ────────────────────────────────────
+  const startRadio = useCallback((track) => {
+    if (!track) return;
+    const cleanTrack = { ...track };
+    delete cleanTrack.media_preview_url;
+    setCurrentSong(cleanTrack);
+    currentSongRef.current = cleanTrack;
+    setQueue([cleanTrack]);
+    setQueueIndex(0);
+
+    if (!ytReadyRef.current || !ytPlayerRef.current) {
+      pendingSongRef.current = cleanTrack;
+      setIsLoading(true);
+    } else {
+      executeLoadSong(cleanTrack);
+    }
+
+    if (typeof library.recordPlayback === 'function') {
+      library.recordPlayback(cleanTrack);
+    }
+
+    // Reset and immediately fetch lyrics
+    setLrcString('');
+    setLyricsSource('none');
+    fetchLyricsForSong(cleanTrack);
+
+    // Populate radio recommendations
+    populateWatchNextQueue(cleanTrack, false);
+  }, [executeLoadSong, fetchLyricsForSong, populateWatchNextQueue, library]);
 
   // ── Load a song into the embedded YouTube engine ───────────────────
   const loadSong = useCallback(async (song, newQueue = null, newIndex = 0) => {
@@ -494,20 +559,13 @@ export function PlayerProvider({ children }) {
 
     // Auto-fetch Watch Next if queue is a single song and not part of an existing playlist
     if (!newQueue || (Array.isArray(newQueue) && newQueue.length <= 1)) {
-      populateWatchNextQueue(cleanSong);
+      populateWatchNextQueue(cleanSong, false);
     }
 
-    // Fetch lyrics async (non-blocking)
-    setLrcString(DEMO_LRC);
-    setLyricsSource('demo');
-    setLyricsLoading(true);
-    fetchSongLyrics(cleanSong.id, cleanSong.title, cleanSong.artist)
-      .then(({ lrc, source }) => {
-        setLrcString(lrc);
-        setLyricsSource(source);
-      })
-      .catch(() => {})
-      .finally(() => setLyricsLoading(false));
+    // Immediately trigger asynchronous lyrics fetching
+    setLrcString('');
+    setLyricsSource('none');
+    fetchLyricsForSong(cleanSong);
 
     // Fetch stream metadata async for quality bitrate verification
     const targetVid = cleanSong.videoId || cleanSong.youtubeId || cleanSong.id;
@@ -521,7 +579,7 @@ export function PlayerProvider({ children }) {
         })
         .catch(() => {});
     }
-  }, [executeLoadSong, audioQuality, populateWatchNextQueue]);
+  }, [executeLoadSong, audioQuality, populateWatchNextQueue, fetchLyricsForSong, library]);
 
   // ── Centralized Contextual Entity Click Router ─────────────────────
   const handleEntityClick = useCallback((item, options = {}) => {
@@ -782,7 +840,7 @@ export function PlayerProvider({ children }) {
     isPlaying, currentTime, duration, volume, isMuted, isLoading,
     currentSong, queue, queueIndex, history,
     isShuffled, toggleShuffle, isRepeat, toggleRepeat,
-    lrcString, lyricsSource, lyricsLoading,
+    lrcString, lyricsSource, lyricsLoading, fetchLyricsForSong,
     view, setView,
     navState, setNavState, navigateTo, goBack, canGoBack, navHistory, playAlbum,
     handleEntityClick,
@@ -793,7 +851,7 @@ export function PlayerProvider({ children }) {
     audioQuality, setAudioQuality, activeStreamMeta, streamToast, setStreamToast,
     // Actions
     play, pause, togglePlay, seek, changeVolume, toggleMute,
-    loadSong, playTrackNow, playNextTrack, addToQueue, skipToNext, skipToPrev,
+    loadSong, playTrackNow, startRadio, populateWatchNextQueue, playNextTrack, addToQueue, skipToNext, skipToPrev,
     playNext: skipToNext, playPrev: skipToPrev, playCollection, toggleView,
     // Library
     ...library,

@@ -16,6 +16,7 @@ const SEARCH_TABS = [
 export default function MobileSearchOverlay({ isOpen, onClose }) {
   const {
     loadSong,
+    playTrackNow,
     currentSong,
     isPlaying,
     togglePlay,
@@ -166,14 +167,13 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const handlePlay = (song, songList) => {
-    if (currentSong?.id === song.id) {
+  const handlePlay = (song) => {
+    if (currentSong?.id === song.id || currentSong?.videoId === song.videoId) {
       togglePlay();
       return;
     }
-    const queue = songList || [song];
-    const idx = queue.findIndex((s) => s.id === song.id);
-    loadSong(song, queue, idx >= 0 ? idx : 0);
+    // Launch song with instant smart radio recommendations queue
+    playTrackNow(song);
   };
 
   const handleFormSubmit = (e) => {

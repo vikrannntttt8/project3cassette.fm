@@ -453,11 +453,103 @@ export async function getPlaylistSongs(playlistId) {
 // ── Synced Lyrics Synchronization ────────────────────────────────────
 
 export async function fetchSongLyrics(id, title, artist) {
-  // 1. Saavn lyrics endpoint (TASK 5): https://saavn.dev/api/songs/{id}/lyrics
+  if (!title && !id) return { lrc: '', source: 'none' };
+
+  // 1. Clean track title & artist for optimal lyric database matching
+  const cleanTitle = (title || '')
+    .replace(/\((?:official\s*(?:music\s*)?video|video|audio|lyrics?|hd|4k|visualizer|full\s*song|remastered|feat\.[^)]*)\)/gi, '')
+    .replace(/\[(?:official\s*(?:music\s*)?video|video|audio|lyrics?|hd|4k|visualizer|full\s*song|remastered|hq|feat\.[^\]]*)\]/gi, '')
+    .replace(/-\s*(?:single|ep|official|audio|video)/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const cleanArtist = (artist || '')
+    .replace(/\((?:feat\.|ft\.).*?\)/gi, '')
+    .split(/[,&/|]/)[0]
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // 2. Query lrclib.net direct GET endpoint first
+  if (cleanTitle) {
+    try {
+      const getParams = new URLSearchParams({
+        track_name: cleanTitle,
+        ...(cleanArtist ? { artist_name: cleanArtist } : {}),
+      });
+      const res = await fetch(`https://lrclib.net/api/get?${getParams}`, {
+        signal: AbortSignal.timeout(4500),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.syncedLyrics && data.syncedLyrics.trim()) {
+          return { lrc: data.syncedLyrics, source: 'synced' };
+        }
+        if (data.plainLyrics && data.plainLyrics.trim()) {
+          const lrc = data.plainLyrics
+            .split('\n')
+            .filter(Boolean)
+            .map((line, i) => {
+              const t = i * 4.5;
+              const mm = String(Math.floor(t / 60)).padStart(2, '0');
+              const ss = String(Math.floor(t % 60)).padStart(2, '0');
+              const ms = String(Math.floor((t % 1) * 100)).padStart(2, '0');
+              return `[${mm}:${ss}.${ms}] ${line.trim()}`;
+            })
+            .join('\n');
+          return { lrc, source: 'plain' };
+        }
+      }
+    } catch {
+      // Continue to search fallback
+    }
+
+    // 3. Query lrclib.net search endpoint fallback
+    try {
+      const searchQuery = `${cleanTitle} ${cleanArtist}`.trim();
+      const res = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(searchQuery)}`, {
+        signal: AbortSignal.timeout(4500),
+      });
+
+      if (res.ok) {
+        const results = await res.json();
+        if (Array.isArray(results) && results.length > 0) {
+          // Find closest match or pick first
+          const match = results.find(
+            (r) =>
+              r.trackName?.toLowerCase().includes(cleanTitle.toLowerCase()) ||
+              cleanTitle.toLowerCase().includes(r.trackName?.toLowerCase())
+          ) || results[0];
+
+          if (match.syncedLyrics && match.syncedLyrics.trim()) {
+            return { lrc: match.syncedLyrics, source: 'synced' };
+          }
+          if (match.plainLyrics && match.plainLyrics.trim()) {
+            const lrc = match.plainLyrics
+              .split('\n')
+              .filter(Boolean)
+              .map((line, i) => {
+                const t = i * 4.5;
+                const mm = String(Math.floor(t / 60)).padStart(2, '0');
+                const ss = String(Math.floor(t % 60)).padStart(2, '0');
+                const ms = String(Math.floor((t % 1) * 100)).padStart(2, '0');
+                return `[${mm}:${ss}.${ms}] ${line.trim()}`;
+              })
+              .join('\n');
+            return { lrc, source: 'plain' };
+          }
+        }
+      }
+    } catch {
+      // Continue to Saavn check if ID exists
+    }
+  }
+
+  // 4. Saavn lyrics endpoint fallback (if ID provided)
   if (id) {
     try {
       const json = await saavnApiFetch(`/songs/${id}/lyrics`);
-      const raw  = json?.data?.lyrics || json?.lyrics || json?.data?.snippet || '';
+      const raw = json?.data?.lyrics || json?.lyrics || json?.data?.snippet || '';
       if (raw && typeof raw === 'string' && raw.trim()) {
         if (/\[\d{1,3}:\d{2}/.test(raw)) {
           return { lrc: raw, source: 'synced' };
@@ -465,52 +557,22 @@ export async function fetchSongLyrics(id, title, artist) {
         const lines = raw
           .replace(/<br\s*[\/]?>/gi, '\n')
           .split(/[\r\n]+/)
-          .map(l => l.trim())
+          .map((l) => l.trim())
           .filter(Boolean);
         if (lines.length > 0) {
-          const lrc = lines.map((line, i) => {
-            const t  = i * 4;
-            const mm = String(Math.floor(t / 60)).padStart(2, '0');
-            const ss = String(Math.floor(t % 60)).padStart(2, '0');
-            return `[${mm}:${ss}.00] ${line}`;
-          }).join('\n');
+          const lrc = lines
+            .map((line, i) => {
+              const t = i * 4;
+              const mm = String(Math.floor(t / 60)).padStart(2, '0');
+              const ss = String(Math.floor(t % 60)).padStart(2, '0');
+              return `[${mm}:${ss}.00] ${line}`;
+            })
+            .join('\n');
           return { lrc, source: 'plain' };
         }
       }
     } catch {}
   }
 
-  // 2. lrclib.net (Full millisecond synced LRC format fallback)
-  try {
-    const cleanTitle = (title || '').replace(/\(.*\)|\[.*\]/g, '').trim();
-    const cleanArtist = (artist || '').split(/[,&]/)[0].trim();
-    if (cleanTitle) {
-      const params = new URLSearchParams({ track_name: cleanTitle, artist_name: cleanArtist });
-      const res = await fetch(`https://lrclib.net/api/search?${params}`, { signal: AbortSignal.timeout(5000) });
-      if (res.ok) {
-        const results = await res.json();
-        if (Array.isArray(results) && results.length) {
-          const m = results.find(r =>
-            r.trackName?.toLowerCase().includes(cleanTitle.toLowerCase())
-          ) || results[0];
-          if (m.syncedLyrics) {
-            return { lrc: m.syncedLyrics, source: 'synced' };
-          }
-          if (m.plainLyrics) {
-            const lrc = m.plainLyrics.split('\n').filter(Boolean)
-              .map((line, i) => {
-                const t  = i * 4.5;
-                const mm = String(Math.floor(t / 60)).padStart(2, '0');
-                const ss = String(Math.floor(t % 60)).padStart(2, '0');
-                const ms = String(Math.floor((t % 1) * 100)).padStart(2, '0');
-                return `[${mm}:${ss}.${ms}] ${line.trim()}`;
-              }).join('\n');
-            return { lrc, source: 'plain' };
-          }
-        }
-      }
-    }
-  } catch {}
-
-  return { lrc: DEMO_LRC, source: 'demo' };
+  return { lrc: '', source: 'none' };
 }

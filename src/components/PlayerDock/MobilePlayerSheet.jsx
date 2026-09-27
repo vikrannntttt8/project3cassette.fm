@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import { formatTime } from '../../utils/timeFormat.js';
+import { useLrcSync } from '../../hooks/useLrcSync.js';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import MarqueeText from '../shared/MarqueeText.jsx';
@@ -23,7 +24,11 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
     queue,
     queueIndex,
     loadSong,
+    startRadio,
     lrcString,
+    lyricsSource,
+    lyricsLoading,
+    fetchLyricsForSong,
     audioQuality,
     setAudioQuality,
     isShuffled,
@@ -34,6 +39,26 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
 
   const [activeTab, setActiveTab] = useState('player'); // 'player' | 'lyrics' | 'queue'
   const [addMenuSong, setAddMenuSong] = useState(null);
+  const lyricsContainerRef = useRef(null);
+
+  const { lines, activeIndex } = useLrcSync(lrcString, currentTime);
+
+  // Trigger lyric fetch when opening lyrics tab if not loaded yet
+  useEffect(() => {
+    if (isOpen && activeTab === 'lyrics' && !lrcString && !lyricsLoading && currentSong) {
+      fetchLyricsForSong(currentSong);
+    }
+  }, [isOpen, activeTab, lrcString, lyricsLoading, currentSong, fetchLyricsForSong]);
+
+  // Auto-scroll active lyric line to center
+  useEffect(() => {
+    if (activeTab === 'lyrics' && lyricsContainerRef.current && activeIndex >= 0) {
+      const el = lyricsContainerRef.current.children[activeIndex];
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [activeTab, activeIndex]);
 
   if (!isOpen || !currentSong) return null;
 
@@ -284,57 +309,123 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
 
         {/* ── Mode 2: Live Synced Lyrics Sheet ─────────────────────── */}
         {activeTab === 'lyrics' && (
-          <div className="flex-1 flex flex-col overflow-y-auto px-2 py-4 space-y-5 text-center no-scrollbar">
-            <p className="text-[11px] font-mono uppercase tracking-widest text-amber-500 font-bold">
-              Synced Lyrics
-            </p>
-            <div className="space-y-4 my-auto">
-              <p className="text-headline-md font-extrabold text-amber-400">
-                {currentSong.title}
-              </p>
-              <p className="text-body-lg text-neutral-400 max-w-xs mx-auto leading-relaxed">
-                {lrcString
-                  ? 'Live synchronized lyrics streaming with YouTube Audio...'
-                  : 'Instrumental or lyric data loading...'}
-              </p>
-            </div>
+          <div className="flex-1 flex flex-col overflow-hidden relative py-2">
+            {lyricsLoading ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 p-4">
+                <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                <p className="text-[13px] text-neutral-400 font-medium">Fetching synchronized lyrics...</p>
+              </div>
+            ) : !lines.length ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-neutral-500">
+                  <span className="material-symbols-outlined text-[26px]">lyrics</span>
+                </div>
+                <div>
+                  <p className="text-body-md font-semibold text-neutral-200">No Synchronized Lyrics Found</p>
+                  <p className="text-body-xs text-neutral-500 mt-0.5">{currentSong.title}</p>
+                </div>
+                <button
+                  onClick={() => fetchLyricsForSong(currentSong)}
+                  className="mt-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 text-[12px] font-semibold text-white transition-all cursor-pointer"
+                >
+                  Retry Search
+                </button>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col overflow-hidden relative">
+                {/* Top & Bottom gradient fade masks */}
+                <div className="absolute top-0 inset-x-0 h-10 bg-gradient-to-b from-[#0e0e0e] to-transparent pointer-events-none z-10" />
+                <div className="absolute bottom-0 inset-x-0 h-12 bg-gradient-to-t from-[#0e0e0e] to-transparent pointer-events-none z-10" />
+
+                <div
+                  ref={lyricsContainerRef}
+                  className="overflow-y-auto flex-1 py-10 px-2 space-y-6 text-center no-scrollbar"
+                >
+                  {lines.map((line, i) => {
+                    const isActive = i === activeIndex;
+                    const isPast = i < activeIndex;
+                    return (
+                      <p
+                        key={i}
+                        onClick={() => seek(line.time)}
+                        className={`font-bold tracking-tight cursor-pointer leading-relaxed transition-all duration-300 select-text ${
+                          isActive
+                            ? 'lyric-active-glow text-accent text-[22px] scale-[1.03] origin-center'
+                            : isPast
+                            ? 'text-white/30 text-[18px] hover:text-white/60'
+                            : 'text-white/40 text-[18px] hover:text-white/70'
+                        }`}
+                      >
+                        {line.text}
+                      </p>
+                    );
+                  })}
+                </div>
+
+                <div className="flex-shrink-0 text-center py-1">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+                    {lyricsSource === 'synced' ? '✦ Synced Lyrics (lrclib)' : '✦ Unsynced / Text Lyrics'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* ── Mode 3: Up Next Queue ─────────────────────────────────── */}
         {activeTab === 'queue' && (
-          <div className="flex-1 flex flex-col overflow-y-auto space-y-2 no-scrollbar">
+          <div className="flex-1 flex flex-col overflow-y-auto space-y-2 no-scrollbar py-2">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] font-mono uppercase tracking-widest text-amber-500 font-bold">
-                Playing Next ({queue.length} tracks)
-              </p>
-              <button
-                onClick={toggleShuffle}
-                className={`text-[12px] font-semibold flex items-center gap-1 cursor-pointer ${
-                  isShuffled ? 'text-amber-400' : 'text-neutral-400'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[15px]">shuffle</span>
-                {isShuffled ? 'Shuffled' : 'Shuffle Queue'}
-              </button>
+              <div className="flex items-center gap-2">
+                <p className="text-[11px] font-mono uppercase tracking-widest text-accent font-bold">
+                  Queue ({queue.length})
+                </p>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-neutral-400 font-mono">
+                  Radio Mix
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => startRadio(currentSong)}
+                  className="text-[11px] font-semibold text-neutral-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                  title="Refresh radio queue"
+                >
+                  <span className="material-symbols-outlined text-[14px]">refresh</span>
+                  Radio
+                </button>
+                <button
+                  onClick={toggleShuffle}
+                  className={`text-[11px] font-semibold flex items-center gap-1 cursor-pointer ${
+                    isShuffled ? 'text-accent' : 'text-neutral-400'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[14px]">shuffle</span>
+                  {isShuffled ? 'Shuffled' : 'Shuffle'}
+                </button>
+              </div>
             </div>
+
             {queue.map((track, i) => (
               <div
-                key={`${track.id}-${i}`}
+                key={`${track.id || track.videoId}-${i}`}
                 onClick={() => loadSong(track, queue, i)}
                 className={`flex items-center gap-3 p-2.5 rounded-2xl cursor-pointer transition-all ${
                   i === queueIndex
-                    ? 'bg-amber-500/15 border border-amber-500/30 text-amber-300'
+                    ? 'bg-accent/15 border border-accent/30 text-accent font-semibold'
                     : 'bg-[#18181a]/55 hover:bg-[#18181a] text-white'
                 }`}
               >
-                <img src={track.thumbnail} alt="" className="w-10 h-10 rounded-xl object-cover" />
+                <img
+                  src={track.thumbnail || track.cover}
+                  alt=""
+                  className="w-10 h-10 rounded-xl object-cover bg-neutral-800"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-semibold truncate">{track.title}</p>
                   <p className="text-[11px] text-neutral-400 truncate">{track.artist}</p>
                 </div>
                 {i === queueIndex && (
-                  <span className="material-symbols-outlined text-amber-400 text-[18px]">
+                  <span className="material-symbols-outlined text-accent text-[18px]">
                     graphic_eq
                   </span>
                 )}

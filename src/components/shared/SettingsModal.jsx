@@ -296,48 +296,38 @@ export default function SettingsModal({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-xl animate-fade-in select-none">
       <div
-        className="w-full sm:max-w-2xl bg-[#121214] sm:border sm:border-white/10 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col h-full sm:h-[88vh] sm:max-h-[800px] text-white"
+        className="w-full sm:max-w-2xl bg-[#101012] sm:border sm:border-white/10 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col h-full sm:h-[90vh] sm:max-h-[820px] text-white"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Modal Top Header (Main Title or Sub-Page Back Header) ── */}
-        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/5 bg-[#18181a] flex-shrink-0 pt-safe">
-          {currentSubPage ? (
-            /* Sub-Page Header with Back Button */
-            <div className="flex items-center gap-3 min-w-0">
-              <button
-                type="button"
-                onClick={() => setCurrentSubPage(null)}
-                className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10 active:scale-95 flex-shrink-0"
-                aria-label="Back to Settings"
-                title="Back to Settings"
-              >
-                <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-              </button>
-              <div className="flex items-center gap-2.5 min-w-0">
+        {/* ── Native Mobile / Desktop Header ── */}
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/5 bg-[#141416] flex-shrink-0 pt-safe">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => {
+                if (currentSubPage) {
+                  setCurrentSubPage(null);
+                } else {
+                  onClose();
+                }
+              }}
+              className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10 active:scale-95 flex-shrink-0"
+              aria-label={currentSubPage ? 'Back to Settings' : 'Close Settings'}
+              title={currentSubPage ? 'Back to Settings' : 'Close Settings'}
+            >
+              <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+            </button>
+            <div className="flex items-center gap-2.5 min-w-0">
+              {currentSubPage && (
                 <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${activeCategoryObj?.badgeBg || 'bg-accent/20 text-accent'}`}>
                   <span className="material-symbols-outlined text-[16px]">{activeCategoryObj?.icon || 'tune'}</span>
                 </div>
-                <h2 className="text-title-md font-bold text-white tracking-tight truncate">
-                  {activeCategoryObj?.label || 'Settings'}
-                </h2>
-              </div>
+              )}
+              <h2 className="text-title-lg font-bold text-white tracking-tight truncate">
+                {currentSubPage ? (activeCategoryObj?.label || 'Settings') : 'Settings'}
+              </h2>
             </div>
-          ) : (
-            /* Main Menu Header */
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center text-accent">
-                <span className="material-symbols-outlined text-[20px]">tune</span>
-              </div>
-              <div>
-                <h2 className="text-title-lg font-bold text-white tracking-tight flex items-center gap-2">
-                  Settings Hub
-                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-accent/20 text-accent border border-accent/30">
-                    cassette.fm
-                  </span>
-                </h2>
-              </div>
-            </div>
-          )}
+          </div>
 
           <button
             onClick={onClose}
@@ -349,15 +339,15 @@ export default function SettingsModal({ isOpen, onClose }) {
         </div>
 
         {/* ── Main Body: Vertical Category List OR Drill-Down Sub-Page ── */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 bg-[#0e0e0e] no-scrollbar">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 bg-[#0e0e0e] no-scrollbar pb-safe">
           {currentSubPage ? (
             /* ── Drill-down Dedicated Sub-Page Controls ────────────── */
-            <div className="w-full max-w-xl mx-auto space-y-4 pb-8 animate-fade-in">
+            <div className="w-full max-w-xl mx-auto space-y-4 pb-10 animate-fade-in">
               {renderActiveCategory(currentSubPage)}
             </div>
           ) : (
             /* ── Main Settings Menu (Vertical Category List) ──────── */
-            <div className="w-full max-w-xl mx-auto space-y-4 pb-8 animate-fade-in">
+            <div className="w-full max-w-xl mx-auto space-y-4 pb-10 animate-fade-in">
               {/* Account Quick Status Banner */}
               <div
                 onClick={() => setCurrentSubPage('account')}
@@ -436,32 +426,6 @@ export default function SettingsModal({ isOpen, onClose }) {
               </div>
             </div>
           )}
-        </div>
-
-        {/* ── Modal Footer ──────────────────────────────────────────── */}
-        <div className="px-5 sm:px-6 py-3.5 border-t border-white/5 bg-[#141416] flex items-center justify-between text-body-xs text-neutral-500">
-          {currentSubPage ? (
-            <button
-              type="button"
-              onClick={() => setCurrentSubPage(null)}
-              className="flex items-center gap-1.5 text-neutral-400 hover:text-white text-label-sm font-semibold transition-colors cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-              <span>Back to Menu</span>
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>cassette.fm · YouTube Music Engine</span>
-            </div>
-          )}
-
-          <button
-            onClick={onClose}
-            className="px-5 py-2 rounded-full bg-accent text-black text-label-sm font-bold hover:brightness-110 transition-all cursor-pointer shadow-md shadow-accent/20"
-          >
-            Done
-          </button>
         </div>
       </div>
     </div>
@@ -1318,7 +1282,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               <div className="space-y-2.5 font-mono text-[12px] p-4 rounded-xl bg-[#0e0e0e] border border-white/10 text-neutral-300">
                 <div className="flex justify-between items-center py-1 border-b border-white/5">
                   <span className="text-neutral-500">App Version:</span>
-                  <span className="text-accent font-bold">cassette.fm v2.4.0 (SimpMusic Edition)</span>
+                  <span className="text-accent font-bold">cassette.fm v2.4.0</span>
                 </div>
                 <div className="flex justify-between items-center py-1 border-b border-white/5">
                   <span className="text-neutral-500">Audio Codec:</span>

@@ -18,7 +18,11 @@ export default function TrackContextMenu({ track, onAddToPlaylist }) {
     addToQueue,
     routeToSongEntity,
     routeToArtistEntity,
+    isDownloaded,
+    toggleDownload,
   } = usePlayer();
+
+  const downloaded = isDownloaded(track?.id || track?.videoId);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -50,6 +54,12 @@ export default function TrackContextMenu({ track, onAddToPlaylist }) {
   const handleAddToQueue = (e) => {
     e.stopPropagation();
     addToQueue(track);
+    setIsOpen(false);
+  };
+
+  const handleDownload = (e) => {
+    e.stopPropagation();
+    toggleDownload(track);
     setIsOpen(false);
   };
 
@@ -88,7 +98,7 @@ export default function TrackContextMenu({ track, onAddToPlaylist }) {
 
       {isOpen && (
         <div
-          className="absolute right-0 top-full mt-1 w-44 rounded-xl bg-[#0e0e0e] border border-[#262626] shadow-2xl py-1 z-50 animate-fade-in divide-y divide-[#1a1a1a]"
+          className="absolute right-0 top-full mt-1 w-48 rounded-xl bg-[#0e0e0e] border border-[#262626] shadow-2xl py-1 z-50 animate-fade-in divide-y divide-[#1a1a1a]"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="py-1">
@@ -105,6 +115,15 @@ export default function TrackContextMenu({ track, onAddToPlaylist }) {
             >
               <span className="material-symbols-outlined text-[18px]">queue_music</span>
               <span>Add to Queue</span>
+            </button>
+            <button
+              onClick={handleDownload}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-label-sm text-white/90 hover:text-white hover:bg-white/10 transition-colors text-left"
+            >
+              <span className="material-symbols-outlined text-[18px] text-accent">
+                {downloaded ? 'download_done' : 'download'}
+              </span>
+              <span>{downloaded ? 'Remove Download' : 'Download Offline'}</span>
             </button>
           </div>
 

@@ -1,67 +1,116 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import { useLrcSync } from '../../hooks/useLrcSync.js';
 
 export default function LyricsPanel() {
-  const { lrcString, lyricsSource, lyricsLoading, currentTime, seek } = usePlayer();
+  const {
+    lrcString,
+    lyricsSource,
+    lyricsLoading,
+    currentTime,
+    seek,
+    isPlaying,
+    togglePlay,
+    playNext,
+    playPrev,
+    currentSong,
+    fetchLyricsForSong,
+  } = usePlayer();
+
   const containerRef = useRef(null);
   const { lines, activeIndex } = useLrcSync(lrcString, currentTime);
+  const [userIsScrolling, setUserIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef(null);
 
-  // Auto-scroll active line to center
+  // Detect manual user scrolling to temporarily pause auto-scroll for 3.5s
+  const handleScroll = () => {
+    setUserIsScrolling(true);
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => {
+      setUserIsScrolling(false);
+    }, 3500);
+  };
+
+  // Auto-scroll active line to center when not actively dragged by user
   useEffect(() => {
-    if (!containerRef.current || activeIndex < 0) return;
+    if (!containerRef.current || activeIndex < 0 || userIsScrolling) return;
     const el = containerRef.current.children[activeIndex];
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [activeIndex]);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [activeIndex, userIsScrolling]);
 
   if (lyricsLoading) {
     return (
-      <section className="lg:col-span-6 flex flex-col items-center justify-center gap-3">
-        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        <p className="text-on-surface-variant text-body-md">Loading lyrics…</p>
+      <section className="lg:col-span-7 flex flex-col items-center justify-center gap-3 h-full min-h-[300px]">
+        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        <p className="text-neutral-400 text-body-md font-medium">Fetching time-synced lyrics…</p>
       </section>
     );
   }
 
   if (!lines.length) {
     return (
-      <section className="lg:col-span-6 flex items-center justify-center">
-        <p className="text-on-surface-variant text-body-lg">No lyrics available</p>
+      <section className="lg:col-span-7 flex flex-col items-center justify-center gap-3 h-full min-h-[300px] text-center px-4">
+        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-neutral-500">
+          <span className="material-symbols-outlined text-[28px]">lyrics</span>
+        </div>
+        <p className="text-neutral-200 text-body-lg font-semibold">No lyrics available for this track</p>
+        <p className="text-neutral-500 text-body-sm">{currentSong?.title}</p>
+        {currentSong && (
+          <button
+            onClick={() => fetchLyricsForSong(currentSong)}
+            className="mt-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/15 text-white text-[12px] font-semibold transition-colors cursor-pointer"
+          >
+            Retry Fetch
+          </button>
+        )}
       </section>
     );
   }
 
   return (
-    <section className="lg:col-span-7 h-full flex flex-col justify-center overflow-hidden relative">
-      {/* Gradient fade masks */}
-      <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-[#09090B] to-transparent pointer-events-none z-10" />
-      <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-[#09090B] to-transparent pointer-events-none z-10" />
+    <section className="lg:col-span-7 h-full flex flex-col justify-center overflow-hidden relative select-none">
+      {/* Top & Bottom gradient fade masks */}
+      <div className="absolute top-0 inset-x-0 h-16 sm:h-24 bg-gradient-to-b from-[#0e0e0e] to-transparent pointer-events-none z-10" />
+      <div className="absolute bottom-0 inset-x-0 h-20 sm:h-28 bg-gradient-to-t from-[#0e0e0e] to-transparent pointer-events-none z-10" />
 
-      {/* Lyrics scroll */}
-      <div ref={containerRef} className="overflow-y-auto py-20 space-y-7 lg:space-y-9 px-1"
-        style={{ scrollbarWidth: 'none' }}>
+      {/* Lyrics scroll container */}
+      <div
+        ref={containerRef}
+        onScroll={handleScroll}
+        className="overflow-y-auto py-24 sm:py-28 space-y-6 sm:space-y-8 px-2 text-left no-scrollbar"
+        style={{ scrollbarWidth: 'none' }}
+      >
         {lines.map((line, i) => {
-          const isActive   = i === activeIndex;
-          const isPast     = i < activeIndex;
-          const isFarPast  = i < activeIndex - 2;
-          const isFarAhead = i > activeIndex + 3;
+          const isActive = i === activeIndex;
+          const isPast = activeIndex >= 0 && i < activeIndex;
+          const isFarPast = activeIndex >= 0 && i < activeIndex - 2;
+          const isFarAhead = activeIndex >= 0 && i > activeIndex + 3;
 
           return (
             <p
               key={i}
-              onClick={() => seek(line.time)}
-              className={`font-bold tracking-tight cursor-pointer leading-snug transition-all duration-400 select-text ${
+              onClick={() => {
+                if (line.time >= 0) {
+                  seek(line.time);
+                  setUserIsScrolling(false);
+                }
+              }}
+              className={`font-bold tracking-tight cursor-pointer leading-snug transition-all duration-300 select-text ${
                 isActive
-                  ? 'lyric-active-glow text-white text-2xl sm:text-3xl lg:text-[36px] scale-[1.03] origin-left'
+                  ? 'lyric-active-glow text-accent text-2xl sm:text-3xl lg:text-[34px] scale-[1.03] origin-left drop-shadow-md'
                   : isFarPast
-                  ? 'text-white/12 text-xl lg:text-[24px] hover:text-white/40'
+                  ? 'text-white/15 text-lg sm:text-xl lg:text-[22px] hover:text-white/50'
                   : isPast
-                  ? 'text-white/28 text-xl lg:text-[26px] hover:text-white/50'
+                  ? 'text-white/30 text-lg sm:text-xl lg:text-[24px] hover:text-white/60'
                   : isFarAhead
-                  ? 'text-white/12 text-xl lg:text-[24px] hover:text-white/40'
-                  : 'text-white/32 text-xl lg:text-[26px] hover:text-white/60'
+                  ? 'text-white/20 text-lg sm:text-xl lg:text-[22px] hover:text-white/50'
+                  : 'text-white/40 text-lg sm:text-xl lg:text-[24px] hover:text-white/70'
               }`}
-              style={{ filter: isActive ? 'blur(0)' : isFarPast || isFarAhead ? 'blur(0.4px)' : 'blur(0)' }}
+              style={{
+                filter: isActive ? 'blur(0)' : isFarPast || isFarAhead ? 'blur(0.3px)' : 'blur(0)',
+              }}
             >
               {line.text}
             </p>
@@ -69,12 +118,43 @@ export default function LyricsPanel() {
         })}
       </div>
 
-      {/* Source badge */}
-      <div className="absolute bottom-1 right-0 z-20">
-        <span className="text-label-sm text-outline/50 uppercase tracking-wider">
-          {lyricsSource === 'synced' ? '✦ Synced · lrclib'
-            : lyricsSource === 'plain' ? '✦ Plain Lyrics'
-            : '✦ Demo Lyrics'}
+      {/* Subtle Floating In-View Playback & Status Bar */}
+      <div className="absolute bottom-2 inset-x-0 z-20 flex items-center justify-between px-2 text-[11px] text-neutral-500 font-mono">
+        <div className="flex items-center gap-2 bg-[#141416]/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/5 shadow-lg">
+          <button
+            onClick={playPrev}
+            className="hover:text-white transition-colors cursor-pointer"
+            title="Previous"
+          >
+            <span className="material-symbols-outlined text-[16px]">skip_previous</span>
+          </button>
+          <button
+            onClick={togglePlay}
+            className="text-accent hover:opacity-80 transition-opacity cursor-pointer flex items-center"
+            title={isPlaying ? 'Pause' : 'Play'}
+          >
+            <span
+              className="material-symbols-outlined text-[18px]"
+              style={{ fontVariationSettings: "'FILL' 1" }}
+            >
+              {isPlaying ? 'pause' : 'play_arrow'}
+            </span>
+          </button>
+          <button
+            onClick={playNext}
+            className="hover:text-white transition-colors cursor-pointer"
+            title="Next"
+          >
+            <span className="material-symbols-outlined text-[16px]">skip_next</span>
+          </button>
+        </div>
+
+        <span className="uppercase tracking-widest text-[10px] bg-[#141416]/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/5">
+          {lyricsSource === 'synced'
+            ? '✦ Synced · lrclib'
+            : lyricsSource === 'plain'
+            ? '✦ Plain Lyrics'
+            : '✦ Synchronized'}
         </span>
       </div>
     </section>

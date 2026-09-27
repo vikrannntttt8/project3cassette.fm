@@ -11,12 +11,14 @@ export default function AlbumArtPanel() {
     currentTime, duration, seek, volume, changeVolume,
     isLiked, toggleLike, playPrev, playNext,
     routeToSongEntity, routeToArtistEntity, audioQuality, setAudioQuality, activeStreamMeta, toggleView,
+    isDownloaded, toggleDownload,
   } = usePlayer();
 
   const [addMenuSong, setAddMenuSong] = useState(null);
 
   const progress = duration ? (currentTime / duration) * 100 : 0;
   const liked = currentSong ? isLiked(currentSong.id) : false;
+  const downloaded = currentSong ? isDownloaded(currentSong.id) : false;
 
   return (
     <>
@@ -96,6 +98,22 @@ export default function AlbumArtPanel() {
 
           {currentSong && (
             <div className="flex items-center gap-1 flex-shrink-0">
+              {/* Download / Offline button */}
+              <button
+                onClick={() => toggleDownload(currentSong)}
+                className={`p-2 rounded-full transition-transform active:scale-90 hover:bg-white/10 cursor-pointer ${
+                  downloaded ? 'text-accent' : 'text-[#888888] hover:text-white'
+                }`}
+                title={downloaded ? 'Saved offline (click to remove)' : 'Download for offline playback'}
+              >
+                <span
+                  className="material-symbols-outlined text-[22px]"
+                  style={{ fontVariationSettings: `'FILL' ${downloaded ? 1 : 0}` }}
+                >
+                  {downloaded ? 'download_done' : 'download'}
+                </span>
+              </button>
+
               {/* Heart / Like button */}
               <button
                 onClick={() => toggleLike(currentSong)}

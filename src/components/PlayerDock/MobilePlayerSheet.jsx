@@ -35,11 +35,15 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
     toggleShuffle,
     isRepeat,
     toggleRepeat,
+    isDownloaded,
+    toggleDownload,
   } = usePlayer();
 
   const [activeTab, setActiveTab] = useState('player'); // 'player' | 'lyrics' | 'queue'
   const [addMenuSong, setAddMenuSong] = useState(null);
   const lyricsContainerRef = useRef(null);
+  const touchStartYRef = useRef(0);
+  const touchEndYRef = useRef(0);
 
   const { lines, activeIndex } = useLrcSync(lrcString, currentTime);
 
@@ -63,10 +67,38 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
   if (!isOpen || !currentSong) return null;
 
   const liked = isLiked(currentSong.id);
+  const downloaded = isDownloaded(currentSong.id);
   const remainingTime = duration > currentTime ? duration - currentTime : 0;
 
+  // Touch gesture handlers for swipe-down to dismiss and swipe-up to open queue/lyrics drawer
+  const handleTouchStart = (e) => {
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    touchEndYRef.current = e.changedTouches[0].clientY;
+    const deltaY = touchEndYRef.current - touchStartYRef.current;
+
+    // Strong swipe down (delta > 80px) closes the sheet or goes back to player
+    if (deltaY > 80) {
+      if (activeTab === 'lyrics' || activeTab === 'queue') {
+        setActiveTab('player');
+      } else {
+        onClose();
+      }
+    }
+    // Strong swipe up (delta < -70px) opens lyrics/queue drawer from main player
+    else if (deltaY < -70 && activeTab === 'player') {
+      setActiveTab('lyrics');
+    }
+  };
+
   return (
-    <div className="md:hidden fixed inset-0 z-[95] bg-[#0c0c0e] flex flex-col text-white animate-sheet-slide-up select-none overflow-hidden">
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      className="md:hidden fixed inset-0 z-[95] bg-[#0c0c0e] flex flex-col text-white animate-sheet-slide-up select-none overflow-hidden"
+    >
       {/* ── Ambient Album Backdrop Glow ── */}
       {(currentSong?.cover || currentSong?.thumbnail) && (
         <div
@@ -77,27 +109,27 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
       )}
 
       {/* ── Top Header Bar ────────────────────────────────────────── */}
-      <div className="flex flex-col items-center pt-2 pb-2 px-5 flex-shrink-0 pt-safe relative z-10 border-b border-white/5">
+      <div className="flex flex-col items-center pt-1.5 pb-2 px-5 flex-shrink-0 pt-safe relative z-10 border-b border-white/5">
         <button
           onClick={onClose}
-          className="w-10 h-1 rounded-full bg-white/25 hover:bg-white/40 transition-colors my-1 cursor-pointer"
+          className="w-12 h-1.5 rounded-full bg-white/30 hover:bg-white/50 active:bg-white/60 transition-colors my-1 cursor-pointer"
           aria-label="Dismiss player sheet"
         />
 
-        <div className="w-full flex items-center justify-between mt-2">
+        <div className="w-full flex items-center justify-between mt-1.5">
           <button
             onClick={onClose}
-            className="w-10 h-10 rounded-full bg-[#18181a]/80 border border-white/10 flex items-center justify-center text-neutral-300 hover:text-white active:scale-95 transition-all cursor-pointer shadow-sm"
+            className="w-9 h-9 rounded-full bg-[#18181a]/80 border border-white/10 flex items-center justify-center text-neutral-300 hover:text-white active:scale-95 transition-all cursor-pointer shadow-sm"
             aria-label="Minimize"
           >
-            <span className="material-symbols-outlined text-[24px]">keyboard_arrow_down</span>
+            <span className="material-symbols-outlined text-[22px]">keyboard_arrow_down</span>
           </button>
 
           {/* Segmented View Switcher: Track | Lyrics | Queue */}
           <div className="flex items-center gap-1 p-1 rounded-full bg-[#18181a]/90 border border-white/10 shadow-inner">
             <button
               onClick={() => setActiveTab('player')}
-              className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-1 rounded-full text-[11.5px] font-bold transition-all cursor-pointer ${
                 activeTab === 'player'
                   ? 'bg-accent text-black shadow-md shadow-accent/20'
                   : 'text-neutral-400 hover:text-white'
@@ -107,7 +139,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
             </button>
             <button
               onClick={() => setActiveTab('lyrics')}
-              className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-1 rounded-full text-[11.5px] font-bold transition-all cursor-pointer ${
                 activeTab === 'lyrics'
                   ? 'bg-accent text-black shadow-md shadow-accent/20'
                   : 'text-neutral-400 hover:text-white'
@@ -117,7 +149,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
             </button>
             <button
               onClick={() => setActiveTab('queue')}
-              className={`px-4 py-1.5 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
+              className={`px-3.5 py-1 rounded-full text-[11.5px] font-bold transition-all cursor-pointer ${
                 activeTab === 'queue'
                   ? 'bg-accent text-black shadow-md shadow-accent/20'
                   : 'text-neutral-400 hover:text-white'
@@ -200,10 +232,30 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {/* Offline Download Button */}
+                <button
+                  onClick={() => toggleDownload(currentSong)}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
+                    downloaded
+                      ? 'bg-accent/15 text-accent border border-accent/40 shadow-sm'
+                      : 'bg-[#18181a] text-neutral-400 border border-white/10 hover:text-white'
+                  }`}
+                  title={downloaded ? 'Saved for offline (click to remove)' : 'Download for offline playback'}
+                  aria-label={downloaded ? 'Remove offline download' : 'Download track offline'}
+                >
+                  <span
+                    className="material-symbols-outlined text-[20px]"
+                    style={{ fontVariationSettings: downloaded ? "'FILL' 1" : "'FILL' 0" }}
+                  >
+                    {downloaded ? 'download_done' : 'download'}
+                  </span>
+                </button>
+
+                {/* Heart / Like button */}
                 <button
                   onClick={() => toggleLike(currentSong)}
-                  className={`w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
                     liked
                       ? 'bg-accent/15 text-accent border border-accent/40 shadow-md shadow-accent/20'
                       : 'bg-[#18181a] text-neutral-400 border border-white/10 hover:text-white'
@@ -211,25 +263,26 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                   aria-label={liked ? 'Unlike' : 'Like'}
                 >
                   <span
-                    className="material-symbols-outlined text-[24px]"
+                    className="material-symbols-outlined text-[22px]"
                     style={{ fontVariationSettings: liked ? "'FILL' 1" : "'FILL' 0" }}
                   >
                     favorite
                   </span>
                 </button>
 
+                {/* Add to Playlist button */}
                 <button
                   onClick={() => setAddMenuSong(currentSong)}
-                  className="w-11 h-11 rounded-full bg-[#18181a] border border-white/10 text-neutral-400 hover:text-white flex items-center justify-center active:scale-90 transition-all cursor-pointer"
+                  className="w-10 h-10 rounded-full bg-[#18181a] border border-white/10 text-neutral-400 hover:text-white flex items-center justify-center active:scale-90 transition-all cursor-pointer"
                   aria-label="Add to playlist"
                 >
-                  <span className="material-symbols-outlined text-[22px]">playlist_add</span>
+                  <span className="material-symbols-outlined text-[20px]">playlist_add</span>
                 </button>
               </div>
             </div>
 
             {/* Progress Scrubber */}
-            <div className="space-y-2 mt-4">
+            <div className="space-y-1.5 mt-3">
               <input
                 type="range"
                 min="0"
@@ -245,36 +298,36 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
             </div>
 
             {/* Transport Controls */}
-            <div className="flex items-center justify-between px-2 mt-3">
+            <div className="flex items-center justify-between px-2 mt-2">
               <button
                 onClick={toggleShuffle}
-                className={`p-2.5 rounded-full transition-colors active:scale-95 cursor-pointer ${
+                className={`p-2 rounded-full transition-colors active:scale-95 cursor-pointer ${
                   isShuffled ? 'text-accent' : 'text-neutral-400 hover:text-white'
                 }`}
                 title="Toggle Shuffle"
               >
-                <span className="material-symbols-outlined text-[22px]">shuffle</span>
+                <span className="material-symbols-outlined text-[20px]">shuffle</span>
               </button>
 
               <button
                 onClick={playPrev}
-                className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer hover:bg-white/5"
+                className="w-11 h-11 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer hover:bg-white/5"
                 aria-label="Previous track"
               >
-                <span className="material-symbols-outlined text-[34px]">skip_previous</span>
+                <span className="material-symbols-outlined text-[30px]">skip_previous</span>
               </button>
 
               {/* Large YouTube Music Style Accent Play/Pause */}
               <button
                 onClick={togglePlay}
-                className="w-16 h-16 rounded-full bg-accent text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl shadow-accent/25 border border-accent/50 cursor-pointer"
+                className="w-15 h-15 rounded-full bg-accent text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl shadow-accent/25 border border-accent/50 cursor-pointer"
                 aria-label={isPlaying ? 'Pause' : 'Play'}
               >
                 {isLoading ? (
-                  <div className="w-7 h-7 border-3 border-black border-t-transparent rounded-full animate-spin" />
+                  <div className="w-6 h-6 border-3 border-black border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <span
-                    className="material-symbols-outlined text-[38px] font-bold"
+                    className="material-symbols-outlined text-[34px] font-bold"
                     style={{ fontVariationSettings: "'FILL' 1" }}
                   >
                     {isPlaying ? 'pause' : 'play_arrow'}
@@ -284,26 +337,26 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
 
               <button
                 onClick={playNext}
-                className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer hover:bg-white/5"
+                className="w-11 h-11 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer hover:bg-white/5"
                 aria-label="Next track"
               >
-                <span className="material-symbols-outlined text-[34px]">skip_next</span>
+                <span className="material-symbols-outlined text-[30px]">skip_next</span>
               </button>
 
               <button
                 onClick={toggleRepeat}
-                className={`p-2.5 rounded-full transition-colors active:scale-95 cursor-pointer ${
+                className={`p-2 rounded-full transition-colors active:scale-95 cursor-pointer ${
                   isRepeat ? 'text-accent' : 'text-neutral-400 hover:text-white'
                 }`}
                 title="Toggle Repeat"
               >
-                <span className="material-symbols-outlined text-[22px]">repeat</span>
+                <span className="material-symbols-outlined text-[20px]">repeat</span>
               </button>
             </div>
 
             {/* Volume Slider */}
-            <div className="flex items-center gap-3 px-2 mt-4">
-              <span className="material-symbols-outlined text-neutral-400 text-[18px]">volume_mute</span>
+            <div className="flex items-center gap-3 px-2 mt-2">
+              <span className="material-symbols-outlined text-neutral-400 text-[16px]">volume_mute</span>
               <input
                 type="range"
                 min="0"
@@ -313,7 +366,37 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                 onChange={(e) => changeVolume(Number(e.target.value))}
                 className="w-full volume-slider"
               />
-              <span className="material-symbols-outlined text-neutral-400 text-[18px]">volume_up</span>
+              <span className="material-symbols-outlined text-neutral-400 text-[16px]">volume_up</span>
+            </div>
+
+            {/* Bottom Swipe Drawer Affordance & Quick Pills */}
+            <div className="pt-2 flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2 w-full justify-center">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('lyrics')}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#18181a] hover:bg-[#222225] border border-white/10 text-[12px] font-semibold text-neutral-300 hover:text-white transition-all cursor-pointer shadow-sm active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-accent">lyrics</span>
+                  <span>Lyrics</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('queue')}
+                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#18181a] hover:bg-[#222225] border border-white/10 text-[12px] font-semibold text-neutral-300 hover:text-white transition-all cursor-pointer shadow-sm active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-accent">queue_music</span>
+                  <span>Up Next ({queue.length})</span>
+                </button>
+              </div>
+
+              <div
+                onClick={() => setActiveTab('lyrics')}
+                className="flex items-center gap-1 text-[11px] font-medium text-neutral-500 hover:text-neutral-300 transition-colors cursor-pointer pt-0.5"
+              >
+                <span className="material-symbols-outlined text-[14px] animate-bounce">keyboard_arrow_up</span>
+                <span>Swipe up for Lyrics & Queue</span>
+              </div>
             </div>
           </div>
         )}

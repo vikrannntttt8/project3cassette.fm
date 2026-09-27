@@ -4,6 +4,7 @@ import { resolveYouTubeVideoId } from '../utils/youtubeEngine.js';
 import { DEMO_LRC } from '../utils/lrcParser.js';
 import { useLibrary } from '../hooks/useLibrary.js';
 import { apiUrl } from '../utils/apiConfig.js';
+import { getOfflineTracks, saveTrackOffline, removeOfflineTrack, isTrackOffline } from '../services/offlineStorage.js';
 
 const PlayerContext = createContext(null);
 
@@ -21,6 +22,20 @@ export function PlayerProvider({ children }) {
   const [volume,      setVolume]      = useState(0.8);
   const [isMuted,     setIsMuted]     = useState(false);
   const [isLoading,   setIsLoading]   = useState(false);
+
+  // ── Offline Downloads state ───────────────────────────────────────
+  const [offlineTracks, setOfflineTracks] = useState([]);
+
+  useEffect(() => {
+    getOfflineTracks().then((tracks) => setOfflineTracks(tracks || []));
+
+    const handleOfflineChange = () => {
+      getOfflineTracks().then((tracks) => setOfflineTracks(tracks || []));
+    };
+
+    window.addEventListener('cassette:offline-changed', handleOfflineChange);
+    return () => window.removeEventListener('cassette:offline-changed', handleOfflineChange);
+  }, []);
 
   // ── Song & queue state ────────────────────────────────────────────
   const [currentSong, setCurrentSong] = useState(null);
@@ -386,7 +401,7 @@ export function PlayerProvider({ children }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Track progress polling (1000ms interval loop) ───────────────────
+  // ── Track progress polling (smooth 200ms interval loop for time-synced lyrics) ──
   useEffect(() => {
     let timer = null;
     if (isPlaying) {
@@ -406,7 +421,7 @@ export function PlayerProvider({ children }) {
         } catch (e) {
           console.warn('[YouTube Player] Progress polling error:', e);
         }
-      }, 1000);
+      }, 200);
     }
     return () => {
       if (timer) clearInterval(timer);
@@ -907,9 +922,38 @@ export function PlayerProvider({ children }) {
     });
   }, []);
 
-  const toggleRepeat = useCallback(() => {
-    setIsRepeat((prev) => !prev);
-  }, []);
+  // ── Infinite Radio / Smart Queue Auto-Refill ──
+  // Whenever the remaining queue drops below 3 tracks, auto-fetch more recommendations
+  useEffect(() => {
+    if (!currentSong || isFetchingNextRef.current) return;
+    const remaining = queue.length - queueIndex;
+    if (remaining <= 3 && queue.length > 0) {
+      const lastTrack = queue[queue.length - 1] || currentSong;
+      populateWatchNextQueue(lastTrack, true);
+    }
+  }, [queue.length, queueIndex, currentSong, populateWatchNextQueue]);
+
+  const isDownloaded = useCallback((trackId) => {
+    if (!trackId) return false;
+    const idStr = String(trackId);
+    return offlineTracks.some((t) => String(t.id) === idStr || String(t.videoId) === idStr);
+  }, [offlineTracks]);
+
+  const toggleDownload = useCallback(async (track) => {
+    if (!track) return;
+    const trackId = track.id || track.videoId;
+    const isAlready = isDownloaded(trackId);
+    if (isAlready) {
+      await removeOfflineTrack(trackId);
+      setStreamToast('Removed from offline storage');
+    } else {
+      const success = await saveTrackOffline(track);
+      if (success) {
+        setStreamToast('Saved for offline playback');
+      }
+    }
+    setTimeout(() => setStreamToast(null), 3000);
+  }, [isDownloaded]);
 
   const value = {
     ytPlayerRef,
@@ -923,6 +967,8 @@ export function PlayerProvider({ children }) {
     routeToSongEntity,
     isSettingsOpen, setIsSettingsOpen,
     activeChip, setActiveChip,
+    // Offline Storage & Downloads
+    offlineTracks, isDownloaded, toggleDownload,
     // Audio Quality & Bitrate
     audioQuality, setAudioQuality, activeStreamMeta, streamToast, setStreamToast,
     // Actions

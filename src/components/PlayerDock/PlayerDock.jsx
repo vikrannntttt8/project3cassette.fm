@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import SeekBar from './SeekBar.jsx';
 import VolumeSlider from './VolumeSlider.jsx';
@@ -32,10 +32,13 @@ export default function PlayerDock() {
     toggleShuffle,
     isRepeat,
     toggleRepeat,
+    isDownloaded,
+    toggleDownload,
   } = usePlayer();
 
   const [addMenuSong, setAddMenuSong] = useState(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const touchStartY = useRef(0);
 
   // Auto-unmount/hide mini-player dock when full-screen expanded views open (lyrics or settings)
   if (view === 'lyrics' || isSettingsOpen) {
@@ -43,6 +46,7 @@ export default function PlayerDock() {
   }
 
   const liked = currentSong ? isLiked(currentSong.id) : false;
+  const downloaded = currentSong ? isDownloaded(currentSong.id) : false;
 
   const handleDockClick = () => {
     if (!currentSong) return;
@@ -53,13 +57,32 @@ export default function PlayerDock() {
     }
   };
 
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+    if (deltaY < -30) {
+      if (window.innerWidth < 768) {
+        setMobileSheetOpen(true);
+      } else {
+        toggleView();
+      }
+    }
+  };
+
   return (
     <>
-      <div className="player-dock-wrap fixed z-50 pointer-events-auto transition-all duration-300 left-3 right-3 bottom-3 md:left-[17rem] md:right-5 md:bottom-4 select-none">
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className="player-dock-wrap fixed z-50 pointer-events-auto transition-all duration-300 left-3 right-3 bottom-3 md:left-[17rem] md:right-5 md:bottom-4 select-none"
+      >
         <div
           onClick={handleDockClick}
-          className="player-dock-inner cursor-pointer rounded-2xl md:rounded-3xl px-3.5 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between gap-3 sm:gap-6 max-w-5xl mx-auto border border-white/10 bg-[#18181a]/95 backdrop-blur-2xl hover:border-white/20 transition-colors shadow-none"
-          title={currentSong ? 'Click to expand Now Playing & Lyrics' : ''}
+          className="player-dock-inner cursor-pointer rounded-2xl md:rounded-3xl px-3.5 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between gap-3 sm:gap-6 max-w-5xl mx-auto border border-white/10 bg-[#18181a]/95 backdrop-blur-2xl hover:border-white/20 transition-colors shadow-none"
+          title={currentSong ? 'Click or swipe up to expand Now Playing & Lyrics' : ''}
         >
           {/* ── Left: Track info + Actions ────────────────────── */}
           <div className="flex items-center gap-3 min-w-0 max-w-[180px] xs:max-w-[220px] sm:max-w-[260px] md:max-w-[280px] flex-shrink-0">
@@ -116,6 +139,26 @@ export default function PlayerDock() {
 
             {currentSong && (
               <div className="hidden xs:flex items-center gap-0.5 flex-shrink-0">
+                {/* Download / Offline button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleDownload(currentSong);
+                  }}
+                  className={`p-1.5 rounded-full transition-transform active:scale-90 cursor-pointer ${
+                    downloaded ? 'text-accent' : 'text-neutral-500 hover:text-white'
+                  }`}
+                  title={downloaded ? 'Saved offline (click to remove)' : 'Download for offline playback'}
+                >
+                  <span
+                    className="material-symbols-outlined text-[19px] sm:text-[20px]"
+                    style={{ fontVariationSettings: downloaded ? "'FILL' 1" : "'FILL' 0" }}
+                  >
+                    {downloaded ? 'download_done' : 'download'}
+                  </span>
+                </button>
+
                 {/* Heart / Like button (stops propagation) */}
                 <button
                   type="button"

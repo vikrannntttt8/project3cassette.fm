@@ -1,39 +1,67 @@
 // LRC Parser Utility
-// Parses LRC format: [MM:SS.ms] lyric text
+// Parses LRC format: [MM:SS.ms] lyric text, supports multiple timestamps per line & formats
 // Returns sorted array of { time: number (seconds), text: string }
 
-const LRC_LINE_REGEX = /\[(\d{1,3}):(\d{2}(?:\.\d+)?)\](.*)/;
+const TIMESTAMP_REGEX = /\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]/g;
+const METADATA_REGEX = /^\[[a-zA-Z]+:/;
 
 /**
  * Parse an LRC string into a sorted array of lyric objects.
- * @param {string} lrcString - Raw LRC content
- * @returns {{ time: number, text: string }[]}
+ * @param {string} lrcString - Raw LRC or plain lyrics content
+ * @returns {{ time: number, text: string, isSynced: boolean }[]}
  */
 export function parseLrc(lrcString) {
   if (!lrcString || typeof lrcString !== 'string') return [];
 
-  const lines = lrcString.split('\n');
+  const rawLines = lrcString.split(/\r?\n/);
   const parsed = [];
+  let hasAnyTimestamps = false;
 
-  for (const line of lines) {
-    const match = LRC_LINE_REGEX.exec(line.trim());
-    if (match) {
+  for (const rawLine of rawLines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+
+    // Skip metadata tags like [ar:...], [ti:...], [length:...]
+    if (METADATA_REGEX.test(line)) continue;
+
+    // Find all timestamp tags in the line: e.g. "[00:12.34][00:45.67] Chorus line"
+    const timestamps = [];
+    let match;
+    let lastIndex = 0;
+
+    while ((match = TIMESTAMP_REGEX.exec(line)) !== null) {
       const minutes = parseInt(match[1], 10);
-      const seconds = parseFloat(match[2]);
-      const text = match[3].trim();
+      const seconds = parseInt(match[2], 10);
+      const fractionStr = match[3] || '0';
+      const fraction = parseFloat(`0.${fractionStr}`) || 0;
 
-      // Skip metadata tags like [ar:...], [ti:...] etc
       if (!isNaN(minutes) && !isNaN(seconds)) {
-        parsed.push({
-          time: minutes * 60 + seconds,
-          text: text || '♪', // musical note for instrumental breaks
-        });
+        timestamps.push(minutes * 60 + seconds + fraction);
       }
+      lastIndex = TIMESTAMP_REGEX.lastIndex;
+    }
+
+    if (timestamps.length > 0) {
+      hasAnyTimestamps = true;
+      const text = line.slice(lastIndex).trim() || '♪';
+      for (const time of timestamps) {
+        parsed.push({ time, text, isSynced: true });
+      }
+    } else if (!hasAnyTimestamps) {
+      // Potentially plain text lyrics without timestamps
+      parsed.push({ time: -1, text: line, isSynced: false });
     }
   }
 
-  // Sort by timestamp ascending
-  return parsed.sort((a, b) => a.time - b.time);
+  // If timestamped lyrics were found, filter out any non-synced artifact lines and sort by time
+  if (hasAnyTimestamps) {
+    return parsed
+      .filter((item) => item.isSynced)
+      .sort((a, b) => a.time - b.time);
+  }
+
+  // Otherwise return plain lines with estimated times or sequential display
+  return parsed.filter((item) => item.text.length > 0);
 }
 
 /**
@@ -44,11 +72,12 @@ export function parseLrc(lrcString) {
  * @returns {number} - Active line index (-1 if before first line)
  */
 export function getActiveLyricIndex(lines, currentTime) {
-  if (!lines.length) return -1;
+  if (!lines || !lines.length || typeof currentTime !== 'number') return -1;
+  if (lines[0]?.time === -1) return -1; // Unsynced plain lyrics
 
   let activeIndex = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].time <= currentTime) {
+    if (lines[i].time <= currentTime + 0.15) { // 150ms lead time for natural reading pace
       activeIndex = i;
     } else {
       break;

@@ -21,16 +21,20 @@ export default function MobileHeader({ onSearchClick }) {
 
   return (
     <header
-      className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 bg-[#0e0e0e]/97 backdrop-blur-2xl border-b border-white/10 select-none pt-safe pb-2"
+      className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 bg-[#0e0e0e]/95 backdrop-blur-2xl border-b border-white/10 select-none"
+      style={{
+        paddingTop: 'var(--safe-top, 0px)',
+        height: 'calc(var(--mobile-header-h, 48px) + var(--safe-top, 0px))',
+      }}
       aria-label="cassette.fm mobile header"
     >
       {/* Brand logo — left aligned */}
       <button
         onClick={() => setView('home')}
-        className="flex items-center gap-1.5 cursor-pointer group py-1"
+        className="flex items-center gap-1.5 cursor-pointer group py-0.5"
         aria-label="Go to Home"
       >
-        <span className="font-cassette text-[24px] text-white tracking-tight leading-none group-hover:text-accent transition-colors">
+        <span className="font-cassette text-[22px] text-white tracking-tight leading-none group-hover:text-accent transition-colors">
           cassette.fm
         </span>
         <span className="w-1.5 h-1.5 rounded-full bg-accent" />

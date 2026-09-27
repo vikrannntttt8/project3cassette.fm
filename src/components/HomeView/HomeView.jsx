@@ -252,7 +252,7 @@ export default function HomeView() {
   const showSearch = query.trim().length > 0;
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto relative bg-[#0e0e0e] pt-[calc(var(--mobile-header-h)+var(--safe-top)+0.5rem)] md:pt-0 no-scrollbar">
+    <div className="h-full flex flex-col overflow-y-auto relative bg-[#0e0e0e] pt-[calc(var(--mobile-header-h)+var(--safe-top))] md:pt-0 no-scrollbar">
       {/* ── Desktop Header ── */}
       <header className="hidden md:block sticky top-0 z-20 px-6 lg:px-8 py-4 bg-[#0e0e0e]/95 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center justify-between gap-4 flex-wrap">

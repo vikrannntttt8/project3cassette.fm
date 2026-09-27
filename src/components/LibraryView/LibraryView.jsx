@@ -11,6 +11,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
     createAlbum, deleteAlbum, renameAlbum, removeFromAlbum,
     loadSong, playCollection, currentSong, isPlaying,
     importPlaylistFromUrl,
+    offlineTracks = [],
   } = usePlayer();
 
   const [activeSection, setActiveSection]   = useState(initialSection);
@@ -92,7 +93,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
   const currentItem = pl || alb;
 
   return (
-    <div className="h-full flex flex-col overflow-y-auto pt-[calc(var(--mobile-header-h)+var(--safe-top)+0.5rem)] md:pt-0 no-scrollbar bg-[#0e0e0e]">
+    <div className="h-full flex flex-col overflow-y-auto pt-[calc(var(--mobile-header-h)+var(--safe-top))] md:pt-0 pb-[calc(var(--mobile-nav-h)+var(--safe-bottom)+6.5rem)] md:pb-20 no-scrollbar bg-[#0e0e0e]">
       {/* ── Header (Flush Non-Sticky) ───────────────────────── */}
       <header className="px-4 sm:px-6 md:px-8 py-4 bg-[#0e0e0e] border-b border-white/5 flex-shrink-0">
         <div className="flex items-center gap-4">
@@ -137,6 +138,18 @@ export default function LibraryView({ initialSection = 'playlists' }) {
             >
               <span className="material-symbols-outlined text-[16px]" style={{fontVariationSettings:"'FILL' 1"}}>favorite</span>
               <span>Liked ({liked.length})</span>
+            </button>
+
+            <button
+              onClick={() => setActiveSection('downloads')}
+              className={`px-4 py-2 rounded-full text-label-md font-medium transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[40px] cursor-pointer ${
+                activeSection === 'downloads'
+                  ? 'bg-accent text-black font-bold shadow-md shadow-accent/20'
+                  : 'bg-[#18181a] text-neutral-400 hover:bg-[#222225] hover:text-white'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]" style={{fontVariationSettings:"'FILL' 1"}}>download_done</span>
+              <span>Downloads ({offlineTracks.length})</span>
             </button>
 
             <button
@@ -351,6 +364,52 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                       isActive={Boolean(sId && curId && sId === curId)}
                       isPlaying={Boolean(sId && curId && sId === curId && isPlaying)}
                       onPlay={() => loadSong(song, liked, i)}
+                      onAddToPlaylist={() => setAddMenuSong(song)}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Offline Downloads Section ──────────────────────── */}
+        {!activePlaylist && !activeAlbum && activeSection === 'downloads' && (
+          <div className="flex flex-col gap-4">
+            {offlineTracks.length > 0 && (
+              <div className="flex items-center justify-between pb-2 border-b border-white/5">
+                <span className="text-body-md text-neutral-400 font-medium">
+                  {offlineTracks.length} {offlineTracks.length === 1 ? 'track' : 'tracks'} available offline
+                </span>
+                <button
+                  onClick={() => playCollection(offlineTracks, 0)}
+                  className="flex items-center gap-2 px-5 py-2 rounded-full bg-accent hover:opacity-90 text-black font-bold text-label-md hover:scale-105 active:scale-95 transition-all shadow-lg shadow-accent/20 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
+                  Play All Offline
+                </button>
+              </div>
+            )}
+
+            {offlineTracks.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-16 text-center">
+                <span className="material-symbols-outlined text-[56px] text-white/20">download_for_offline</span>
+                <p className="text-headline-sm text-on-surface-variant">No offline downloads yet</p>
+                <p className="text-body-md text-outline">Tap the download icon on any song or player bar to cache it for offline listening</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {offlineTracks.map((song, i) => {
+                  const sId = song.id || song.videoId;
+                  const curId = currentSong?.id || currentSong?.videoId;
+                  return (
+                    <SongRow
+                      key={sId || i}
+                      song={song}
+                      index={i}
+                      isActive={Boolean(sId && curId && sId === curId)}
+                      isPlaying={Boolean(sId && curId && sId === curId && isPlaying)}
+                      onPlay={() => loadSong(song, offlineTracks, i)}
                       onAddToPlaylist={() => setAddMenuSong(song)}
                     />
                   );

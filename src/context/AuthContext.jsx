@@ -5,6 +5,9 @@ import {
   getSupabaseCredentials,
   saveSupabaseCredentials,
   signInWithGoogle as supaSignInGoogle,
+  signInWithEmail as supaSignInEmail,
+  signUpWithEmail as supaSignUpEmail,
+  resetPasswordForEmail as supaResetPassword,
   signOut as supaSignOut,
   syncLikedSongsCloud,
   fetchLikedSongsCloud,
@@ -40,6 +43,13 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [configured, setConfigured] = useState(isSupabaseConfigured);
   const [authSequence, setAuthSequence] = useState(0);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('signin'); // 'signin' | 'signup' | 'forgot' | 'profile'
+
+  const openAuthModal = useCallback((mode = 'signin') => {
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
+  }, []);
 
   // Initialize session and auth state listener
   useEffect(() => {
@@ -85,6 +95,18 @@ export function AuthProvider({ children }) {
 
   const signInWithGoogle = useCallback(async () => {
     return await supaSignInGoogle();
+  }, []);
+
+  const signInWithEmail = useCallback(async (email, password) => {
+    return await supaSignInEmail(email, password);
+  }, []);
+
+  const signUpWithEmail = useCallback(async (email, password, fullName) => {
+    return await supaSignUpEmail(email, password, fullName);
+  }, []);
+
+  const resetPassword = useCallback(async (email) => {
+    return await supaResetPassword(email);
   }, []);
 
   const signOut = useCallback(async () => {
@@ -142,6 +164,9 @@ export function AuthProvider({ children }) {
     credentials: getSupabaseCredentials(),
     updateCredentials,
     signInWithGoogle,
+    signInWithEmail,
+    signUpWithEmail,
+    resetPassword,
     signOut,
     syncLikedSongs,
     fetchLikedSongs,
@@ -151,6 +176,11 @@ export function AuthProvider({ children }) {
     fetchHistory,
     performFullSync,
     authSequence,
+    isAuthModalOpen,
+    setIsAuthModalOpen,
+    authModalMode,
+    setAuthModalMode,
+    openAuthModal,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

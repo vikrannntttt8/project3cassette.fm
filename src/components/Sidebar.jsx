@@ -1,4 +1,5 @@
 import { usePlayer } from '../context/PlayerContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const NAV_ITEMS = [
   { icon: 'home',          label: 'Home',     view: 'home'    },
@@ -7,11 +8,22 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const { view, setView, playlists, playCollection, customAlbums = [], setIsSettingsOpen } = usePlayer();
+  const { user, openAuthModal } = useAuth();
+
+  const getInitials = (name, mail) => {
+    if (name) {
+      const parts = name.split(' ').filter(Boolean);
+      if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+      return name.slice(0, 2).toUpperCase();
+    }
+    if (mail) return mail.slice(0, 2).toUpperCase();
+    return 'CF';
+  };
 
   return (
     <aside className="h-full w-full bg-[#0e0e0e] flex flex-col justify-between py-4 px-3.5 border-r border-white/5 select-none overflow-hidden">
       <div className="flex flex-col gap-5 min-h-0">
-        {/* Logo — cassette.fm with Amber Dot */}
+        {/* Logo — cassette.fm with Dynamic Accent Dot */}
         <div
           onClick={() => setView('home')}
           className="flex items-center gap-1.5 px-2.5 py-1.5 flex-shrink-0 cursor-pointer group"
@@ -20,7 +32,7 @@ export default function Sidebar() {
           <span className="font-cassette text-[26px] text-white tracking-tight select-none leading-none group-hover:text-amber-400 transition-colors">
             cassette.fm
           </span>
-          <span className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50" />
+          <span className="w-2 h-2 rounded-full bg-accent shadow-sm shadow-accent" />
         </div>
 
         {/* Navigation items (Home & Library) */}
@@ -33,7 +45,7 @@ export default function Sidebar() {
                 onClick={() => setView(item.view)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-150 w-full text-left cursor-pointer min-h-[44px] ${
                   isActive
-                    ? 'bg-amber-500 text-black font-bold shadow-md shadow-amber-500/20'
+                    ? 'bg-accent text-black font-bold shadow-md shadow-accent'
                     : 'text-neutral-400 hover:bg-white/[0.05] hover:text-white'
                 }`}
               >
@@ -114,17 +126,51 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Settings button anchored to bottom left */}
-      <div className="flex-shrink-0 pt-2 border-t border-white/5 mt-auto">
+      {/* Bottom section: Account / Profile + Settings Hub */}
+      <div className="flex-shrink-0 pt-2 border-t border-white/5 mt-auto flex flex-col gap-1.5">
+        {/* Account Button */}
+        <button
+          onClick={() => openAuthModal(user ? 'profile' : 'signin')}
+          className="flex items-center gap-3 px-3 py-2 rounded-2xl text-neutral-400 hover:text-white hover:bg-white/[0.05] transition-all duration-150 w-full text-left group min-h-[42px] cursor-pointer"
+          title={user ? `${user.user_metadata?.full_name || user.email} (Connected)` : 'Sign in / Create Account'}
+        >
+          {user ? (
+            user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
+              <img
+                src={user.user_metadata.avatar_url || user.user_metadata.picture}
+                alt=""
+                className="w-6 h-6 rounded-full object-cover border border-amber-500/40"
+              />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-accent text-black font-bold text-[10px] flex items-center justify-center">
+                {getInitials(user.user_metadata?.full_name || user.user_metadata?.name, user.email)}
+              </div>
+            )
+          ) : (
+            <span className="material-symbols-outlined text-[20px] text-neutral-500 group-hover:text-accent transition-colors">
+              account_circle
+            </span>
+          )}
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-body-sm font-semibold truncate text-white">
+              {user ? (user.user_metadata?.full_name || user.user_metadata?.name || 'Account') : 'Sign In / Sync'}
+            </span>
+            <span className="text-[10px] font-mono text-neutral-500 truncate">
+              {user ? 'Cloud Active' : 'Supabase Cloud'}
+            </span>
+          </div>
+        </button>
+
+        {/* Settings button */}
         <button
           onClick={() => setIsSettingsOpen(true)}
-          className="sidebar-settings-btn flex items-center gap-3 px-3 py-2.5 rounded-2xl text-neutral-400 hover:text-white hover:bg-white/[0.05] transition-all duration-150 w-full text-left group min-h-[44px] cursor-pointer"
+          className="sidebar-settings-btn flex items-center gap-3 px-3 py-2 rounded-2xl text-neutral-400 hover:text-white hover:bg-white/[0.05] transition-all duration-150 w-full text-left group min-h-[42px] cursor-pointer"
           title="Settings"
         >
-          <span className="material-symbols-outlined text-[20px] text-neutral-500 group-hover:text-amber-400 group-hover:rotate-45 transition-transform duration-300">
+          <span className="material-symbols-outlined text-[20px] text-neutral-500 group-hover:text-accent group-hover:rotate-45 transition-transform duration-300">
             tune
           </span>
-          <span className="text-body-md font-semibold">Settings Hub</span>
+          <span className="text-body-sm font-semibold">Settings Hub</span>
         </button>
       </div>
     </aside>

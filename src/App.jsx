@@ -14,6 +14,9 @@ import MobileBottomNav     from './components/shared/MobileBottomNav.jsx';
 import MobileHeader        from './components/shared/MobileHeader.jsx';
 import MobileSearchOverlay from './components/shared/MobileSearchOverlay.jsx';
 
+import AuthModal          from './components/shared/AuthModal.jsx';
+import { ThemeProvider }   from './context/ThemeContext.jsx';
+
 function AppShell() {
   const { view, navState, currentSong, isSettingsOpen, setIsSettingsOpen, streamToast } = usePlayer();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -99,11 +102,21 @@ function AppShell() {
   );
 }
 
+function ThemedAppShell() {
+  const { currentSong } = usePlayer();
+  return (
+    <ThemeProvider currentSong={currentSong}>
+      <AppShell />
+      <AuthModal />
+    </ThemeProvider>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <PlayerProvider>
-        <AppShell />
+        <ThemedAppShell />
       </PlayerProvider>
     </AuthProvider>
   );

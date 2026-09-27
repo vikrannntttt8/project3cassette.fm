@@ -66,7 +66,7 @@ export default function PlayerDock() {
             {/* Album Art: clicking triggers dock expand */}
             <div
               className={`player-dock-thumb relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden flex-shrink-0 bg-[#222225] border border-white/5 ${
-                isPlaying ? 'ring-1.5 ring-amber-500' : ''
+                isPlaying ? 'ring-1.5 ring-accent' : ''
               }`}
             >
               {currentSong?.thumbnail ? (
@@ -82,7 +82,7 @@ export default function PlayerDock() {
               )}
               {isLoading && (
                 <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                  <div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </div>
@@ -165,7 +165,7 @@ export default function PlayerDock() {
                 type="button"
                 onClick={toggleShuffle}
                 className={`p-1 transition-colors cursor-pointer ${
-                  isShuffled ? 'text-amber-400' : 'text-neutral-400 hover:text-white'
+                  isShuffled ? 'text-accent' : 'text-neutral-400 hover:text-white'
                 }`}
                 title="Shuffle"
               >
@@ -183,12 +183,12 @@ export default function PlayerDock() {
                 <span className="material-symbols-outlined text-[24px]">skip_previous</span>
               </button>
 
-              {/* Play / Pause with Clean Solid Amber Accent (no messy halo blob) */}
+              {/* Play / Pause with Dynamic Accent */}
               <button
                 type="button"
                 onClick={togglePlay}
                 disabled={!currentSong}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-amber-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 disabled:opacity-40 cursor-pointer shadow-none border border-amber-400/50"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-accent text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 disabled:opacity-40 cursor-pointer shadow-none border border-accent/50"
                 aria-label={isPlaying ? 'Pause' : 'Play'}
                 title={isPlaying ? 'Pause' : 'Play'}
               >
@@ -219,7 +219,7 @@ export default function PlayerDock() {
                 type="button"
                 onClick={toggleRepeat}
                 className={`p-1 transition-colors cursor-pointer ${
-                  isRepeat ? 'text-amber-400' : 'text-neutral-400 hover:text-white'
+                  isRepeat ? 'text-accent' : 'text-neutral-400 hover:text-white'
                 }`}
                 title="Repeat"
               >
@@ -254,7 +254,7 @@ export default function PlayerDock() {
                 type="button"
                 onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                 disabled={!currentSong}
-                className="w-9 h-9 rounded-full bg-amber-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 disabled:opacity-40 cursor-pointer shadow-none border border-amber-400/50"
+                className="w-9 h-9 rounded-full bg-accent text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 disabled:opacity-40 cursor-pointer shadow-none border border-accent/50"
                 aria-label={isPlaying ? 'Pause' : 'Play'}
               >
                 {isLoading ? (
@@ -301,8 +301,8 @@ export default function PlayerDock() {
                     : audioQuality.toUpperCase()
                 } • Click to cycle quality`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                <span className="font-bold uppercase tracking-wider text-[9px] text-amber-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                <span className="font-bold uppercase tracking-wider text-[9px] text-accent">
                   {audioQuality}
                 </span>
                 <span className="text-neutral-600">•</span>

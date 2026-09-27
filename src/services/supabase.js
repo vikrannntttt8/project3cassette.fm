@@ -93,7 +93,75 @@ export async function signInWithGoogle() {
 }
 
 /**
- * 2. Sign Out
+ * 2. Sign in with Email & Password
+ */
+export async function signInWithEmail(email, password) {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase client is not available. Please verify your Supabase configuration.');
+  }
+
+  const { data, error } = await client.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
+
+  if (error) {
+    console.error('[Supabase] signInWithEmail error:', error);
+    throw error;
+  }
+  return data;
+}
+
+/**
+ * 3. Sign up with Email & Password
+ */
+export async function signUpWithEmail(email, password, fullName = '') {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase client is not available. Please verify your Supabase configuration.');
+  }
+
+  const { data, error } = await client.auth.signUp({
+    email: email.trim(),
+    password,
+    options: {
+      data: {
+        full_name: fullName.trim(),
+        name: fullName.trim(),
+      },
+    },
+  });
+
+  if (error) {
+    console.error('[Supabase] signUpWithEmail error:', error);
+    throw error;
+  }
+  return data;
+}
+
+/**
+ * 4. Reset Password
+ */
+export async function resetPasswordForEmail(email) {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase client is not available. Please verify your Supabase configuration.');
+  }
+
+  const { data, error } = await client.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: `${window.location.origin}/#reset-password`,
+  });
+
+  if (error) {
+    console.error('[Supabase] resetPasswordForEmail error:', error);
+    throw error;
+  }
+  return data;
+}
+
+/**
+ * 5. Sign Out
  */
 export async function signOut() {
   const client = getSupabaseClient();

@@ -64,7 +64,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               onClick={() => setActiveTab('player')}
               className={`px-3.5 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
                 activeTab === 'player'
-                  ? 'bg-amber-500 text-black shadow-sm'
+                  ? 'bg-accent text-black shadow-sm'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
@@ -74,7 +74,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               onClick={() => setActiveTab('lyrics')}
               className={`px-3.5 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
                 activeTab === 'lyrics'
-                  ? 'bg-amber-500 text-black shadow-sm'
+                  ? 'bg-accent text-black shadow-sm'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
@@ -84,7 +84,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               onClick={() => setActiveTab('queue')}
               className={`px-3.5 py-1 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
                 activeTab === 'queue'
-                  ? 'bg-amber-500 text-black shadow-sm'
+                  ? 'bg-accent text-black shadow-sm'
                   : 'text-neutral-400 hover:text-white'
               }`}
             >
@@ -103,7 +103,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                   : 'max';
               setAudioQuality(nextQ);
             }}
-            className="px-2.5 py-1 rounded-full bg-[#18181a] border border-white/10 text-[10px] font-mono text-amber-400 font-bold active:scale-95 transition-transform"
+            className="px-2.5 py-1 rounded-full bg-[#18181a] border border-white/10 text-[10px] font-mono text-accent font-bold active:scale-95 transition-transform"
           >
             {audioQuality.toUpperCase()}
           </button>
@@ -131,7 +131,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               />
               {isLoading && (
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center">
-                  <div className="w-8 h-8 border-3 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </div>
@@ -149,7 +149,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                 >
                   <MarqueeText
                     text={currentSong.title}
-                    className="text-headline-sm font-bold text-white tracking-tight group-hover/title:text-amber-300"
+                    className="text-headline-sm font-bold text-white tracking-tight group-hover/title:text-accent"
                   />
                 </div>
                 <div
@@ -157,7 +157,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                     routeToArtistEntity(currentSong.artist, currentSong.artistId);
                     onClose();
                   }}
-                  className="text-body-md text-neutral-400 hover:text-amber-400 hover:underline truncate block mt-0.5 cursor-pointer"
+                  className="text-body-md text-neutral-400 hover:text-accent hover:underline truncate block mt-0.5 cursor-pointer"
                   title="View artist discography"
                 >
                   {currentSong.artist || 'Unknown Artist'}
@@ -169,7 +169,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                   onClick={() => toggleLike(currentSong)}
                   className={`w-11 h-11 rounded-full flex items-center justify-center transition-transform active:scale-90 cursor-pointer ${
                     liked
-                      ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30'
+                      ? 'bg-accent/15 text-accent border border-accent/30'
                       : 'bg-[#18181a] text-neutral-400 border border-white/10 hover:text-white'
                   }`}
                   aria-label={liked ? 'Unlike' : 'Like'}
@@ -213,7 +213,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               <button
                 onClick={toggleShuffle}
                 className={`p-2 transition-colors cursor-pointer ${
-                  isShuffled ? 'text-amber-400' : 'text-neutral-400 hover:text-white'
+                  isShuffled ? 'text-accent' : 'text-neutral-400 hover:text-white'
                 }`}
                 title="Toggle Shuffle"
               >
@@ -228,10 +228,10 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                 <span className="material-symbols-outlined text-[32px]">skip_previous</span>
               </button>
 
-              {/* Clean Solid Amber Play/Pause (No drop shadow halo blob) */}
+              {/* Clean Solid Accent Play/Pause */}
               <button
                 onClick={togglePlay}
-                className="w-16 h-16 rounded-full bg-amber-500 text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-none border border-amber-400/50 cursor-pointer"
+                className="w-16 h-16 rounded-full bg-accent text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-none border border-accent/50 cursor-pointer"
                 aria-label={isPlaying ? 'Pause' : 'Play'}
               >
                 {isLoading ? (
@@ -257,7 +257,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               <button
                 onClick={toggleRepeat}
                 className={`p-2 transition-colors cursor-pointer ${
-                  isRepeat ? 'text-amber-400' : 'text-neutral-400 hover:text-white'
+                  isRepeat ? 'text-accent' : 'text-neutral-400 hover:text-white'
                 }`}
                 title="Toggle Repeat"
               >

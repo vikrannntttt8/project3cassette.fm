@@ -1,12 +1,13 @@
 import { usePlayer } from '../../context/PlayerContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 /**
- * MobileBottomNav — 3-tab clean fixed bottom nav for mobile (md:hidden).
- * ArchiveTune aesthetic with warm amber active states & charcoal background.
- * Liked tracks live inside Library view.
+ * MobileBottomNav — 4-tab clean fixed bottom nav for mobile (md:hidden).
+ * ArchiveTune aesthetic with dynamic accent active states & charcoal background.
  */
 export default function MobileBottomNav() {
   const { view, setView, isSettingsOpen, setIsSettingsOpen } = usePlayer();
+  const { user, openAuthModal, isAuthModalOpen } = useAuth();
 
   const tabs = [
     {
@@ -16,7 +17,7 @@ export default function MobileBottomNav() {
         setIsSettingsOpen(false);
         setView('home');
       },
-      isActive: view === 'home' && !isSettingsOpen,
+      isActive: view === 'home' && !isSettingsOpen && !isAuthModalOpen,
     },
     {
       icon: 'local_library',
@@ -25,19 +26,19 @@ export default function MobileBottomNav() {
         setIsSettingsOpen(false);
         setView('library');
       },
-      isActive: (view === 'library' || view === 'liked') && !isSettingsOpen,
+      isActive: (view === 'library' || view === 'liked') && !isSettingsOpen && !isAuthModalOpen,
     },
     {
       icon: 'tune',
       label: 'Settings',
       action: () => setIsSettingsOpen(true),
-      isActive: isSettingsOpen,
+      isActive: isSettingsOpen && !isAuthModalOpen,
     },
     {
-      icon: 'person',
-      label: 'Profile',
-      action: () => setIsSettingsOpen(true),
-      isActive: false,
+      icon: user ? 'account_circle' : 'person',
+      label: user ? 'Account' : 'Sign In',
+      action: () => openAuthModal(user ? 'profile' : 'signin'),
+      isActive: isAuthModalOpen,
     },
   ];
 
@@ -53,15 +54,15 @@ export default function MobileBottomNav() {
             key={tab.label}
             onClick={tab.action}
             className={`flex-1 flex flex-col items-center justify-center gap-0.5 relative transition-all duration-150 cursor-pointer ${
-              tab.isActive ? 'text-amber-400 font-bold' : 'text-neutral-500 hover:text-neutral-300'
+              tab.isActive ? 'text-accent font-bold' : 'text-neutral-500 hover:text-neutral-300'
             }`}
             aria-label={tab.label}
             aria-current={tab.isActive ? 'page' : undefined}
             style={{ minHeight: '44px' }}
           >
-            {/* Active top indicator pill in amber */}
+            {/* Active top indicator pill */}
             {tab.isActive && (
-              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2.5px] rounded-full bg-amber-500" />
+              <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[2.5px] rounded-full bg-accent" />
             )}
 
             <span
@@ -71,7 +72,7 @@ export default function MobileBottomNav() {
               {tab.icon}
             </span>
 
-            <span className={`text-[10.5px] font-semibold leading-none mt-0.5 ${tab.isActive ? 'text-amber-400' : ''}`}>
+            <span className={`text-[10.5px] font-semibold leading-none mt-0.5 ${tab.isActive ? 'text-accent' : ''}`}>
               {tab.label}
             </span>
           </button>

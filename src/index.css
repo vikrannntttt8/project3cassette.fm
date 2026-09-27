@@ -55,11 +55,40 @@
   * { scrollbar-width: none; -ms-overflow-style: none; }
 }
 
+:root {
+  --accent-color: #f59e0b;
+  --accent-color-rgb: 245, 158, 11;
+  --accent-color-glow: rgba(245, 158, 11, 0.35);
+  --accent-hover: #fbbf24;
+  --accent-subtle: rgba(245, 158, 11, 0.15);
+  --accent-border: rgba(245, 158, 11, 0.30);
+  --mobile-nav-h: 56px;
+  --mobile-header-h: 56px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 @layer utilities {
-  /* Active lyric glow — warm amber / golden glow */
+  /* Dynamic Theme Utility Classes */
+  .text-accent {
+    color: var(--accent-color, #f59e0b) !important;
+  }
+  .bg-accent {
+    background-color: var(--accent-color, #f59e0b) !important;
+  }
+  .border-accent {
+    border-color: var(--accent-color, #f59e0b) !important;
+  }
+  .shadow-accent {
+    box-shadow: 0 10px 25px -5px var(--accent-color-glow, rgba(245, 158, 11, 0.35)) !important;
+  }
+  .ring-accent {
+    --tw-ring-color: var(--accent-color, #f59e0b) !important;
+  }
+
+  /* Active lyric glow — dynamic */
   .lyric-active-glow {
-    text-shadow: 0 0 25px rgba(245, 158, 11, 0.45),
-                 0 0 10px rgba(245, 158, 11, 0.25);
+    text-shadow: 0 0 25px var(--accent-color-glow, rgba(245, 158, 11, 0.45)),
+                 0 0 10px var(--accent-color-glow, rgba(245, 158, 11, 0.25));
   }
 
   /* Glass dock elevation */
@@ -90,17 +119,17 @@
 
   /* Active lyrics highlight */
   .gradient-text-active {
-    color: #f59e0b;
-    text-shadow: 0 0 20px rgba(245, 158, 11, 0.35);
+    color: var(--accent-color, #f59e0b);
+    text-shadow: 0 0 20px var(--accent-color-glow, rgba(245, 158, 11, 0.35));
   }
 
-  /* Seek bar amber fill */
+  /* Seek bar dynamic fill */
   .seek-fill {
-    background: #f59e0b;
+    background: var(--accent-color, #f59e0b);
   }
 }
 
-/* Custom range input styling — Clean sharp solid thumb without glowing halo blobs */
+/* Custom range input styling — dynamically theme-tinted */
 input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
@@ -120,10 +149,10 @@ input[type='range']::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #f59e0b;
+  background: var(--accent-color, #f59e0b);
   margin-top: -5px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, background 0.4s ease;
 }
 
 input[type='range']:hover::-webkit-slider-thumb {

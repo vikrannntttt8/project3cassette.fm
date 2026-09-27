@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useTheme } from '../../context/ThemeContext.jsx';
 
 export default function SettingsModal({ isOpen, onClose }) {
   const {
@@ -20,7 +21,18 @@ export default function SettingsModal({ isOpen, onClose }) {
     updateCredentials,
     signInWithGoogle,
     signOut,
+    openAuthModal,
   } = useAuth();
+
+  const {
+    themeMode,
+    setThemeMode,
+    customColor,
+    setCustomColor,
+    extractedColor,
+    activeAccentColor,
+    presetPalettes,
+  } = useTheme();
 
   // ── Active category tab (desktop sidebar / mobile accordion) ────────
   const [activeCategory, setActiveCategory] = useState('account');
@@ -498,32 +510,17 @@ export default function SettingsModal({ isOpen, onClose }) {
                 </div>
               )}
 
-              {syncStatus && (
-                <div
-                  className={`mt-4 p-3 rounded-xl text-body-sm font-medium flex items-center gap-2.5 ${
-                    syncStatus.type === 'error'
-                      ? 'bg-red-950/50 border border-red-800 text-red-300'
-                      : 'bg-amber-500/10 border border-amber-500/30 text-amber-300'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[18px] flex-shrink-0">
-                    {syncStatus.type === 'error' ? 'error' : 'check_circle'}
-                  </span>
-                  <span>{syncStatus.text}</span>
-                </div>
-              )}
-
               {user ? (
                 <div className="mt-5 pt-4 border-t border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                     {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
                       <img
-                        src={user.user_metadata.avatar_url || user.user_metadata.picture}
+                        src={user.user_metadata.avatar_url || user.user_metadata?.picture}
                         alt="Avatar"
                         className="w-10 h-10 rounded-full border border-amber-500/40 object-cover"
                       />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-amber-500 text-black font-bold flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-accent text-black font-bold flex items-center justify-center">
                         {(user.email || 'U')[0].toUpperCase()}
                       </div>
                     )}
@@ -539,12 +536,18 @@ export default function SettingsModal({ isOpen, onClose }) {
                     <button
                       onClick={handleManualSync}
                       disabled={syncLoading}
-                      className="px-4 py-2 rounded-xl bg-amber-500 text-black text-label-sm font-bold hover:bg-amber-400 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="px-4 py-2 rounded-xl bg-accent text-black text-label-sm font-bold hover:brightness-110 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <span className={`material-symbols-outlined text-[16px] ${syncLoading ? 'animate-spin' : ''}`}>
                         sync
                       </span>
                       {syncLoading ? 'Syncing...' : 'Sync Cloud'}
+                    </button>
+                    <button
+                      onClick={() => openAuthModal('profile')}
+                      className="px-3.5 py-2 rounded-xl border border-white/10 hover:border-white/30 text-neutral-300 hover:text-white text-label-sm transition-colors cursor-pointer"
+                    >
+                      Profile
                     </button>
                     <button
                       onClick={signOut}
@@ -556,18 +559,28 @@ export default function SettingsModal({ isOpen, onClose }) {
                 </div>
               ) : (
                 <div className="mt-5 pt-4 border-t border-white/10 flex flex-col gap-3">
-                  <button
-                    onClick={handleGoogleSignIn}
-                    className="w-full py-3 px-4 rounded-xl bg-white text-black hover:bg-neutral-200 font-bold text-label-lg flex items-center justify-center gap-3 transition-all cursor-pointer shadow-lg"
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                      <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"/>
-                      <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-                      <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                    </svg>
-                    Sign in with Google
-                  </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      onClick={handleGoogleSignIn}
+                      className="w-full py-3 px-4 rounded-xl bg-white text-black hover:bg-neutral-200 font-bold text-label-md flex items-center justify-center gap-3 transition-all cursor-pointer shadow-lg"
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"/>
+                        <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                      </svg>
+                      Sign in with Google
+                    </button>
+
+                    <button
+                      onClick={() => openAuthModal('signin')}
+                      className="w-full py-3 px-4 rounded-xl bg-[#222225] border border-white/10 hover:border-white/30 text-white font-bold text-label-md flex items-center justify-center gap-2.5 transition-all cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">mail</span>
+                      Sign in with Email
+                    </button>
+                  </div>
 
                   <div className="pt-2">
                     <button
@@ -629,7 +642,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="p-4 rounded-2xl bg-[#18181a] border border-white/10">
                 <span className="text-[11px] font-mono text-neutral-400 block uppercase">LIKED TRACKS</span>
-                <span className="text-headline-md font-extrabold text-amber-400 mt-1 block">
+                <span className="text-headline-md font-extrabold text-accent mt-1 block">
                   {liked?.length || 0}
                 </span>
               </div>
@@ -641,7 +654,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               </div>
               <div className="p-4 rounded-2xl bg-[#18181a] border border-white/10 col-span-2 sm:col-span-1">
                 <span className="text-[11px] font-mono text-neutral-400 block uppercase">SESSION HISTORY</span>
-                <span className="text-headline-md font-extrabold text-amber-400 mt-1 block">
+                <span className="text-headline-md font-extrabold text-accent mt-1 block">
                   {history?.length || 0}
                 </span>
               </div>
@@ -649,7 +662,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
             <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-3">
               <h4 className="text-label-md font-bold text-white flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-amber-500">insights</span>
+                <span className="material-symbols-outlined text-[18px] text-accent">insights</span>
                 Listening Insights
               </h4>
               <p className="text-body-sm text-neutral-400 leading-relaxed">
@@ -659,41 +672,202 @@ export default function SettingsModal({ isOpen, onClose }) {
           </div>
         );
 
-      // 3. Appearance
+      // 3. Appearance (Dynamic Theming Engine)
       case 'appearance':
         return (
           <div className="space-y-4 animate-fade-in">
-            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-4">
+            <div className="p-5 rounded-2xl bg-[#18181a] border border-white/10 space-y-5">
               <div>
-                <h4 className="text-headline-sm font-bold text-white">Accent Theme</h4>
+                <h4 className="text-headline-sm font-bold text-white">Dynamic Theming Engine</h4>
                 <p className="text-body-sm text-neutral-400 mt-0.5">
-                  Select your signature highlight accent across buttons, sliders, and badges.
+                  Customize the interface accent colors across player buttons, progress bars, and active badges.
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { id: 'amber',   label: 'Warm Amber',  color: '#f59e0b', ring: 'ring-amber-500' },
-                  { id: 'rose',    label: 'Rose Pink',   color: '#f43f5e', ring: 'ring-rose-500' },
-                  { id: 'violet',  label: 'Neon Violet', color: '#a855f7', ring: 'ring-violet-500' },
-                  { id: 'cyan',    label: 'Electric Cyan', color: '#06b6d4', ring: 'ring-cyan-500' },
-                ].map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => {
-                      setAccentColor(t.id);
-                      localStorage.setItem('pulse_accent_color', t.id);
-                    }}
-                    className={`p-3 rounded-xl border text-left flex items-center gap-3 transition-all cursor-pointer ${
-                      accentColor === t.id
-                        ? 'bg-[#222225] border-white/30 font-bold text-white ring-2 ' + t.ring
-                        : 'bg-[#121214] border-white/5 text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    <span className="w-5 h-5 rounded-full flex-shrink-0" style={{ backgroundColor: t.color }} />
-                    <span className="text-body-sm truncate">{t.label}</span>
-                  </button>
-                ))}
+              {/* 3 Explicit Theme Options */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* 1. Dynamic (From Album Art) */}
+                <button
+                  type="button"
+                  onClick={() => setThemeMode('dynamic')}
+                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer relative overflow-hidden ${
+                    themeMode === 'dynamic'
+                      ? 'bg-[#222225] border-white/40 shadow-lg ring-2 ring-accent'
+                      : 'bg-[#141416] border-white/5 hover:bg-[#1c1c1f] hover:border-white/10 text-neutral-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="material-symbols-outlined text-[24px]" style={{ color: extractedColor }}>
+                      auto_awesome
+                    </span>
+                    <span
+                      className="w-5 h-5 rounded-full border border-white/20 shadow-sm transition-colors duration-500"
+                      style={{ backgroundColor: extractedColor }}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-label-md font-bold text-white block">Dynamic (Album Art)</span>
+                    <span className="text-[12px] text-neutral-400 block mt-0.5">
+                      Extracts vibrant color from current cover
+                    </span>
+                  </div>
+                </button>
+
+                {/* 2. Default (Cassette Gold) */}
+                <button
+                  type="button"
+                  onClick={() => setThemeMode('default')}
+                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer relative overflow-hidden ${
+                    themeMode === 'default'
+                      ? 'bg-[#222225] border-white/40 shadow-lg ring-2 ring-amber-500'
+                      : 'bg-[#141416] border-white/5 hover:bg-[#1c1c1f] hover:border-white/10 text-neutral-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="material-symbols-outlined text-[24px] text-amber-500">
+                      album
+                    </span>
+                    <span className="w-5 h-5 rounded-full bg-amber-500 border border-white/20 shadow-sm" />
+                  </div>
+                  <div>
+                    <span className="text-label-md font-bold text-white block">Default (Cassette Gold)</span>
+                    <span className="text-[12px] text-neutral-400 block mt-0.5">
+                      Iconic signature gold (#f59e0b)
+                    </span>
+                  </div>
+                </button>
+
+                {/* 3. Custom Palette Picker */}
+                <button
+                  type="button"
+                  onClick={() => setThemeMode('custom')}
+                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between gap-3 transition-all cursor-pointer relative overflow-hidden ${
+                    themeMode === 'custom'
+                      ? 'bg-[#222225] border-white/40 shadow-lg ring-2 ring-accent'
+                      : 'bg-[#141416] border-white/5 hover:bg-[#1c1c1f] hover:border-white/10 text-neutral-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="material-symbols-outlined text-[24px]" style={{ color: customColor }}>
+                      palette
+                    </span>
+                    <span
+                      className="w-5 h-5 rounded-full border border-white/20 shadow-sm transition-colors"
+                      style={{ backgroundColor: customColor }}
+                    />
+                  </div>
+                  <div>
+                    <span className="text-label-md font-bold text-white block">Custom Palette Picker</span>
+                    <span className="text-[12px] text-neutral-400 block mt-0.5">
+                      Select your custom hex color
+                    </span>
+                  </div>
+                </button>
+              </div>
+
+              {/* Custom Color Selector Panel */}
+              {themeMode === 'custom' && (
+                <div className="p-4 rounded-2xl bg-[#141416] border border-white/10 space-y-3.5 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-label-sm font-bold text-white">Curated Palettes & Color Picker</span>
+                    <span className="text-body-xs font-mono text-neutral-400 uppercase">
+                      Current: {customColor}
+                    </span>
+                  </div>
+
+                  {/* Preset Swatches */}
+                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                    {presetPalettes.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setCustomColor(p.hex)}
+                        title={p.name}
+                        className={`h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer border ${
+                          customColor.toLowerCase() === p.hex.toLowerCase()
+                            ? 'border-white scale-110 shadow-lg ring-2 ring-white/40'
+                            : 'border-white/10 hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: p.hex }}
+                      >
+                        {customColor.toLowerCase() === p.hex.toLowerCase() && (
+                          <span className="material-symbols-outlined text-[16px] text-black font-bold">
+                            check
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Hex Color Input + Live Native Picker */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <label className="relative flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#222225] border border-white/10 hover:border-white/30 cursor-pointer text-body-sm text-white transition-colors">
+                      <input
+                        type="color"
+                        value={customColor}
+                        onChange={(e) => setCustomColor(e.target.value)}
+                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                      />
+                      <span
+                        className="w-5 h-5 rounded-full border border-white/20 flex-shrink-0"
+                        style={{ backgroundColor: customColor }}
+                      />
+                      <span>Pick Any Custom Color</span>
+                    </label>
+
+                    <input
+                      type="text"
+                      value={customColor}
+                      onChange={(e) => setCustomColor(e.target.value)}
+                      placeholder="#f59e0b"
+                      maxLength={7}
+                      className="w-28 px-3.5 py-2.5 rounded-xl bg-[#222225] border border-white/10 text-white font-mono text-body-sm text-center focus:border-accent focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Live Theme Preview Component */}
+              <div className="p-4 rounded-2xl bg-[#141416] border border-white/10 space-y-3">
+                <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-widest block">
+                  Live Interface Preview
+                </span>
+                <div className="p-3.5 rounded-xl bg-[#1c1c1f] border border-white/5 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center text-black font-bold flex-shrink-0 shadow-md transition-colors duration-500"
+                      style={{ backgroundColor: activeAccentColor }}
+                    >
+                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        music_note
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-body-sm font-bold text-white truncate">Active Theme Accent</p>
+                      <p className="text-[11px] text-neutral-400 truncate font-mono">
+                        Applied Color: {activeAccentColor}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-black font-bold shadow-lg transition-all duration-500 hover:scale-105"
+                      style={{ backgroundColor: activeAccentColor }}
+                    >
+                      <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                        play_arrow
+                      </span>
+                    </button>
+                    <span
+                      className="px-2.5 py-1 rounded-full text-[11px] font-bold text-black transition-colors duration-500"
+                      style={{ backgroundColor: activeAccentColor }}
+                    >
+                      Active
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -712,7 +886,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   localStorage.setItem('pulse_ambient_glow', String(next));
                 }}
                 className={`w-12 h-6 rounded-full transition-colors relative cursor-pointer ${
-                  ambientGlow ? 'bg-amber-500' : 'bg-neutral-700'
+                  ambientGlow ? 'bg-accent' : 'bg-neutral-700'
                 }`}
               >
                 <span

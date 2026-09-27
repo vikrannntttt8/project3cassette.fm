@@ -34,8 +34,8 @@ export default function SettingsModal({ isOpen, onClose }) {
     presetPalettes,
   } = useTheme();
 
-  // ── Active category tab (SimpMusic categorized groups) ───────────
-  const [activeCategory, setActiveCategory] = useState('quality');
+  // ── Drill-down sub-page state (null = Main Settings Menu) ────────
+  const [currentSubPage, setCurrentSubPage] = useState(null);
 
   // ── Settings Local States ──────────────────────────────────────────
   const [normalizeAudio, setNormalizeAudio] = useState(
@@ -90,6 +90,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
   useEffect(() => {
     if (isOpen) {
+      setCurrentSubPage(null);
       setSupabaseUrl(credentials.url || '');
       setSupabaseKey(credentials.anonKey || '');
       setAuthError(null);
@@ -98,16 +99,22 @@ export default function SettingsModal({ isOpen, onClose }) {
     }
   }, [isOpen, credentials]);
 
-  // Escape key close
+  // Escape key close or navigate back to main menu
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        if (currentSubPage) {
+          setCurrentSubPage(null);
+        } else {
+          onClose();
+        }
+      }
     };
     if (isOpen) {
       window.addEventListener('keydown', handleKeyDown);
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen, currentSubPage, onClose]);
 
   if (!isOpen) return null;
 
@@ -238,118 +245,217 @@ export default function SettingsModal({ isOpen, onClose }) {
     }
   };
 
-  // ── 6 SimpMusic Categorized Groups Metadata ────────────────────────
+  // ── 6 Categorized Settings Sections ────────────────────────────────
   const CATEGORIES = [
-    { id: 'quality',   label: 'Quality & Playback', icon: 'graphic_eq',    badgeBg: 'bg-amber-600' },
-    { id: 'interface', label: 'Interface & Themes', icon: 'palette',       badgeBg: 'bg-rose-500' },
-    { id: 'content',   label: 'Content & Language', icon: 'tune',          badgeBg: 'bg-sky-600' },
-    { id: 'account',   label: 'Account & Cloud',    icon: 'account_circle', badgeBg: 'bg-indigo-600' },
-    { id: 'backup',    label: 'Backup & Import',    icon: 'cloud_sync',    badgeBg: 'bg-emerald-600' },
-    { id: 'devices',   label: 'Devices & Engine',   icon: 'cast',          badgeBg: 'bg-violet-600' },
+    {
+      id: 'interface',
+      label: 'Interface & Themes',
+      description: 'Accent colors, dynamic album art theming & synced lyric sizing',
+      icon: 'palette',
+      badgeBg: 'bg-rose-500/15 text-rose-400 border border-rose-500/25',
+    },
+    {
+      id: 'quality',
+      label: 'Quality & Playback',
+      description: 'Streaming audio fidelity, volume normalization, crossfade & smart radio',
+      icon: 'graphic_eq',
+      badgeBg: 'bg-amber-500/15 text-amber-400 border border-amber-500/25',
+    },
+    {
+      id: 'content',
+      label: 'Content & Language',
+      description: 'Regional music charts, explicit lyrics filter & data saver',
+      icon: 'tune',
+      badgeBg: 'bg-sky-500/15 text-sky-400 border border-sky-500/25',
+    },
+    {
+      id: 'account',
+      label: 'Account & Cloud Sync',
+      description: 'Google sign-in, cloud library sync & custom Supabase backend',
+      icon: 'account_circle',
+      badgeBg: 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/25',
+    },
+    {
+      id: 'backup',
+      label: 'Backup & Import',
+      description: 'Import YouTube playlists/albums & export/restore JSON backups',
+      icon: 'cloud_sync',
+      badgeBg: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25',
+    },
+    {
+      id: 'devices',
+      label: 'About & System Engine',
+      description: 'OPUS audio pipeline diagnostics, browser cache & app build info',
+      icon: 'info',
+      badgeBg: 'bg-violet-500/15 text-violet-400 border border-violet-500/25',
+    },
   ];
+
+  const activeCategoryObj = CATEGORIES.find((c) => c.id === currentSubPage);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-xl animate-fade-in select-none">
       <div
-        className="w-full sm:max-w-4xl bg-[#121214] sm:border sm:border-white/10 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col h-full sm:h-[92vh] sm:max-h-[850px] text-white"
+        className="w-full sm:max-w-2xl bg-[#121214] sm:border sm:border-white/10 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col h-full sm:h-[88vh] sm:max-h-[800px] text-white"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Modal Top Header ────────────────────────────────────────── */}
+        {/* ── Modal Top Header (Main Title or Sub-Page Back Header) ── */}
         <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-white/5 bg-[#18181a] flex-shrink-0 pt-safe">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center text-accent">
-              <span className="material-symbols-outlined text-[20px]">tune</span>
+          {currentSubPage ? (
+            /* Sub-Page Header with Back Button */
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                type="button"
+                onClick={() => setCurrentSubPage(null)}
+                className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10 active:scale-95 flex-shrink-0"
+                aria-label="Back to Settings"
+                title="Back to Settings"
+              >
+                <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+              </button>
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${activeCategoryObj?.badgeBg || 'bg-accent/20 text-accent'}`}>
+                  <span className="material-symbols-outlined text-[16px]">{activeCategoryObj?.icon || 'tune'}</span>
+                </div>
+                <h2 className="text-title-md font-bold text-white tracking-tight truncate">
+                  {activeCategoryObj?.label || 'Settings'}
+                </h2>
+              </div>
             </div>
-            <div>
-              <h2 className="text-title-lg font-bold text-white tracking-tight flex items-center gap-2">
-                Settings
-                <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-accent/20 text-accent border border-accent/30">
-                  SimpMusic
-                </span>
-              </h2>
+          ) : (
+            /* Main Menu Header */
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center text-accent">
+                <span className="material-symbols-outlined text-[20px]">tune</span>
+              </div>
+              <div>
+                <h2 className="text-title-lg font-bold text-white tracking-tight flex items-center gap-2">
+                  Settings Hub
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-accent/20 text-accent border border-accent/30">
+                    cassette.fm
+                  </span>
+                </h2>
+              </div>
             </div>
-          </div>
+          )}
+
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10"
+            className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10 flex-shrink-0 ml-3"
             aria-label="Close"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
-        {/* ── Main Layout: Categories Nav + Content Area ────────────── */}
-        <div className="flex-1 flex min-h-0 overflow-hidden">
-          {/* Left Categories Sidebar (Desktop + Tablet) */}
-          <aside className="w-60 sm:w-64 flex-shrink-0 border-r border-white/5 bg-[#141416] p-3 overflow-y-auto no-scrollbar hidden md:flex flex-col gap-1.5">
-            <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 px-3 py-1.5 font-bold">
-              PREFERENCES
-            </p>
-            {CATEGORIES.map((cat) => {
-              const isActive = activeCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-left text-body-sm font-medium transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-[#222225] text-white font-bold shadow-md border border-white/10'
-                      : 'text-neutral-400 hover:bg-white/[0.04] hover:text-neutral-200 border border-transparent'
-                  }`}
-                >
-                  <div
-                    className={`w-7 h-7 rounded-xl flex items-center justify-center text-white flex-shrink-0 text-[15px] shadow-sm ${cat.badgeBg}`}
-                  >
-                    <span className="material-symbols-outlined text-[17px]">{cat.icon}</span>
-                  </div>
-                  <span className="truncate flex-1">{cat.label}</span>
-                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-accent" />}
-                </button>
-              );
-            })}
-          </aside>
-
-          {/* Mobile Category Horizontal Pills Strip (< md) */}
-          <div className="md:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
-            <div className="flex gap-2 px-4 py-3 bg-[#141416] border-b border-white/5 overflow-x-auto no-scrollbar flex-shrink-0">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-full text-[13px] font-semibold whitespace-nowrap transition-all flex-shrink-0 min-h-[38px] ${
-                    activeCategory === cat.id
-                      ? 'bg-accent text-black font-bold shadow-md'
-                      : 'bg-[#1e1e22] text-neutral-400 border border-white/5 hover:text-white'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[16px]">{cat.icon}</span>
-                  <span>{cat.label}</span>
-                </button>
-              ))}
+        {/* ── Main Body: Vertical Category List OR Drill-Down Sub-Page ── */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 bg-[#0e0e0e] no-scrollbar">
+          {currentSubPage ? (
+            /* ── Drill-down Dedicated Sub-Page Controls ────────────── */
+            <div className="w-full max-w-xl mx-auto space-y-4 pb-8 animate-fade-in">
+              {renderActiveCategory(currentSubPage)}
             </div>
+          ) : (
+            /* ── Main Settings Menu (Vertical Category List) ──────── */
+            <div className="w-full max-w-xl mx-auto space-y-4 pb-8 animate-fade-in">
+              {/* Account Quick Status Banner */}
+              <div
+                onClick={() => setCurrentSubPage('account')}
+                className="p-4 rounded-2xl bg-[#161618] border border-white/10 hover:border-white/20 transition-all cursor-pointer flex items-center justify-between gap-3 group"
+              >
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {user ? (
+                    user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
+                      <img
+                        src={user.user_metadata.avatar_url || user.user_metadata?.picture}
+                        alt="Avatar"
+                        className="w-11 h-11 rounded-full border border-accent/40 object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-full bg-accent text-black font-bold flex items-center justify-center text-title-sm flex-shrink-0">
+                        {(user.email || 'U')[0].toUpperCase()}
+                      </div>
+                    )
+                  ) : (
+                    <div className="w-11 h-11 rounded-2xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-400 flex-shrink-0">
+                      <span className="material-symbols-outlined text-[22px]">account_circle</span>
+                    </div>
+                  )}
 
-            {/* Content Container (Spacious mobile preference list) */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5 space-y-4 bg-[#0e0e0e] no-scrollbar">
-              <div className="w-full max-w-lg mx-auto flex flex-col gap-4 pb-12">
-                {renderActiveCategory()}
+                  <div className="min-w-0">
+                    <p className="text-label-md font-bold text-white truncate group-hover:text-accent transition-colors">
+                      {user ? (user.user_metadata?.full_name || user.user_metadata?.name || user.email) : 'Cloud Sync & Account'}
+                    </p>
+                    <p className="text-body-xs text-neutral-400 truncate mt-0.5">
+                      {user ? 'Google Account Connected · Library Synced' : 'Sign in to sync your playlists and liked songs'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 text-neutral-500 group-hover:text-white transition-colors flex-shrink-0">
+                  <span className="text-[12px] font-medium hidden sm:inline text-neutral-400">Manage</span>
+                  <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+                </div>
+              </div>
+
+              {/* Section Header */}
+              <div className="pt-2 px-1">
+                <p className="text-[11px] font-mono uppercase tracking-widest text-neutral-500 font-bold">
+                  PREFERENCES & SYSTEM
+                </p>
+              </div>
+
+              {/* Vertical Category Rows */}
+              <div className="space-y-2.5">
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setCurrentSubPage(cat.id)}
+                    className="w-full p-4 rounded-2xl bg-[#161618] hover:bg-[#1f1f22] border border-white/5 hover:border-white/15 transition-all text-left flex items-center justify-between gap-3.5 group cursor-pointer active:scale-[0.99] shadow-sm"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${cat.badgeBg}`}>
+                        <span className="material-symbols-outlined text-[22px]">{cat.icon}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-label-md font-bold text-white group-hover:text-accent transition-colors truncate">
+                          {cat.label}
+                        </h3>
+                        <p className="text-body-xs text-neutral-400 mt-0.5 line-clamp-1">
+                          {cat.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className="material-symbols-outlined text-[20px] text-neutral-500 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0">
+                      chevron_right
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
-          </div>
-
-          {/* Desktop Content Panel (md+) */}
-          <div className="hidden md:block flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 bg-[#0e0e0e] no-scrollbar">
-            <div className="max-w-2xl">
-              {renderActiveCategory()}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* ── Modal Footer ──────────────────────────────────────────── */}
-        <div className="px-6 py-3.5 border-t border-white/5 bg-[#141416] flex items-center justify-between text-body-xs text-neutral-500">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>cassette.fm · YouTube Music Engine + Supabase</span>
-          </div>
+        <div className="px-5 sm:px-6 py-3.5 border-t border-white/5 bg-[#141416] flex items-center justify-between text-body-xs text-neutral-500">
+          {currentSubPage ? (
+            <button
+              type="button"
+              onClick={() => setCurrentSubPage(null)}
+              className="flex items-center gap-1.5 text-neutral-400 hover:text-white text-label-sm font-semibold transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+              <span>Back to Menu</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>cassette.fm · YouTube Music Engine</span>
+            </div>
+          )}
+
           <button
             onClick={onClose}
             className="px-5 py-2 rounded-full bg-accent text-black text-label-sm font-bold hover:brightness-110 transition-all cursor-pointer shadow-md shadow-accent/20"
@@ -465,9 +571,9 @@ export default function SettingsModal({ isOpen, onClose }) {
     );
   }
 
-  // ── Category Views Renderer (SimpMusic Categorized Hub) ─────────────
-  function renderActiveCategory() {
-    switch (activeCategory) {
+  // ── Category Views Renderer (Drill-Down Sub-Pages) ────────────────
+  function renderActiveCategory(targetCategory = currentSubPage) {
+    switch (targetCategory) {
       // ── 1. Quality & Playback ──────────────────────────────────────
       case 'quality':
         return (

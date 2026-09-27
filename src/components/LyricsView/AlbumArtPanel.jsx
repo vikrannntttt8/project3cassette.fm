@@ -3,6 +3,7 @@ import { usePlayer } from '../../context/PlayerContext.jsx';
 import { formatTime, formatRemaining } from '../../utils/timeFormat.js';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
+import MarqueeText from '../shared/MarqueeText.jsx';
 
 export default function AlbumArtPanel() {
   const {
@@ -40,19 +41,22 @@ export default function AlbumArtPanel() {
 
         {/* Track metadata & Action buttons */}
         <div className="w-full flex items-center justify-between gap-3">
-          <div className="flex flex-col min-w-0 flex-1">
-            <h1 
+          <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
+            <div
               onClick={() => {
                 if (currentSong) {
                   toggleView(); // close lyrics view
                   routeToSongEntity(currentSong);
                 }
               }}
-              className="text-[18px] sm:text-[22px] font-bold tracking-tight text-white leading-tight truncate hover:underline cursor-pointer transition-colors"
+              className="cursor-pointer group/lyrics-title"
               title="View track / album details"
             >
-              {currentSong?.title || 'No Track Loaded'}
-            </h1>
+              <MarqueeText
+                text={currentSong?.title || 'No Track Loaded'}
+                className="text-[18px] sm:text-[22px] font-bold tracking-tight text-white leading-tight group-hover/lyrics-title:underline"
+              />
+            </div>
             <div className="flex items-center gap-2 mt-1">
               {currentSong ? (
                 <ArtistLinks

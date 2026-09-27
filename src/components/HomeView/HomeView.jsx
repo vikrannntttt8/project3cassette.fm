@@ -11,7 +11,6 @@ import TrackContextMenu from '../shared/TrackContextMenu.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ArtistModal from '../ArtistView/ArtistModal.jsx';
-import MarqueeText from '../shared/MarqueeText.jsx';
 import { apiUrl } from '../../utils/apiConfig.js';
 import { FALLBACK_HOME_FEED } from '../../data/fallbackFeed.js';
 
@@ -563,18 +562,20 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
         </div>
       </div>
 
-      <div className="flex-1 min-w-0 flex flex-col justify-center">
-        <MarqueeText
-          text={song.title}
-          className={`font-semibold text-white text-[13.5px] leading-tight ${
+      <div className="flex-1 min-w-0 flex flex-col justify-center overflow-hidden">
+        <p
+          className={`font-semibold text-white text-[13.5px] leading-tight truncate whitespace-nowrap overflow-hidden text-ellipsis ${
             isActive ? 'text-accent font-bold' : ''
           }`}
-        />
+          title={song.title}
+        >
+          {song.title}
+        </p>
         <ArtistLinks
           artists={song.artists}
           artist={song.artist}
           artistId={song.artistId}
-          className="text-[11px] text-neutral-400 truncate mt-0.5"
+          className="text-[11px] text-neutral-400 truncate mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis"
         />
       </div>
 

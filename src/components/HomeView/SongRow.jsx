@@ -2,11 +2,10 @@ import { formatTime } from '../../utils/timeFormat.js';
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import TrackContextMenu from '../shared/TrackContextMenu.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
-import MarqueeText from '../shared/MarqueeText.jsx';
 
 /**
  * SongRow
- * Flat micro-surface row with universal click-to-play handler and marquee title.
+ * Flat micro-surface row with universal click-to-play handler and single-line ellipsis truncation.
  */
 export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAddToPlaylist }) {
   const { isLiked, toggleLike } = usePlayer();
@@ -55,19 +54,21 @@ export default function SongRow({ song, index, isActive, isPlaying, onPlay, onAd
         )}
       </div>
 
-      {/* Title & artist with Marquee Text & Universal click to play */}
-      <div className="flex flex-col min-w-0 flex-1 justify-center">
-        <MarqueeText
-          text={song.title}
-          className={`text-[13.5px] font-semibold leading-tight ${
+      {/* Title & artist with clean single-line truncation */}
+      <div className="flex flex-col min-w-0 flex-1 justify-center overflow-hidden">
+        <p
+          className={`text-[13.5px] font-semibold leading-tight truncate whitespace-nowrap overflow-hidden text-ellipsis ${
             isActive ? 'text-accent font-bold' : 'text-white'
           }`}
-        />
+          title={song.title}
+        >
+          {song.title}
+        </p>
         <ArtistLinks
           artists={song.artists}
           artist={song.artist}
           artistId={song.artistId}
-          className="text-[11px] text-neutral-400 truncate block mt-0.5"
+          className="text-[11px] text-neutral-400 truncate block mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis"
         />
       </div>
 

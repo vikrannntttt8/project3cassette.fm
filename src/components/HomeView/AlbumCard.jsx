@@ -36,11 +36,17 @@ export default function AlbumCard({ item, onClick }) {
       </div>
 
       {/* Info */}
-      <div className="flex flex-col min-w-0">
-        <span className="text-label-md font-bold text-white truncate group-hover:text-accent transition-colors">
+      <div className="flex flex-col min-w-0 w-full overflow-hidden">
+        <span
+          className="text-label-md font-bold text-white truncate block whitespace-nowrap overflow-hidden text-ellipsis group-hover:text-accent transition-colors"
+          title={item.title}
+        >
           {item.title}
         </span>
-        <span className="text-body-xs text-neutral-400 truncate">
+        <span
+          className="text-body-xs text-neutral-400 truncate block whitespace-nowrap overflow-hidden text-ellipsis"
+          title={item.artist || item.year || ''}
+        >
           {item.artist || item.year || ''}
         </span>
       </div>

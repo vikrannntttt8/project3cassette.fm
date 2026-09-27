@@ -185,20 +185,25 @@ input[type='range'].volume-slider::-webkit-slider-thumb {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-/* ── Smooth Marquee Animation for Text Overflow ───────────────────── */
-@keyframes marqueeScroll {
-  0%, 20% {
-    transform: translateX(0%);
+/* ── Smooth Continuous Marquee Animation for Text Overflow ───────────────────── */
+@keyframes marqueeInfinite {
+  0% {
+    transform: translateX(0);
   }
-  80%, 100% {
-    transform: translateX(calc(-100% + var(--marquee-container-w, 200px)));
+  100% {
+    transform: translateX(calc(-50% - 1rem));
   }
 }
 
-.animate-marquee {
-  display: inline-block;
-  white-space: nowrap;
-  animation: marqueeScroll 8s linear infinite alternate;
+.animate-marquee-loop {
+  display: inline-flex;
+  width: max-content;
+  will-change: transform;
+  animation: marqueeInfinite linear infinite;
+}
+
+.animate-marquee-loop:hover {
+  animation-play-state: paused;
 }
 
 /* Visualizer bars animation */

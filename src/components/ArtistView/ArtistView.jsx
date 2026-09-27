@@ -230,20 +230,20 @@ export default function ArtistView({ browseId, artistName }) {
                           className="w-11 h-11 rounded-lg object-cover flex-shrink-0 shadow-sm border border-[#262626]"
                         />
 
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 overflow-hidden">
                           <p
                             onClick={(e) => {
                               e.stopPropagation();
                               routeToSongEntity(track);
                             }}
-                            className={`text-label-md font-medium truncate transition-colors hover:underline cursor-pointer ${
+                            className={`text-label-md font-medium truncate whitespace-nowrap overflow-hidden text-ellipsis transition-colors hover:underline cursor-pointer ${
                               isCurrent ? 'text-white font-bold' : 'text-white'
                             }`}
                             title={`View "${track.title}"`}
                           >
                             {track.title}
                           </p>
-                          <p className="text-label-sm text-[#888888] truncate">
+                          <p className="text-label-sm text-[#888888] truncate whitespace-nowrap overflow-hidden text-ellipsis">
                             <ArtistLinks
                               artists={track.artists}
                               artist={track.artist || data.name}

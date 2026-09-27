@@ -514,15 +514,20 @@ function SongItem({ song, isActive, isPlaying, liked, onPlay, onToggleLike }) {
             </div>
           )}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className={`text-[13.5px] font-semibold truncate ${isActive ? 'text-accent' : 'text-white'}`}>
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <p
+            className={`text-[13.5px] font-semibold truncate whitespace-nowrap overflow-hidden text-ellipsis ${
+              isActive ? 'text-accent font-bold' : 'text-white'
+            }`}
+            title={song.title}
+          >
             {song.title}
           </p>
           <ArtistLinks
             artists={song.artists}
             artist={song.artist}
             artistId={song.artistId}
-            className="text-[11.5px] text-neutral-400 truncate block"
+            className="text-[11.5px] text-neutral-400 truncate block whitespace-nowrap overflow-hidden text-ellipsis"
           />
         </div>
       </div>

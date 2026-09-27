@@ -420,9 +420,19 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                   alt=""
                   className="w-10 h-10 rounded-xl object-cover bg-neutral-800"
                 />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold truncate">{track.title}</p>
-                  <p className="text-[11px] text-neutral-400 truncate">{track.artist}</p>
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <p
+                    className="text-[13px] font-semibold truncate whitespace-nowrap overflow-hidden text-ellipsis"
+                    title={track.title}
+                  >
+                    {track.title}
+                  </p>
+                  <p
+                    className="text-[11px] text-neutral-400 truncate whitespace-nowrap overflow-hidden text-ellipsis"
+                    title={track.artist}
+                  >
+                    {track.artist}
+                  </p>
                 </div>
                 {i === queueIndex && (
                   <span className="material-symbols-outlined text-accent text-[18px]">

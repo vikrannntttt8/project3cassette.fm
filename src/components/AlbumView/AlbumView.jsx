@@ -203,9 +203,9 @@ export default function AlbumView({ browseId, initialData }) {
                           )}
                         </div>
 
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 overflow-hidden">
                           <p
-                            className={`text-label-md font-semibold truncate transition-colors ${
+                            className={`text-label-md font-semibold truncate whitespace-nowrap overflow-hidden text-ellipsis transition-colors ${
                               isCurrent ? 'text-accent font-bold' : 'text-white'
                             }`}
                             title={track.title}
@@ -216,7 +216,7 @@ export default function AlbumView({ browseId, initialData }) {
                             artists={track.artists}
                             artist={track.artist || data.artist}
                             artistId={track.artistId || data.artistId}
-                            className="text-[11px] text-neutral-400 truncate block mt-0.5"
+                            className="text-[11px] text-neutral-400 truncate block mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis"
                           />
                         </div>
                       </div>

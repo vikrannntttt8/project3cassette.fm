@@ -6,32 +6,52 @@ import { FALLBACK_HOME_FEED } from '../data/fallbackFeed.js';
 export const SEARCH_TABS = ['all', 'songs', 'albums', 'artists'];
 
 /**
- * useMusicSearch — YouTube Music / Innertube powered search hook
+ * useMusicSearch — High-performance YouTube Music / Innertube search hook
  *
- * Manages debounced search across tabs: All | Songs | Albums | Artists
- * `results` shape:
- *   - 'all'       → { songs[], albums[], artists[], playlists[] }
- *   - 'songs'     → Song[]
- *   - 'albums'    → Album[]
- *   - 'artists'   → Artist[]
+ * Features:
+ * - 450ms Debounced input dispatch to eliminate keystroke spam.
+ * - In-flight AbortController cancellation preventing stale race conditions.
+ * - Duplicate execution guards for multiple submits.
+ * - Multi-tier client fallback resilience.
  */
 export function useMusicSearch() {
-  const [results,      setResults]      = useState(null); // null = not searched yet
-  const [loading,      setLoading]      = useState(false);
-  const [error,        setError]        = useState(null);
-  const [activeTab,    setActiveTab]    = useState('all');
-  const [query,        setQuery]        = useState('');
+  const [results, setResults] = useState(null); // null = not searched yet
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState('all');
+  const [query, setQuery] = useState('');
 
   const debounceRef = useRef(null);
+  const abortControllerRef = useRef(null);
+  const inFlightRef = useRef({ query: '', tab: '' });
 
   /** Execute a search for the current query and given tab */
   const executeSearch = useCallback(async (q, tab) => {
     const trimmed = q.trim();
-    if (!trimmed) { setResults(null); return; }
+    if (!trimmed) {
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      inFlightRef.current = { query: '', tab: '' };
+      setResults(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    // Cancel previous in-flight fetch
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    inFlightRef.current = { query: trimmed, tab };
+
     setLoading(true);
     setError(null);
+
     try {
-      const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(trimmed)}&type=${tab}`));
+      const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(trimmed)}&type=${tab}`), {
+        signal: controller.signal,
+      });
       if (!res.ok) throw new Error(`Search failed (${res.status})`);
       const data = await res.json();
       
@@ -58,7 +78,9 @@ export function useMusicSearch() {
       // If server returned 0 results or empty, invoke multi-tier client fallback
       throw new Error('Empty server search result');
     } catch (err) {
+      if (err.name === 'AbortError') return;
       console.warn('[useMusicSearch] Server search failed or empty, attempting client-side fallback:', err.message);
+      
       try {
         if (tab === 'songs' || tab === 'song') {
           const songs = await searchSongs(trimmed, 20);
@@ -144,34 +166,61 @@ export function useMusicSearch() {
     }
   }, []);
 
-  /** Debounced query update — triggers after 350ms idle */
+  /** Debounced query update — triggers 450ms after user stops typing */
   const search = useCallback((q) => {
     setQuery(q);
     clearTimeout(debounceRef.current);
-    if (!q.trim()) { setResults(null); return; }
+    const trimmed = q.trim();
+    if (!trimmed) {
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      setResults(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    // Set loading preview state early for responsive feel
+    setLoading(true);
     debounceRef.current = setTimeout(() => {
-      executeSearch(q, activeTab);
-    }, 350);
+      executeSearch(trimmed, activeTab);
+    }, 450);
   }, [activeTab, executeSearch]);
+
+  /** Immediate search submit (e.g. on Enter key or submit button click) */
+  const submitSearch = useCallback((q = query) => {
+    clearTimeout(debounceRef.current);
+    const trimmed = q.trim();
+    if (!trimmed) return;
+    // Guard against duplicate execution if already searching same query & tab
+    if (loading && inFlightRef.current.query === trimmed && inFlightRef.current.tab === activeTab) {
+      return;
+    }
+    executeSearch(trimmed, activeTab);
+  }, [query, activeTab, loading, executeSearch]);
 
   /** Switch tab and re-run search for current query */
   const switchTab = useCallback((tab) => {
     setActiveTab(tab);
+    clearTimeout(debounceRef.current);
     if (query.trim()) {
-      executeSearch(query, tab);
+      executeSearch(query.trim(), tab);
     }
   }, [query, executeSearch]);
 
   /** Clear everything */
   const clear = useCallback(() => {
     clearTimeout(debounceRef.current);
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    inFlightRef.current = { query: '', tab: '' };
     setQuery('');
     setResults(null);
+    setLoading(false);
     setError(null);
   }, []);
 
   return {
     query, results, loading, error, activeTab,
-    search, switchTab, clear,
+    search, submitSearch, switchTab, clear,
   };
 }

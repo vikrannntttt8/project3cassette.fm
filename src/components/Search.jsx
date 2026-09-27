@@ -37,13 +37,16 @@ export default function Search({ onSelectTrack, onArtistClick }) {
   const [error, setError] = useState(null);
   const [addMenuSong, setAddMenuSong] = useState(null);
 
-  // Synchronous input typing + 200ms debounced network dispatch
-  const debouncedQuery = useDebounce(searchTerm, 200);
+  // Synchronous input typing + 450ms debounced network dispatch
+  const debouncedQuery = useDebounce(searchTerm, 450);
   const abortControllerRef = useRef(null);
+  const inFlightRef = useRef({ query: '', tab: '' });
 
   const fetchResults = useCallback(async (query, tab) => {
     const trimmed = query.trim();
     if (!trimmed) {
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      inFlightRef.current = { query: '', tab: '' };
       setResults([]);
       setLoading(false);
       setError(null);
@@ -56,6 +59,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
     }
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
+    inFlightRef.current = { query: trimmed, tab };
 
     setLoading(true);
     setError(null);
@@ -131,7 +135,18 @@ export default function Search({ onSelectTrack, onArtistClick }) {
   const handleClear = () => {
     setSearchTerm('');
     setResults([]);
+    setLoading(false);
     setError(null);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = searchTerm.trim();
+    if (!trimmed) return;
+    if (loading && inFlightRef.current.query === trimmed && inFlightRef.current.tab === activeTab) {
+      return;
+    }
+    fetchResults(trimmed, activeTab);
   };
 
   const handleTrackClick = (track) => {
@@ -159,17 +174,24 @@ export default function Search({ onSelectTrack, onArtistClick }) {
 
   return (
     <div className="w-full flex flex-col gap-3">
-      {/* Search Input Bar (Sleek monochrome input) */}
-      <div className="relative w-full">
+      {/* Search Input Bar (Sleek monochrome input with submit guard) */}
+      <form onSubmit={handleSubmit} className="relative w-full">
         <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#888888]">
-          <span className="material-symbols-outlined text-[20px]">search</span>
+          {loading ? (
+            <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <span className="material-symbols-outlined text-[20px]">search</span>
+          )}
         </div>
         <input
           type="text"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            if (e.target.value.trim()) setLoading(true);
+          }}
           placeholder="Search songs, artists, or albums via YouTube Music..."
-          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-black border border-[#262626] text-white placeholder-[#666666] text-body-md focus:outline-none focus:border-white focus:ring-1 focus:ring-white transition-all"
+          className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-black border border-[#262626] text-white placeholder-[#666666] text-body-md focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
         />
         {searchTerm && (
           <button
@@ -180,9 +202,9 @@ export default function Search({ onSelectTrack, onArtistClick }) {
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         )}
-      </div>
+      </form>
 
-      {/* Filter Chips (Minimal outline pills: border #333333/white, bg transparent, active: bg #FFFFFF text #000000) */}
+      {/* Filter Chips */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -193,7 +215,7 @@ export default function Search({ onSelectTrack, onArtistClick }) {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-label-sm font-medium transition-all duration-150 flex-shrink-0 border ${
                 isActive
-                  ? 'bg-white text-black border-white font-semibold shadow-sm'
+                  ? 'bg-accent text-black border-accent font-semibold shadow-sm'
                   : 'bg-transparent text-[#888888] border-[#333333] hover:text-white hover:border-[#666666]'
               }`}
             >
@@ -204,11 +226,18 @@ export default function Search({ onSelectTrack, onArtistClick }) {
         })}
       </div>
 
-      {/* Loading Indicator */}
+      {/* Loading Skeleton Indicator */}
       {loading && (
-        <div className="flex items-center gap-2 px-3 py-2 text-label-sm text-[#888888] animate-pulse">
-          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          <span>Searching YouTube Music ({activeTab})...</span>
+        <div className="flex flex-col gap-2.5 animate-fade-in">
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-[#141416] border border-white/5 text-label-sm text-white">
+            <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            <span>Searching YouTube Music ({activeTab})…</span>
+          </div>
+          <div className="space-y-2">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-14 rounded-xl bg-[#111113] border border-white/5 animate-pulse" />
+            ))}
+          </div>
         </div>
       )}
 

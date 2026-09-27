@@ -33,8 +33,9 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
   const [error, setError] = useState(null);
   const inputRef = useRef(null);
 
-  const debouncedQuery = useDebounce(query, 250);
+  const debouncedQuery = useDebounce(query, 450);
   const abortControllerRef = useRef(null);
+  const inFlightRef = useRef({ query: '', tab: '' });
 
   // Auto-focus input when opened
   useEffect(() => {
@@ -51,6 +52,8 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
   const searchMusic = useCallback(async (q, tab) => {
     const trimmed = q.trim();
     if (!trimmed) {
+      if (abortControllerRef.current) abortControllerRef.current.abort();
+      inFlightRef.current = { query: '', tab: '' };
       setResults(null);
       setLoading(false);
       return;
@@ -61,6 +64,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
     }
     const controller = new AbortController();
     abortControllerRef.current = controller;
+    inFlightRef.current = { query: trimmed, tab };
 
     setLoading(true);
     setError(null);
@@ -186,25 +190,47 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
     loadSong(song, queue, idx >= 0 ? idx : 0);
   };
 
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    if (loading && inFlightRef.current.query === trimmed && inFlightRef.current.tab === activeTab) {
+      return; // Prevent duplicate submit
+    }
+    searchMusic(trimmed, activeTab);
+  };
+
   return (
     <div className="md:hidden fixed inset-0 z-[80] bg-[#0e0e0e] flex flex-col animate-fade-in text-white select-none">
       {/* ── Top Header with Search Input ────────────────────────────── */}
-      <div className="flex items-center gap-2 px-3 py-2.5 bg-[#141416] border-b border-white/10 pt-safe">
+      <form onSubmit={handleFormSubmit} className="flex items-center gap-2 px-3 py-2.5 bg-[#141416] border-b border-white/10 pt-safe">
         <div className="flex-1 flex items-center gap-2.5 px-3.5 py-2 rounded-2xl bg-[#1e1e22] border border-white/10 focus-within:border-accent transition-colors">
-          <span className="material-symbols-outlined text-neutral-400 text-[20px] flex-shrink-0">
-            search
-          </span>
+          {loading ? (
+            <div className="w-[18px] h-[18px] border-2 border-accent border-t-transparent rounded-full animate-spin flex-shrink-0" />
+          ) : (
+            <span className="material-symbols-outlined text-neutral-400 text-[20px] flex-shrink-0">
+              search
+            </span>
+          )}
           <input
             ref={inputRef}
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              if (e.target.value.trim()) setLoading(true);
+            }}
             placeholder="Search songs, albums, artists..."
             className="w-full bg-transparent text-white text-[14px] outline-none placeholder:text-neutral-500"
           />
           {query && (
             <button
-              onClick={() => setQuery('')}
+              type="button"
+              onClick={() => {
+                setQuery('');
+                setResults(null);
+                setLoading(false);
+              }}
               className="text-neutral-400 hover:text-white p-1"
             >
               <span className="material-symbols-outlined text-[16px]">close</span>
@@ -213,12 +239,13 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
         </div>
 
         <button
+          type="button"
           onClick={onClose}
           className="px-3 py-2 text-accent hover:opacity-80 font-semibold text-[14px] cursor-pointer"
         >
           Cancel
         </button>
-      </div>
+      </form>
 
       {/* ── Filter Tabs Strip ───────────────────────────────────────── */}
       <div className="flex gap-2 px-4 py-2 bg-[#121214] border-b border-white/5 overflow-x-auto no-scrollbar flex-shrink-0">
@@ -241,12 +268,35 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
       {/* ── Search Results Body ─────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto px-4 py-3 pb-36 space-y-3 no-scrollbar">
         {loading && (
-          <div className="flex flex-col gap-2.5 pt-4">
+          <div className="flex flex-col gap-3 pt-2 animate-fade-in">
+            {/* Searching status pill */}
+            <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-[#18181a] border border-white/10 shadow-sm">
+              <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold text-white truncate">
+                  Searching YouTube Music…
+                </p>
+                {query && (
+                  <p className="text-[11px] text-neutral-400 truncate">
+                    Matching tracks for "{query}"
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Skeleton rows */}
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}
-                className="h-16 rounded-2xl bg-[#18181a] border border-white/5 animate-pulse"
-              />
+                className="flex items-center gap-3 p-2.5 rounded-2xl bg-[#18181a] border border-white/5 animate-pulse"
+                style={{ animationDelay: `${i * 80}ms` }}
+              >
+                <div className="w-11 h-11 rounded-xl bg-[#252528] flex-shrink-0" />
+                <div className="flex flex-col gap-2 flex-1">
+                  <div className="h-3.5 w-3/5 bg-[#2a2a2e] rounded" />
+                  <div className="h-2.5 w-2/5 bg-[#202024] rounded" />
+                </div>
+              </div>
             ))}
           </div>
         )}

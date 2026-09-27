@@ -54,7 +54,7 @@ export default function HomeView() {
     routeToSongEntity,
     routeToArtistEntity,
   } = usePlayer();
-  const { query, results, loading, error, activeTab, search, switchTab, clear } = useMusicSearch();
+  const { query, results, loading, error, activeTab, search, submitSearch, switchTab, clear } = useMusicSearch();
 
   const [addMenuSong, setAddMenuSong] = useState(null);
   const [selectedArtist, setSelectedArtist] = useState(null);
@@ -96,9 +96,9 @@ export default function HomeView() {
 
   // ── Render results by tab ─────────────────────────────────────────
   const renderResults = () => {
-    if (!results) return null;
-    if (loading) return <SearchSkeleton />;
+    if (loading) return <SearchSkeleton query={query} tab={activeTab} />;
     if (error) return <ErrorMsg msg={error} onRetry={() => search(query)} />;
+    if (!results) return null;
 
     if (activeTab === 'all') {
       const { songs = [], albums = [], artists = [] } = results;
@@ -257,7 +257,13 @@ export default function HomeView() {
             </h1>
           </div>
           <div className="flex items-center gap-3 flex-1 sm:flex-initial justify-end">
-            <SearchBar query={query} onChange={search} onClear={clear} />
+            <SearchBar
+              query={query}
+              onChange={search}
+              onClear={clear}
+              onSubmit={submitSearch}
+              loading={loading}
+            />
           </div>
         </div>
 
@@ -270,7 +276,7 @@ export default function HomeView() {
                 onClick={() => setActiveChip(chip.id)}
                 className={`px-3.5 py-1.5 rounded-full text-[13px] font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeChip === chip.id
-                    ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20'
+                    ? 'bg-accent text-black shadow-md shadow-accent/20 font-bold'
                     : 'bg-[#18181a] text-neutral-400 border border-white/5 hover:border-white/20 hover:text-white'
                 }`}
               >
@@ -289,7 +295,7 @@ export default function HomeView() {
                 onClick={() => switchTab(tab)}
                 className={`px-4 py-1.5 rounded-full text-label-md font-medium whitespace-nowrap transition-all text-[13px] sm:text-[14px] border ${
                   activeTab === tab
-                    ? 'bg-amber-500 text-black border-amber-500 font-bold shadow-sm'
+                    ? 'bg-accent text-black border-accent font-bold shadow-sm'
                     : 'bg-transparent text-neutral-400 border-white/10 hover:text-white hover:border-white/30'
                 }`}
               >
@@ -362,7 +368,7 @@ function ResultSection({ title, icon, children }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <span className="material-symbols-outlined text-amber-500 text-[20px]">{icon}</span>
+        <span className="material-symbols-outlined text-accent text-[20px]">{icon}</span>
         <h2 className="text-headline-sm font-bold text-white">{title}</h2>
       </div>
       {children}
@@ -370,12 +376,70 @@ function ResultSection({ title, icon, children }) {
   );
 }
 
-function SearchSkeleton() {
+function SearchSkeleton({ query, tab = 'all' }) {
   return (
-    <div className="flex flex-col gap-3 animate-pulse">
-      {[...Array(6)].map((_, i) => (
-        <div key={i} className="h-16 rounded-2xl bg-[#18181a] border border-white/5" />
-      ))}
+    <div className="flex flex-col gap-6 animate-fade-in">
+      {/* ── Searching YouTube Music Indicator ── */}
+      <div className="flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-[#18181a] via-[#1f1f23] to-[#18181a] border border-white/10 shadow-lg relative overflow-hidden">
+        <div className="flex items-center gap-3.5 min-w-0 z-10">
+          <div className="relative w-8 h-8 rounded-xl bg-accent/15 border border-accent/30 flex items-center justify-center flex-shrink-0">
+            <div className="w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-label-md font-bold text-white">
+                Searching YouTube Music…
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-mono font-bold bg-accent/20 text-accent uppercase tracking-wider">
+                {tab}
+              </span>
+            </div>
+            {query && (
+              <p className="text-body-xs text-neutral-400 truncate mt-0.5">
+                Fetching high-fidelity matches for <span className="text-white font-medium">"{query}"</span>
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="hidden sm:flex items-center gap-1 text-accent opacity-60 z-10">
+          <span className="material-symbols-outlined text-[20px] animate-pulse">graphic_eq</span>
+        </div>
+      </div>
+
+      {/* ── Top Result Hero Skeleton ── */}
+      {tab === 'all' && (
+        <div className="w-full p-5 rounded-3xl bg-[#18181a]/80 border border-white/5 flex flex-col sm:flex-row items-center gap-5 relative overflow-hidden animate-pulse">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-[#252528] flex-shrink-0" />
+          <div className="flex flex-col gap-2.5 flex-1 w-full">
+            <div className="h-4 w-20 bg-accent/20 rounded-full" />
+            <div className="h-6 w-3/4 max-w-sm bg-[#2c2c30] rounded-xl" />
+            <div className="h-4 w-1/2 max-w-xs bg-[#222225] rounded-lg" />
+          </div>
+        </div>
+      )}
+
+      {/* ── Track Row Skeletons ── */}
+      <div className="flex flex-col gap-2.5">
+        {[...Array(6)].map((_, i) => (
+          <div
+            key={i}
+            className="flex items-center justify-between p-3 rounded-2xl bg-[#161618] border border-white/5 animate-pulse"
+            style={{ animationDelay: `${i * 90}ms` }}
+          >
+            <div className="flex items-center gap-3.5 flex-1 min-w-0">
+              <div className="w-12 h-12 rounded-xl bg-[#26262a] flex-shrink-0" />
+              <div className="flex flex-col gap-2 flex-1">
+                <div className="h-4 w-2/5 min-w-[140px] bg-[#2a2a2e] rounded-md" />
+                <div className="h-3 w-1/4 min-w-[90px] bg-[#202024] rounded-md" />
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded-full bg-[#202024]" />
+              <div className="w-10 h-3 bg-[#202024] rounded-md hidden sm:block" />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -383,7 +447,7 @@ function SearchSkeleton() {
 function ErrorMsg({ msg, onRetry }) {
   return (
     <div className="flex flex-col items-center gap-3 py-16 text-center">
-      <span className="material-symbols-outlined text-[48px] text-amber-500">cloud_off</span>
+      <span className="material-symbols-outlined text-[48px] text-accent">cloud_off</span>
       <p className="text-headline-sm text-white font-semibold">Search encountered an issue</p>
       <p className="text-body-md text-neutral-400 max-w-md">
         {msg || 'Unable to reach music endpoints. Please try again.'}
@@ -391,7 +455,7 @@ function ErrorMsg({ msg, onRetry }) {
       {onRetry && (
         <button
           onClick={onRetry}
-          className="px-4 py-2 rounded-full bg-amber-500 text-black font-bold text-label-md hover:bg-amber-400 transition-colors mt-2 cursor-pointer shadow-md shadow-amber-500/20"
+          className="px-4 py-2 rounded-full bg-accent text-black font-bold text-label-md hover:opacity-90 transition-opacity mt-2 cursor-pointer shadow-md shadow-accent/20"
         >
           Retry Search
         </button>

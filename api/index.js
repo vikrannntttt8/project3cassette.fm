@@ -114,21 +114,17 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── 2. GET /api/home/feed ───────────────────────────────────
-    if (pathname === '/api/home/feed') {
+    // ── 2. GET /api/home & /api/home/feed ─────────────────────────
+    if (pathname === '/api/home' || pathname === '/api/home/feed') {
       try {
         const feedData = await getHomeFeedData();
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
         return res.status(200).json(feedData);
       } catch (err) {
         console.error('[API /api/home/feed] Error:', err);
-        return res.status(200).json({
-          quickPicks: [],
-          dailyMixes: [],
-          trendingAlbums: [],
-          dynamicSections: [],
-          error: err.message,
-        });
+        const { FALLBACK_HOME_FEED } = await import('../src/data/fallbackFeed.js');
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return res.status(200).json(FALLBACK_HOME_FEED);
       }
     }
 

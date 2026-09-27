@@ -165,8 +165,8 @@ function innertubeApiPlugin() {
           }
         }
 
-        // ── 1d. GET /api/home/feed ─────────────────────────────────────────
-        if (pathname === '/api/home/feed' && req.method === 'GET') {
+        // ── 1d. GET /api/home & /api/home/feed ─────────────────────────────
+        if ((pathname === '/api/home' || pathname === '/api/home/feed') && req.method === 'GET') {
           try {
             const { getHomeFeedData } = await import('./src/services/innertube.js');
             const feedData = await getHomeFeedData();
@@ -177,9 +177,11 @@ function innertubeApiPlugin() {
             return;
           } catch (err) {
             console.error('[API /api/home/feed] Error:', err);
-            res.statusCode = 500;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: err.message, quickPicks: [], dailyMixes: [], trendingAlbums: [], dynamicSections: [] }));
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            const { FALLBACK_HOME_FEED } = await import('./src/data/fallbackFeed.js');
+            res.end(JSON.stringify(FALLBACK_HOME_FEED));
             return;
           }
         }

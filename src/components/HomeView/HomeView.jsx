@@ -13,6 +13,7 @@ import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ArtistModal from '../ArtistView/ArtistModal.jsx';
 import MarqueeText from '../shared/MarqueeText.jsx';
 import { apiUrl } from '../../utils/apiConfig.js';
+import { FALLBACK_HOME_FEED } from '../../data/fallbackFeed.js';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -548,7 +549,6 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
   const { currentSong, isPlaying, history } = usePlayer();
   const [feedData, setFeedData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [loadingMixId, setLoadingMixId] = useState(null);
 
   const quickPicksRef = useRef(null);
@@ -562,48 +562,83 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
 
   useEffect(() => {
     let isMounted = true;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 7000);
+
     setLoading(true);
-    fetch(apiUrl('/api/home/feed'))
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to load YouTube Music feed');
+    fetch(apiUrl('/api/home/feed'), { signal: controller.signal })
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(`Feed request returned status ${res.status}`);
+        }
         return res.json();
       })
       .then((data) => {
-        if (isMounted) {
-          setFeedData(data);
-          setLoading(false);
+        clearTimeout(timeoutId);
+        if (!isMounted) return;
+
+        const hasQuickPicks = Array.isArray(data?.quickPicks) && data.quickPicks.length > 0;
+        const hasTrendingAlbums = Array.isArray(data?.trendingAlbums) && data.trendingAlbums.length > 0;
+
+        if (!data || (!hasQuickPicks && !hasTrendingAlbums)) {
+          console.warn('[Home Feed] Incomplete payload received, using offline curated fallback');
+          setFeedData(FALLBACK_HOME_FEED);
+        } else {
+          setFeedData({
+            quickPicks: hasQuickPicks ? data.quickPicks : FALLBACK_HOME_FEED.quickPicks,
+            dailyMixes: Array.isArray(data?.dailyMixes) && data.dailyMixes.length > 0 ? data.dailyMixes : FALLBACK_HOME_FEED.dailyMixes,
+            trendingAlbums: hasTrendingAlbums ? data.trendingAlbums : FALLBACK_HOME_FEED.trendingAlbums,
+            dynamicSections: Array.isArray(data?.dynamicSections) ? data.dynamicSections : FALLBACK_HOME_FEED.dynamicSections,
+          });
         }
+        setLoading(false);
       })
       .catch((err) => {
-        if (isMounted) {
-          setError(err.message);
-          setLoading(false);
-        }
+        clearTimeout(timeoutId);
+        if (!isMounted) return;
+        console.warn('[Home Feed] Live feed unavailable or timed out, recovering with curated catalog:', err.message);
+        setFeedData(FALLBACK_HOME_FEED);
+        setLoading(false);
       });
 
     return () => {
       isMounted = false;
+      clearTimeout(timeoutId);
+      controller.abort();
     };
   }, []);
 
   const playMix = async (mix) => {
     setLoadingMixId(mix.id);
     try {
-      const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(mix.title + ' songs')}&type=songs`));
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(mix.title + ' songs')}&type=songs`), {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
       if (res.ok) {
         const songs = await res.json();
         if (Array.isArray(songs) && songs.length > 0) {
           onPlaySong(songs[0], songs);
+          return;
         }
       }
+      throw new Error('Search returned empty songs');
     } catch (e) {
-      console.error('[Live Mix Playback] Error:', e);
+      console.warn('[Live Mix Playback] Falling back to curated mix tracks:', e);
+      const fallbackList = FALLBACK_HOME_FEED.quickPicks;
+      if (fallbackList.length > 0) {
+        onPlaySong(fallbackList[0], fallbackList);
+      }
     } finally {
       setLoadingMixId(null);
     }
   };
 
-  if (loading) {
+  if (loading && !feedData) {
     return (
       <div className="flex flex-col gap-8">
         <FeedSkeleton title="Quick Picks" />
@@ -613,26 +648,10 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
     );
   }
 
-  if (error && (!feedData || !feedData.quickPicks?.length)) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-center">
-        <span className="material-symbols-outlined text-[48px] text-amber-500">wifi_off</span>
-        <p className="text-headline-sm font-semibold text-white mt-2">Live feed currently unavailable</p>
-        <p className="text-body-sm text-neutral-400 mt-1">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-4 px-4 py-2 rounded-full bg-amber-500 text-black font-bold text-label-md hover:bg-amber-400 transition-colors cursor-pointer"
-        >
-          Reload Feed
-        </button>
-      </div>
-    );
-  }
-
-  const quickPicks = feedData?.quickPicks || [];
-  const dailyMixes = feedData?.dailyMixes || [];
-  const trendingAlbums = feedData?.trendingAlbums || [];
-  const dynamicSections = feedData?.dynamicSections || [];
+  const quickPicks = feedData?.quickPicks?.length ? feedData.quickPicks : FALLBACK_HOME_FEED.quickPicks;
+  const dailyMixes = feedData?.dailyMixes?.length ? feedData.dailyMixes : FALLBACK_HOME_FEED.dailyMixes;
+  const trendingAlbums = feedData?.trendingAlbums?.length ? feedData.trendingAlbums : FALLBACK_HOME_FEED.trendingAlbums;
+  const dynamicSections = feedData?.dynamicSections || FALLBACK_HOME_FEED.dynamicSections;
 
   const quickPickColumns = chunkArray(quickPicks, 4);
 

@@ -4,13 +4,12 @@ import { formatTime, formatDuration } from '../../utils/timeFormat.js';
 import { useLrcSync } from '../../hooks/useLrcSync.js';
 import { getHighResImage } from '../../utils/imageUtils.js';
 import ImageWithFallback from '../shared/ImageWithFallback.jsx';
-import ArtistLinks from '../shared/ArtistLinks.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import TrackContextMenu from '../shared/TrackContextMenu.jsx';
 import MarqueeText from '../shared/MarqueeText.jsx';
 
 /**
- * MobilePlayerSheet — Archive Tune Inspired Now Playing Screen & Queue Drawer
+ * MobilePlayerSheet — ArchiveTune Now Playing Interface Layout & Visual Hierarchy
  */
 export default function MobilePlayerSheet({ isOpen, onClose }) {
   const {
@@ -39,14 +38,10 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
     lyricsSource,
     lyricsLoading,
     fetchLyricsForSong,
-    audioQuality,
-    setAudioQuality,
     isShuffled,
     toggleShuffle,
     isRepeat,
     toggleRepeat,
-    isDownloaded,
-    toggleDownload,
     routeToSongEntity,
     routeToArtistEntity,
   } = usePlayer();
@@ -60,7 +55,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
 
   const { lines, activeIndex } = useLrcSync(lrcString, currentTime);
 
-  // Trigger lyric fetch when opening lyrics sheet if not loaded yet
+  // Fetch lyrics when opening lyrics sheet if not already loaded
   useEffect(() => {
     if (isOpen && activeSheet === 'lyrics' && !lrcString && !lyricsLoading && currentSong) {
       fetchLyricsForSong(currentSong);
@@ -87,19 +82,20 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
   if (!isOpen || !currentSong) return null;
 
   const liked = isLiked(currentSong.id || currentSong.videoId);
-  const downloaded = isDownloaded(currentSong.id || currentSong.videoId);
   const remainingTime = duration > currentTime ? duration - currentTime : 0;
+  const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const volPct = Math.round(volume * 100);
   const highResCover = getHighResImage(currentSong.cover || currentSong.thumbnail);
 
-  // Playing from context label
+  // Top context label
   const playingFromContext =
     currentSong.album
       ? `Album • ${currentSong.album}`
       : currentSong.artist
       ? `${currentSong.artist} Radio`
-      : 'Cassette Flow';
+      : 'cassette.fm Flow';
 
-  // Touch gesture handlers
+  // Swipe & Touch gesture handlers
   const handleTouchStart = (e) => {
     touchStartYRef.current = e.touches[0].clientY;
     touchStartXRef.current = e.touches[0].clientX;
@@ -112,7 +108,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
     // Ignore mostly horizontal swipes
     if (Math.abs(deltaX) > Math.abs(deltaY)) return;
 
-    // Swipe down
+    // Swipe down to collapse drawer or sheet
     if (deltaY > 70) {
       if (activeSheet === 'queue' || activeSheet === 'lyrics') {
         setActiveSheet('player');
@@ -132,28 +128,28 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
       onTouchEnd={handleTouchEnd}
       className="md:hidden fixed inset-0 z-[95] bg-[#0c0c0e] flex flex-col text-white animate-sheet-slide-up select-none overflow-hidden"
     >
-      {/* ── Ambient Album Backdrop Glow ── */}
+      {/* ── 1. SUBTLE AMBIENT DYNAMIC THEME (BACKGROUND GLOW ONLY) ──── */}
       {highResCover && (
         <div
           aria-hidden="true"
-          className="absolute -top-[15%] -left-[15%] -right-[15%] h-[65%] bg-cover bg-center pointer-events-none opacity-25 blur-[120px] transform scale-125 transition-all duration-1000"
+          className="absolute -top-[10%] -left-[10%] -right-[10%] h-[60%] bg-cover bg-center pointer-events-none opacity-20 blur-[130px] transform scale-125 transition-all duration-1000"
           style={{ backgroundImage: `url(${highResCover})` }}
         />
       )}
-      <div className="absolute inset-0 bg-[#0c0c0e]/80 pointer-events-none z-0" />
+      <div className="absolute inset-0 bg-[#0c0c0e]/85 pointer-events-none z-0" />
 
-      {/* ── TOP BAR: Playing from Context + Dismiss Button ──────────── */}
+      {/* ── TOP CONTEXT BAR ─────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-5 pt-3 pb-2 flex-shrink-0 pt-safe relative z-10">
         <button
           onClick={onClose}
-          className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white/80 hover:text-white active:scale-95 transition-all cursor-pointer shadow-sm"
+          className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all cursor-pointer shadow-sm"
           aria-label="Dismiss player sheet"
           title="Dismiss"
         >
           <span className="material-symbols-outlined text-[24px]">keyboard_arrow_down</span>
         </button>
 
-        {/* Subtle Top Context Line */}
+        {/* Subtle Top Context Line: Playing from [Playlist / Artist Mix] */}
         <div
           onClick={() => {
             if (currentSong.album) {
@@ -164,7 +160,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               onClose();
             }
           }}
-          className="flex flex-col items-center max-w-[200px] text-center cursor-pointer group/context"
+          className="flex flex-col items-center max-w-[210px] text-center cursor-pointer group/context"
           title="View source"
         >
           <span className="text-[10px] font-mono tracking-widest uppercase text-neutral-400 group-hover/context:text-neutral-300">
@@ -175,26 +171,34 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
           </span>
         </div>
 
-        {/* Quality / More Menu */}
-        <div className="flex items-center gap-1">
-          <TrackContextMenu track={currentSong} onAddToPlaylist={setAddMenuSong} />
-        </div>
+        {/* More Context Menu */}
+        <TrackContextMenu track={currentSong} onAddToPlaylist={setAddMenuSong}>
+          <button
+            type="button"
+            className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all cursor-pointer shadow-sm"
+            title="Options"
+            aria-label="Options"
+          >
+            <span className="material-symbols-outlined text-[20px]">more_vert</span>
+          </button>
+        </TrackContextMenu>
       </div>
 
-      {/* ── CENTER CONTENT AREA (MAIN NOW PLAYING SCREEN) ───────────── */}
+      {/* ── CENTER CONTENT AREA (NOW PLAYING SCREEN) ────────────────── */}
       {activeSheet === 'player' && (
-        <div className="flex-1 flex flex-col justify-between px-6 pt-2 pb-[calc(1rem+var(--safe-bottom,12px))] min-h-0 overflow-y-auto no-scrollbar relative z-10 max-w-md mx-auto w-full">
-          {/* ── 1. High-Res Artwork Card ── */}
-          <div className="my-auto pt-2 pb-4 flex flex-col items-center justify-center">
+        <div className="flex-1 flex flex-col justify-between px-6 pt-2 pb-[calc(1.25rem+var(--safe-bottom,12px))] min-h-0 overflow-y-auto no-scrollbar relative z-10 max-w-md mx-auto w-full">
+          
+          {/* ── High-Res Cover Artwork Card ── */}
+          <div className="my-auto pt-2 pb-3 flex flex-col items-center justify-center">
             <div
               onClick={() => {
                 routeToSongEntity(currentSong);
                 onClose();
               }}
-              className="relative aspect-square w-full max-w-[320px] sm:max-w-[350px] mx-auto rounded-[32px] overflow-hidden bg-neutral-900 border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.85)] ring-1 ring-white/10 cursor-pointer group transition-transform duration-300 active:scale-[0.98]"
+              className="relative aspect-square w-full max-w-[310px] sm:max-w-[340px] mx-auto rounded-3xl overflow-hidden bg-neutral-900 border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.9)] ring-1 ring-white/10 cursor-pointer group transition-transform duration-300 active:scale-[0.98]"
               title="Click to view album release"
             >
-              <img
+              <ImageWithFallback
                 src={highResCover}
                 alt={currentSong.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
@@ -207,8 +211,8 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
             </div>
           </div>
 
-          {/* ── 2. Track Title & Artist (Left) paired with Heart & Menu (Right) ── */}
-          <div className="flex items-center justify-between gap-4 mt-2">
+          {/* ── 2. TYPOGRAPHY & TRACK METADATA ROW ── */}
+          <div className="flex items-start justify-between gap-4 mt-2">
             <div className="min-w-0 flex-1 overflow-hidden">
               <div
                 onClick={() => {
@@ -218,10 +222,9 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                 className="cursor-pointer group/title"
                 title="View track release"
               >
-                <MarqueeText
-                  text={currentSong.title}
-                  className="text-[22px] sm:text-[24px] font-extrabold text-white tracking-tight leading-snug group-hover/title:underline"
-                />
+                <h2 className="text-2xl font-bold tracking-tight text-white truncate leading-tight group-hover/title:underline">
+                  {currentSong.title}
+                </h2>
               </div>
               <div
                 onClick={() => {
@@ -242,127 +245,195 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                     onClose();
                   }
                 }}
-                className="text-[15px] text-neutral-400 font-medium hover:text-white hover:underline truncate block mt-0.5 cursor-pointer"
+                className="text-sm font-medium text-neutral-400 hover:text-white hover:underline truncate block mt-1 cursor-pointer"
                 title="View artist profile"
               >
                 {currentSong?.artist || 'Unknown Artist'}
               </div>
             </div>
 
-            {/* Right Action Icons: Heart & More */}
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Action Icons: Outline Heart & More Options on the right */}
+            <div className="flex items-center gap-1.5 flex-shrink-0 pt-0.5">
               <button
                 type="button"
                 onClick={() => toggleLike(currentSong)}
-                className={`w-11 h-11 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90 cursor-pointer ${
                   liked
-                    ? 'text-white bg-white/10 shadow-sm'
+                    ? 'text-white bg-white/10'
                     : 'text-neutral-400 hover:text-white hover:bg-white/5'
                 }`}
                 aria-label={liked ? 'Unlike' : 'Like'}
                 title={liked ? 'Unlike' : 'Like'}
               >
                 <span
-                  className="material-symbols-outlined text-[26px]"
+                  className="material-symbols-outlined text-[24px]"
                   style={{ fontVariationSettings: `'FILL' ${liked ? 1 : 0}` }}
                 >
                   favorite
                 </span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => setAddMenuSong(currentSong)}
-                className="w-11 h-11 rounded-full flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/5 active:scale-90 transition-all cursor-pointer"
-                title="Add to playlist"
-                aria-label="Add to playlist"
-              >
-                <span className="material-symbols-outlined text-[24px]">playlist_add</span>
-              </button>
+              <TrackContextMenu track={currentSong} onAddToPlaylist={setAddMenuSong} icon="more_horiz">
+                <button
+                  type="button"
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/5 active:scale-90 transition-all cursor-pointer"
+                  title="More options"
+                  aria-label="More options"
+                >
+                  <span className="material-symbols-outlined text-[24px]">more_horiz</span>
+                </button>
+              </TrackContextMenu>
             </div>
           </div>
 
-          {/* ── 3. Modernized Seek Bar with Elapsed/Remaining Timestamps ── */}
-          <div className="space-y-1.5 mt-4">
-            <input
-              type="range"
-              min="0"
-              max={duration || 100}
-              value={currentTime || 0}
-              onChange={(e) => seek(Number(e.target.value))}
-              className="w-full cursor-pointer"
-            />
-            <div className="flex items-center justify-between text-[11.5px] font-mono text-neutral-400 px-0.5 tabular-nums">
+          {/* ── 3. PURE WHITE SCRUBBER & TIMELINE ── */}
+          <div className="space-y-2 mt-5">
+            {/* Timeline Track: Thin rounded progress bar with solid white fill */}
+            <div className="relative w-full h-1.5 rounded-full bg-white/20 flex items-center group cursor-pointer">
+              <div
+                className="h-full bg-white rounded-full transition-all duration-75"
+                style={{ width: `${progressPct}%` }}
+              />
+              <div
+                className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-white shadow-sm pointer-events-none transition-transform"
+                style={{ left: `calc(${Math.min(Math.max(progressPct, 0), 100)}% - 6px)` }}
+              />
+              <input
+                type="range"
+                min="0"
+                max={duration || 100}
+                step="0.25"
+                value={currentTime || 0}
+                onChange={(e) => seek(Number(e.target.value))}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                aria-label="Seek track"
+              />
+            </div>
+
+            {/* Timestamps: Elapsed left, Remaining right */}
+            <div className="flex items-center justify-between text-xs text-neutral-400 font-normal font-mono tabular-nums px-0.5">
               <span>{formatTime(currentTime)}</span>
               <span>-{formatTime(remainingTime)}</span>
             </div>
           </div>
 
-          {/* ── 4. Playback Controls Row (Shuffle, Prev, Play/Pause, Next, Repeat) ── */}
-          <div className="flex items-center justify-between px-2 mt-2">
-            <button
-              onClick={toggleShuffle}
-              className={`p-2.5 rounded-full transition-colors active:scale-90 cursor-pointer ${
-                isShuffled ? 'text-white' : 'text-neutral-500 hover:text-white'
-              }`}
-              title="Toggle Shuffle"
-              aria-label="Toggle Shuffle"
-            >
-              <span className="material-symbols-outlined text-[22px]">shuffle</span>
-            </button>
+          {/* ── 4. CLEAN PLAYBACK CONTROLS & VOLUME ── */}
+          <div className="space-y-4 mt-1">
+            {/* Main Playback Row: Shuffle, Prev, Solid White Play/Pause, Next, Repeat */}
+            <div className="flex items-center justify-between px-1">
+              <button
+                type="button"
+                onClick={toggleShuffle}
+                className={`p-2.5 rounded-full transition-colors active:scale-90 cursor-pointer ${
+                  isShuffled ? 'text-white' : 'text-neutral-500 hover:text-white'
+                }`}
+                title="Toggle Shuffle"
+                aria-label="Toggle Shuffle"
+              >
+                <span className="material-symbols-outlined text-[22px]">shuffle</span>
+              </button>
 
-            <button
-              onClick={playPrev}
-              className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer hover:bg-white/5"
-              aria-label="Previous track"
-              title="Previous"
-            >
-              <span className="material-symbols-outlined text-[34px]">skip_previous</span>
-            </button>
+              <button
+                type="button"
+                onClick={playPrev}
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer hover:bg-white/5"
+                aria-label="Previous track"
+                title="Previous"
+              >
+                <span className="material-symbols-outlined text-[34px]">skip_previous</span>
+              </button>
 
-            {/* Oversized Filled Play/Pause Button */}
-            <button
-              onClick={togglePlay}
-              className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_8px_25px_rgba(255,255,255,0.3)] cursor-pointer"
-              aria-label={isPlaying ? 'Pause' : 'Play'}
-              title={isPlaying ? 'Pause' : 'Play'}
-            >
-              {isLoading ? (
-                <div className="w-6 h-6 border-3 border-black border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <span
-                  className="material-symbols-outlined text-[36px] font-bold"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  {isPlaying ? 'pause' : 'play_arrow'}
+              {/* Large Solid White Play/Pause Toggle */}
+              <button
+                type="button"
+                onClick={togglePlay}
+                className="w-16 h-16 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_8px_30px_rgba(255,255,255,0.25)] cursor-pointer"
+                aria-label={isPlaying ? 'Pause' : 'Play'}
+                title={isPlaying ? 'Pause' : 'Play'}
+              >
+                {isLoading ? (
+                  <div className="w-6 h-6 border-3 border-black border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span
+                    className="material-symbols-outlined text-[36px] font-bold"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    {isPlaying ? 'pause' : 'play_arrow'}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={playNext}
+                className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer hover:bg-white/5"
+                aria-label="Next track"
+                title="Next"
+              >
+                <span className="material-symbols-outlined text-[34px]">skip_next</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleRepeat}
+                className={`p-2.5 rounded-full transition-colors active:scale-90 cursor-pointer ${
+                  isRepeat ? 'text-white' : 'text-neutral-500 hover:text-white'
+                }`}
+                title="Toggle Repeat"
+                aria-label="Toggle Repeat"
+              >
+                <span className="material-symbols-outlined text-[22px]">repeat</span>
+              </button>
+            </div>
+
+            {/* Volume Bar: Thin white-and-translucent slider flanked by mute and max-volume speaker icons */}
+            <div className="flex items-center gap-3 px-2 pt-1">
+              <button
+                type="button"
+                onClick={() => changeVolume(volume > 0 ? 0 : 0.8)}
+                className="text-neutral-400 hover:text-white transition-colors cursor-pointer flex-shrink-0"
+                aria-label="Mute"
+              >
+                <span className="material-symbols-outlined text-[18px]">
+                  {volume === 0 ? 'volume_off' : 'volume_mute'}
                 </span>
-              )}
-            </button>
+              </button>
 
-            <button
-              onClick={playNext}
-              className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform cursor-pointer hover:bg-white/5"
-              aria-label="Next track"
-              title="Next"
-            >
-              <span className="material-symbols-outlined text-[34px]">skip_next</span>
-            </button>
+              <div className="relative flex-1 h-1 rounded-full bg-white/20 flex items-center group cursor-pointer">
+                <div
+                  className="h-full bg-white rounded-full transition-all duration-75"
+                  style={{ width: `${volPct}%` }}
+                />
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-sm pointer-events-none"
+                  style={{ left: `calc(${Math.min(Math.max(volPct, 0), 100)}% - 5px)` }}
+                />
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={volume}
+                  onChange={(e) => changeVolume(parseFloat(e.target.value))}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  aria-label="Volume"
+                />
+              </div>
 
-            <button
-              onClick={toggleRepeat}
-              className={`p-2.5 rounded-full transition-colors active:scale-90 cursor-pointer ${
-                isRepeat ? 'text-white' : 'text-neutral-500 hover:text-white'
-              }`}
-              title="Toggle Repeat"
-              aria-label="Toggle Repeat"
-            >
-              <span className="material-symbols-outlined text-[22px]">repeat</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => changeVolume(1)}
+                className="text-neutral-400 hover:text-white transition-colors cursor-pointer flex-shrink-0"
+                aria-label="Max volume"
+              >
+                <span className="material-symbols-outlined text-[18px]">volume_up</span>
+              </button>
+            </div>
           </div>
 
-          {/* ── 5. Clean 3-Element Bottom Utility Strip ── */}
-          <div className="pt-5 flex items-center justify-between px-2 border-t border-white/5 mt-2">
-            {/* Left: Lyrics Icon */}
+          {/* ── 5. MINIMALIST BOTTOM UTILITY DOCK ── */}
+          <div className="pt-5 flex items-center justify-between px-2 border-t border-white/5 mt-3">
+            {/* Left: Minimalist speech bubble icon for Lyrics */}
             <button
               type="button"
               onClick={() => setActiveSheet('lyrics')}
@@ -373,7 +444,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               <span className="material-symbols-outlined text-[22px]">chat_bubble</span>
             </button>
 
-            {/* Center: Device Output Pill ("Speaker") */}
+            {/* Center: Subtle rounded translucent pill displaying active audio output */}
             <div className="relative">
               <button
                 type="button"
@@ -381,7 +452,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                 className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#18181a] border border-white/10 hover:border-white/20 text-neutral-300 hover:text-white text-[12px] font-medium transition-all active:scale-95 cursor-pointer shadow-sm"
               >
                 <span className="material-symbols-outlined text-[16px] text-white">speaker</span>
-                <span>This Device</span>
+                <span>Speaker</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               </button>
 
@@ -393,7 +464,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               )}
             </div>
 
-            {/* Right: Queue Sheet Toggle Icon */}
+            {/* Right: Clean hamburger list icon for Queue */}
             <button
               type="button"
               onClick={() => setActiveSheet('queue')}
@@ -412,7 +483,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
         </div>
       )}
 
-      {/* ── DRAWER 1: SWIPE-UP QUEUE DRAWER & ACTIVE SONG CARD ──────── */}
+      {/* ── SWIPE-UP QUEUE DRAWER & ACTIVE SONG CARD ────────────────── */}
       {activeSheet === 'queue' && (
         <div className="flex-1 flex flex-col min-h-0 bg-[#0c0c0e] animate-sheet-slide-up relative z-20">
           {/* Drawer Header with Drag Handle */}
@@ -439,7 +510,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                 </div>
               </div>
 
-              {/* Action Buttons: Clear Queue, Shuffle, Autoplay Loop */}
+              {/* Action Buttons: Autoplay Loop, Shuffle, Clear Queue */}
               <div className="flex items-center gap-1">
                 <button
                   onClick={toggleAutoplay}
@@ -483,7 +554,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               <div className="p-3.5 rounded-2xl bg-neutral-900/90 border border-white/15 shadow-xl flex items-center gap-3.5">
                 {/* Thumbnail with Live Visualizer Equalizer */}
                 <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-neutral-800 border border-white/10">
-                  <img
+                  <ImageWithFallback
                     src={currentSong.thumbnail || currentSong.cover}
                     alt=""
                     className="w-full h-full object-cover"
@@ -542,7 +613,6 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                 <div className="divide-y divide-white/5 rounded-2xl bg-neutral-900/40 border border-white/5 overflow-hidden">
                   {queue.map((track, i) => {
                     if (i === queueIndex) return null; // Skip active track shown above
-                    const isUpcoming = i > queueIndex;
                     return (
                       <div
                         key={`${track.id || track.videoId || i}-${i}`}
@@ -598,7 +668,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
         </div>
       )}
 
-      {/* ── DRAWER 2: LIVE SYNCED LYRICS SHEET ──────────────────────── */}
+      {/* ── LIVE SYNCED LYRICS SHEET ────────────────────────────────── */}
       {activeSheet === 'lyrics' && (
         <div className="flex-1 flex flex-col min-h-0 bg-[#0c0c0e] animate-sheet-slide-up relative z-20">
           {/* Lyrics Header */}
@@ -611,7 +681,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
             </button>
             <div className="text-center">
               <h3 className="text-[14px] font-bold text-white">Live Synced Lyrics</h3>
-              <p className="text-[11px] font-mono text-neutral-400">{currentSong.title}</p>
+              <p className="text-[11px] font-mono text-neutral-400 truncate max-w-[200px]">{currentSong.title}</p>
             </div>
             <button
               onClick={() => fetchLyricsForSong(currentSong)}

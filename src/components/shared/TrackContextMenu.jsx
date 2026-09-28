@@ -10,7 +10,7 @@ import { usePlayer } from '../../context/PlayerContext.jsx';
  * - Go to Artist
  * - Add to Playlist
  */
-export default function TrackContextMenu({ track, onAddToPlaylist }) {
+export default function TrackContextMenu({ track, onAddToPlaylist, children, icon = 'more_vert' }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
   const {
@@ -101,18 +101,24 @@ export default function TrackContextMenu({ track, onAddToPlaylist }) {
 
   return (
     <div className="relative inline-block" ref={menuRef}>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen((prev) => !prev);
-        }}
-        className="p-1.5 rounded-full text-[#888888] hover:text-white hover:bg-white/10 transition-colors"
-        title="More options"
-        aria-label="Track options"
-      >
-        <span className="material-symbols-outlined text-[20px]">more_vert</span>
-      </button>
+      {children ? (
+        <div onClick={(e) => { e.stopPropagation(); setIsOpen((prev) => !prev); }}>
+          {children}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen((prev) => !prev);
+          }}
+          className="p-1.5 rounded-full text-[#888888] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+          title="More options"
+          aria-label="Track options"
+        >
+          <span className="material-symbols-outlined text-[20px]">{icon}</span>
+        </button>
+      )}
 
       {isOpen && (
         <div

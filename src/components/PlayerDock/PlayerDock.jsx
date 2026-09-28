@@ -226,12 +226,12 @@ export default function PlayerDock() {
                 <span className="material-symbols-outlined text-[24px]">skip_previous</span>
               </button>
 
-              {/* Play / Pause with Dynamic Accent */}
+              {/* Play / Pause with Pure White styling */}
               <button
                 type="button"
                 onClick={togglePlay}
                 disabled={!currentSong}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-accent text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 disabled:opacity-40 cursor-pointer shadow-none border border-accent/50"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 disabled:opacity-40 cursor-pointer shadow-none border border-white/20"
                 aria-label={isPlaying ? 'Pause' : 'Play'}
                 title={isPlaying ? 'Pause' : 'Play'}
               >
@@ -262,7 +262,7 @@ export default function PlayerDock() {
                 type="button"
                 onClick={toggleRepeat}
                 className={`p-1 transition-colors cursor-pointer ${
-                  isRepeat ? 'text-accent' : 'text-neutral-400 hover:text-white'
+                  isRepeat ? 'text-white' : 'text-neutral-400 hover:text-white'
                 }`}
                 title="Repeat"
               >
@@ -297,7 +297,7 @@ export default function PlayerDock() {
                 type="button"
                 onClick={(e) => { e.stopPropagation(); togglePlay(); }}
                 disabled={!currentSong}
-                className="w-9 h-9 rounded-full bg-accent text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 disabled:opacity-40 cursor-pointer shadow-none border border-accent/50"
+                className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 disabled:opacity-40 cursor-pointer shadow-none border border-white/20"
                 aria-label={isPlaying ? 'Pause' : 'Play'}
               >
                 {isLoading ? (
@@ -344,8 +344,8 @@ export default function PlayerDock() {
                     : audioQuality.toUpperCase()
                 } • Click to cycle quality`}
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                <span className="font-bold uppercase tracking-wider text-[9px] text-accent">
+                <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                <span className="font-bold uppercase tracking-wider text-[9px] text-white">
                   {audioQuality}
                 </span>
                 <span className="text-neutral-600">•</span>
@@ -371,7 +371,7 @@ export default function PlayerDock() {
               className="px-2.5 sm:px-3 py-1.5 rounded-full flex items-center gap-1.5 text-label-sm font-medium transition-all border border-white/10 bg-transparent text-neutral-400 hover:text-white hover:border-white/30 cursor-pointer"
               title="Open full lyrics & now playing"
             >
-              <span className="material-symbols-outlined text-[16px] text-accent">lyrics</span>
+              <span className="material-symbols-outlined text-[16px] text-white">lyrics</span>
               <span className="hidden sm:inline text-[12px]">Lyrics</span>
             </button>
 

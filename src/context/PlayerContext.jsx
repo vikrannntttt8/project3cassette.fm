@@ -143,6 +143,7 @@ export function PlayerProvider({ children }) {
     }
     return { view: 'home', currentId: null, extra: null };
   });
+  const [navHistory, setNavHistory] = useState([]);
   // ── Hierarchical Modal & Overlay Stack (Synchronized with Browser History) ──
   const [isPlayerSheetOpen, setIsPlayerSheetOpen] = useState(false);
   const [playerSheetTab, setPlayerSheetTab] = useState('player'); // 'player' | 'queue' | 'lyrics'

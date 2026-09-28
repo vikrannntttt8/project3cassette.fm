@@ -1021,6 +1021,7 @@ export function PlayerProvider({ children }) {
     navState, setNavState, navigateTo, goBack, canGoBack, navHistory, playAlbum,
     handleEntityClick,
     routeToSongEntity,
+    routeToArtistEntity,
     isSettingsOpen, setIsSettingsOpen,
     activeChip, setActiveChip,
     // Offline Storage & Downloads

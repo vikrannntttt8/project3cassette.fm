@@ -1,9 +1,23 @@
 import { getHighResImage } from '../../utils/imageUtils.js';
+import { usePlayer } from '../../context/PlayerContext.jsx';
 
 export default function ArtistCard({ artist, onClick }) {
+  const { routeToArtistEntity } = usePlayer();
+
+  const handleClick = (e) => {
+    e?.stopPropagation?.();
+    if (typeof onClick === 'function') {
+      onClick(artist);
+    } else {
+      const name = artist?.name || artist?.title || artist?.artist || '';
+      const id = artist?.id || artist?.browseId || artist?.artistId || artist?.channelId || null;
+      routeToArtistEntity(name, id);
+    }
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className="group flex flex-col items-center gap-2 p-3 rounded-2xl bg-[#18181a] hover:bg-[#222225] border border-white/5 hover:border-accent/30 transition-all duration-200 w-24 sm:w-28 text-center cursor-pointer"
     >
       {/* Circular avatar */}

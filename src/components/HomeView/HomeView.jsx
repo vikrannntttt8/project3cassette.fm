@@ -847,7 +847,13 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
           {artistList.map((art) => (
             <div
               key={art.name}
-              onClick={() => onArtistClick(art.name, art.id)}
+              onClick={() => {
+                if (typeof onArtistClick === 'function') {
+                  onArtistClick(art.name, art.id);
+                } else {
+                  routeToArtistEntity(art.name, art.id);
+                }
+              }}
               className="p-3.5 rounded-2xl bg-[#18181a] border border-white/5 flex flex-col items-center text-center gap-2.5 cursor-pointer hover:bg-[#222225] transition-colors"
             >
               <img src={art.thumbnail} alt="" className="w-20 h-20 rounded-full object-cover border border-white/10" />

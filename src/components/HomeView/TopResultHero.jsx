@@ -1,10 +1,12 @@
 import ImageWithFallback from '../shared/ImageWithFallback.jsx';
+import { usePlayer } from '../../context/PlayerContext.jsx';
 
 /**
  * TopResultHero
  * High-confidence hero card with warm charcoal surface, rounded-3xl container, and amber highlights.
  */
 export default function TopResultHero({ entity, onPlay, onNavigate }) {
+  const { routeToArtistEntity, routeToSongEntity } = usePlayer();
   if (!entity) return null;
 
   const isArtist = entity.type === 'artist';
@@ -17,9 +19,19 @@ export default function TopResultHero({ entity, onPlay, onNavigate }) {
   const actionLabel = isArtist ? 'View Discography' : isAlbum ? 'Play Album' : 'Play Track';
   const actionIcon = isArtist ? 'person' : 'play_arrow';
 
+  const handleCardClick = () => {
+    if (typeof onNavigate === 'function') {
+      onNavigate();
+    } else if (isArtist) {
+      routeToArtistEntity(entity.name || entity.title, entity.id || entity.browseId);
+    } else {
+      routeToSongEntity(entity);
+    }
+  };
+
   return (
     <div
-      onClick={onNavigate}
+      onClick={handleCardClick}
       className="group relative w-full rounded-3xl bg-[#18181a] border border-white/10 hover:border-accent/40 p-5 sm:p-6 transition-all duration-300 shadow-2xl cursor-pointer overflow-hidden flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6"
     >
       {/* Entity Artwork / Avatar */}

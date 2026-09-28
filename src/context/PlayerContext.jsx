@@ -261,6 +261,9 @@ export function PlayerProvider({ children }) {
 
   // ── Forward-declare playNext so it can be called inside events ─────
   const playNextRef = useRef(null);
+  // ── isRepeatRef — readable by the YT player ENDED closure without stale closure ──
+  const isRepeatRef = useRef(false);
+  useEffect(() => { isRepeatRef.current = isRepeat; }, [isRepeat]);
 
   // ── Initialize YouTube IFrame Player API (Direct Embedded Audio) ──
   useEffect(() => {
@@ -351,7 +354,20 @@ export function PlayerProvider({ children }) {
                 else if (event.data === 0) {
                   setIsPlaying(false);
                   setIsLoading(false);
-                  if (playNextRef.current) {
+                  // If repeat is active, loop the current track
+                  if (isRepeatRef.current) {
+                    try {
+                      const p = ytPlayerRef.current;
+                      if (p && typeof p.seekTo === 'function') {
+                        p.seekTo(0, true);
+                        p.playVideo();
+                        setIsPlaying(true);
+                        setCurrentTime(0);
+                      }
+                    } catch (e) {
+                      console.warn('[YouTube Player] repeat seek error:', e);
+                    }
+                  } else if (playNextRef.current) {
                     playNextRef.current();
                   }
                 }
@@ -505,6 +521,10 @@ export function PlayerProvider({ children }) {
     } catch (e) {
       console.warn('[YouTube Player] toggleMute error:', e);
     }
+  }, []);
+
+  const toggleRepeat = useCallback(() => {
+    setIsRepeat((prev) => !prev);
   }, []);
 
   // ── Helper to execute load on the YouTube Player ──────────────────

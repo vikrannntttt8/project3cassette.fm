@@ -34,10 +34,12 @@ export default function PlayerDock() {
     toggleRepeat,
     isDownloaded,
     toggleDownload,
+    openPlayerSheet,
+    closePlayerSheet,
+    isPlayerSheetOpen,
   } = usePlayer();
 
   const [addMenuSong, setAddMenuSong] = useState(null);
-  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const touchStartY = useRef(0);
 
   // Auto-unmount/hide mini-player dock when full-screen expanded views open (lyrics or settings)
@@ -51,7 +53,7 @@ export default function PlayerDock() {
   const handleDockClick = () => {
     if (!currentSong) return;
     if (window.innerWidth < 768) {
-      setMobileSheetOpen(true);
+      openPlayerSheet('player');
     } else {
       toggleView();
     }
@@ -65,7 +67,7 @@ export default function PlayerDock() {
     const deltaY = e.changedTouches[0].clientY - touchStartY.current;
     if (deltaY < -30) {
       if (window.innerWidth < 768) {
-        setMobileSheetOpen(true);
+        openPlayerSheet('player');
       } else {
         toggleView();
       }
@@ -385,8 +387,8 @@ export default function PlayerDock() {
 
       {/* Full-Height iOS / YT Music Slide-Up Sheet */}
       <MobilePlayerSheet
-        isOpen={mobileSheetOpen}
-        onClose={() => setMobileSheetOpen(false)}
+        isOpen={isPlayerSheetOpen}
+        onClose={closePlayerSheet}
       />
 
       {addMenuSong && (

@@ -24,7 +24,12 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
     routeToArtistEntity,
     isLiked,
     toggleLike,
+    isMobileSearchOpen,
+    closeMobileSearch,
   } = usePlayer();
+
+  const isSearchOpen = isOpen !== undefined ? isOpen : isMobileSearchOpen;
+  const dismissSearch = onClose || closeMobileSearch;
 
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -39,7 +44,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
 
   // Auto-focus input when opened
   useEffect(() => {
-    if (isOpen) {
+    if (isSearchOpen) {
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
@@ -47,7 +52,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
       setQuery('');
       setResults(null);
     }
-  }, [isOpen]);
+  }, [isSearchOpen]);
 
   const searchMusic = useCallback(async (q, tab) => {
     const trimmed = q.trim();
@@ -186,6 +191,8 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
     searchMusic(trimmed, activeTab);
   };
 
+  if (!isSearchOpen) return null;
+
   return (
     <div className="md:hidden fixed inset-0 z-[80] bg-[#0e0e0e] flex flex-col animate-fade-in text-white select-none">
       {/* ── Top Header with Search Input ────────────────────────────── */}
@@ -226,7 +233,7 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
 
         <button
           type="button"
-          onClick={onClose}
+          onClick={dismissSearch}
           className="px-3 py-2 text-accent hover:opacity-80 font-semibold text-[14px] cursor-pointer"
         >
           Cancel

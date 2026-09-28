@@ -10,16 +10,18 @@ export default function MobileBottomNav({ onOpenSearch }) {
     view,
     setView,
     isSettingsOpen,
-    setIsSettingsOpen,
+    openSettings,
+    closeSettings,
     currentSong,
     startRadio,
     activeChip,
     setActiveChip,
+    openMobileSearch,
   } = usePlayer();
   const { isAuthModalOpen } = useAuth();
 
   const handleRadioClick = () => {
-    setIsSettingsOpen(false);
+    if (isSettingsOpen) closeSettings();
     if (currentSong) {
       startRadio(currentSong);
     } else {
@@ -31,11 +33,11 @@ export default function MobileBottomNav({ onOpenSearch }) {
   };
 
   const handleExploreClick = () => {
-    setIsSettingsOpen(false);
+    if (isSettingsOpen) closeSettings();
     if (typeof onOpenSearch === 'function') {
       onOpenSearch();
     } else {
-      setView('home');
+      openMobileSearch();
     }
   };
 
@@ -45,7 +47,7 @@ export default function MobileBottomNav({ onOpenSearch }) {
       icon: 'home',
       label: 'Home',
       action: () => {
-        setIsSettingsOpen(false);
+        if (isSettingsOpen) closeSettings();
         setView('home');
         if (typeof setActiveChip === 'function') setActiveChip('all');
       },
@@ -70,7 +72,7 @@ export default function MobileBottomNav({ onOpenSearch }) {
       icon: 'library_music',
       label: 'Library',
       action: () => {
-        setIsSettingsOpen(false);
+        if (isSettingsOpen) closeSettings();
         setView('library');
       },
       isActive: (view === 'library' || view === 'liked') && !isSettingsOpen && !isAuthModalOpen,
@@ -79,7 +81,7 @@ export default function MobileBottomNav({ onOpenSearch }) {
       id: 'settings',
       icon: 'tune',
       label: 'Settings',
-      action: () => setIsSettingsOpen(true),
+      action: () => (isSettingsOpen ? closeSettings() : openSettings()),
       isActive: isSettingsOpen && !isAuthModalOpen,
     },
   ];

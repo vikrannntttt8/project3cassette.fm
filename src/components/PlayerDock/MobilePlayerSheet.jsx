@@ -44,23 +44,30 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
     toggleRepeat,
     routeToSongEntity,
     routeToArtistEntity,
+    isPlayerSheetOpen,
+    closePlayerSheet,
+    playerSheetTab,
+    setPlayerSheetTabWithHistory,
   } = usePlayer();
 
-  const [activeSheet, setActiveSheet] = useState('player'); // 'player' | 'lyrics' | 'queue'
   const [addMenuSong, setAddMenuSong] = useState(null);
   const [devicePillOpen, setDevicePillOpen] = useState(false);
   const lyricsContainerRef = useRef(null);
   const touchStartYRef = useRef(0);
   const touchStartXRef = useRef(0);
 
+  const activeSheet = playerSheetTab || 'player';
+  const isSheetOpen = isOpen !== undefined ? isOpen : isPlayerSheetOpen;
+  const dismissPlayerSheet = onClose || closePlayerSheet;
+
   const { lines, activeIndex } = useLrcSync(lrcString, currentTime);
 
   // Fetch lyrics when opening lyrics sheet if not already loaded
   useEffect(() => {
-    if (isOpen && activeSheet === 'lyrics' && !lrcString && !lyricsLoading && currentSong) {
+    if (isSheetOpen && activeSheet === 'lyrics' && !lrcString && !lyricsLoading && currentSong) {
       fetchLyricsForSong(currentSong);
     }
-  }, [isOpen, activeSheet, lrcString, lyricsLoading, currentSong, fetchLyricsForSong]);
+  }, [isSheetOpen, activeSheet, lrcString, lyricsLoading, currentSong, fetchLyricsForSong]);
 
   // Auto-scroll active lyric line to center
   useEffect(() => {
@@ -79,7 +86,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
     return Math.round(totalSecs / 60);
   }, [queue]);
 
-  if (!isOpen || !currentSong) return null;
+  if (!isSheetOpen || !currentSong) return null;
 
   const liked = isLiked(currentSong.id || currentSong.videoId);
   const remainingTime = duration > currentTime ? duration - currentTime : 0;
@@ -111,14 +118,14 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
     // Swipe down to collapse drawer or sheet
     if (deltaY > 70) {
       if (activeSheet === 'queue' || activeSheet === 'lyrics') {
-        setActiveSheet('player');
+        setPlayerSheetTabWithHistory('player');
       } else {
-        onClose();
+        dismissPlayerSheet();
       }
     }
     // Swipe up from main player opens Queue drawer
     else if (deltaY < -60 && activeSheet === 'player') {
-      setActiveSheet('queue');
+      setPlayerSheetTabWithHistory('queue');
     }
   };
 
@@ -141,7 +148,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
       {/* ── TOP CONTEXT BAR ─────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-5 pt-3 pb-2 flex-shrink-0 pt-safe relative z-10">
         <button
-          onClick={onClose}
+          onClick={dismissPlayerSheet}
           className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-white active:scale-95 transition-all cursor-pointer shadow-sm"
           aria-label="Dismiss player sheet"
           title="Dismiss"
@@ -154,10 +161,10 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
           onClick={() => {
             if (currentSong.album) {
               routeToSongEntity(currentSong);
-              onClose();
+              dismissPlayerSheet();
             } else if (currentSong.artist) {
               routeToArtistEntity(currentSong.artist, currentSong.artistId);
-              onClose();
+              dismissPlayerSheet();
             }
           }}
           className="flex flex-col items-center max-w-[210px] text-center cursor-pointer group/context"
@@ -193,7 +200,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
             <div
               onClick={() => {
                 routeToSongEntity(currentSong);
-                onClose();
+                dismissPlayerSheet();
               }}
               className="relative aspect-square w-full max-w-[310px] sm:max-w-[340px] mx-auto rounded-3xl overflow-hidden bg-neutral-900 border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.9)] ring-1 ring-white/10 cursor-pointer group transition-transform duration-300 active:scale-[0.98]"
               title="Click to view album release"
@@ -217,7 +224,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
               <div
                 onClick={() => {
                   routeToSongEntity(currentSong);
-                  onClose();
+                  dismissPlayerSheet();
                 }}
                 className="cursor-pointer group/title"
                 title="View track release"
@@ -242,7 +249,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                     null;
                   if (artistName || artistId) {
                     routeToArtistEntity(artistName, artistId);
-                    onClose();
+                    dismissPlayerSheet();
                   }
                 }}
                 className="text-sm font-medium text-neutral-400 hover:text-white hover:underline truncate block mt-1 cursor-pointer"
@@ -436,7 +443,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
             {/* Left: Minimalist speech bubble icon for Lyrics */}
             <button
               type="button"
-              onClick={() => setActiveSheet('lyrics')}
+              onClick={() => setPlayerSheetTabWithHistory('lyrics')}
               className="w-10 h-10 rounded-full flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/5 active:scale-90 transition-all cursor-pointer"
               title="View synced lyrics"
               aria-label="Open lyrics"
@@ -467,7 +474,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
             {/* Right: Clean hamburger list icon for Queue */}
             <button
               type="button"
-              onClick={() => setActiveSheet('queue')}
+              onClick={() => setPlayerSheetTabWithHistory('queue')}
               className="w-10 h-10 rounded-full flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/5 active:scale-90 transition-all cursor-pointer relative"
               title="Open Queue Drawer"
               aria-label="Open queue drawer"
@@ -489,7 +496,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
           {/* Drawer Header with Drag Handle */}
           <div className="pt-2 pb-3 px-5 border-b border-white/5 flex-shrink-0 flex flex-col items-center">
             <button
-              onClick={() => setActiveSheet('player')}
+              onClick={() => setPlayerSheetTabWithHistory('player')}
               className="w-12 h-1.5 rounded-full bg-white/20 hover:bg-white/40 transition-colors my-1 cursor-pointer"
               title="Swipe down to collapse"
             />
@@ -497,7 +504,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
             <div className="w-full flex items-center justify-between mt-2">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setActiveSheet('player')}
+                  onClick={() => setPlayerSheetTabWithHistory('player')}
                   className="p-1 rounded-full text-neutral-400 hover:text-white mr-1 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[22px]">arrow_back</span>
@@ -674,7 +681,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
           {/* Lyrics Header */}
           <div className="pt-2 pb-3 px-5 border-b border-white/5 flex-shrink-0 flex items-center justify-between">
             <button
-              onClick={() => setActiveSheet('player')}
+              onClick={() => setPlayerSheetTabWithHistory('player')}
               className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white cursor-pointer"
             >
               <span className="material-symbols-outlined text-[20px]">arrow_back</span>

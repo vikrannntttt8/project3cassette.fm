@@ -13,6 +13,11 @@ export default function SettingsModal({ isOpen, onClose }) {
     audioQuality,
     setAudioQuality,
     activeStreamMeta,
+    isSettingsOpen,
+    closeSettings,
+    settingsSubPage,
+    openSettingsSubPage,
+    closeSettingsSubPage,
   } = usePlayer();
 
   const {
@@ -34,8 +39,9 @@ export default function SettingsModal({ isOpen, onClose }) {
     presetPalettes,
   } = useTheme();
 
-  // ── Drill-down sub-page state (null = Main Settings Menu) ────────
-  const [currentSubPage, setCurrentSubPage] = useState(null);
+  const isModalOpen = isOpen !== undefined ? isOpen : isSettingsOpen;
+  const dismissSettings = onClose || closeSettings;
+  const currentSubPage = settingsSubPage;
 
   // ── Settings Local States ──────────────────────────────────────────
   const [normalizeAudio, setNormalizeAudio] = useState(
@@ -89,34 +95,33 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [importUrlStatus, setImportUrlStatus] = useState(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setCurrentSubPage(null);
+    if (isModalOpen) {
       setSupabaseUrl(credentials.url || '');
       setSupabaseKey(credentials.anonKey || '');
       setAuthError(null);
       setSyncStatus(null);
       setImportUrlStatus(null);
     }
-  }, [isOpen, credentials]);
+  }, [isModalOpen, credentials]);
 
   // Escape key close or navigate back to main menu
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         if (currentSubPage) {
-          setCurrentSubPage(null);
+          closeSettingsSubPage();
         } else {
-          onClose();
+          dismissSettings();
         }
       }
     };
-    if (isOpen) {
+    if (isModalOpen) {
       window.addEventListener('keydown', handleKeyDown);
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, currentSubPage, onClose]);
+  }, [isModalOpen, currentSubPage, closeSettingsSubPage, dismissSettings]);
 
-  if (!isOpen) return null;
+  if (!isModalOpen) return null;
 
   // ── Handlers ───────────────────────────────────────────────────────
   const handleQualityChange = (val) => {
@@ -301,9 +306,9 @@ export default function SettingsModal({ isOpen, onClose }) {
               type="button"
               onClick={() => {
                 if (currentSubPage) {
-                  setCurrentSubPage(null);
+                  closeSettingsSubPage();
                 } else {
-                  onClose();
+                  dismissSettings();
                 }
               }}
               className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10 active:scale-95 flex-shrink-0"
@@ -339,7 +344,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               {/* Primary Account & Cloud Sync Row */}
               <button
                 type="button"
-                onClick={() => setCurrentSubPage('account')}
+                onClick={() => openSettingsSubPage('account')}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-[#141416] hover:bg-[#1c1c1f] border border-white/10 hover:border-white/20 transition-all cursor-pointer flex items-center justify-between gap-3 text-left group active:scale-[0.99] shadow-sm"
               >
                 <div className="flex items-center gap-3 min-w-0">
@@ -389,7 +394,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   <button
                     key={cat.id}
                     type="button"
-                    onClick={() => setCurrentSubPage(cat.id)}
+                    onClick={() => openSettingsSubPage(cat.id)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-[#141416] hover:bg-[#1c1c1f] border border-white/5 hover:border-white/15 transition-all text-left flex items-center justify-between gap-3 group cursor-pointer active:scale-[0.99] shadow-sm"
                   >
                     <div className="flex items-center gap-3 min-w-0">

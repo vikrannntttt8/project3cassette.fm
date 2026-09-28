@@ -18,14 +18,18 @@ import AuthModal          from './components/shared/AuthModal.jsx';
 import { ThemeProvider, useTheme }   from './context/ThemeContext.jsx';
 
 function AppShell() {
-  const { view, navState, currentSong, isSettingsOpen, setIsSettingsOpen, streamToast } = usePlayer();
+  const {
+    view,
+    navState,
+    currentSong,
+    isSettingsOpen,
+    closeSettings,
+    isMobileSearchOpen,
+    openMobileSearch,
+    closeMobileSearch,
+    streamToast,
+  } = usePlayer();
   const { themeMode } = useTheme();
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-
-  // Close mobile search on view change
-  useEffect(() => {
-    setMobileSearchOpen(false);
-  }, [view]);
 
   return (
     <div className="flex h-[100dvh] w-screen overflow-hidden bg-[#0e0e0e] text-[#f3f3f5] relative">
@@ -67,13 +71,13 @@ function AppShell() {
 
       {/* ── Mobile Branded Header (< md — hidden on desktop & LyricsView) ── */}
       {view !== 'lyrics' && !isSettingsOpen && (
-        <MobileHeader onSearchClick={() => setMobileSearchOpen(true)} />
+        <MobileHeader onSearchClick={openMobileSearch} />
       )}
 
       {/* ── Mobile Search Overlay (< md) ── */}
       <MobileSearchOverlay
-        isOpen={mobileSearchOpen}
-        onClose={() => setMobileSearchOpen(false)}
+        isOpen={isMobileSearchOpen}
+        onClose={closeMobileSearch}
       />
 
       {/* ── Sidebar — desktop only (md+). Mobile uses MobileHeader + MobileBottomNav ── */}
@@ -115,11 +119,11 @@ function AppShell() {
 
       {/* ── Mobile Bottom Navigation Bar (< md) ── */}
       {view !== 'lyrics' && !isSettingsOpen && (
-        <MobileBottomNav onOpenSearch={() => setMobileSearchOpen(true)} />
+        <MobileBottomNav onOpenSearch={openMobileSearch} />
       )}
 
       {/* ── Full-Screen ArchiveTune Settings Overlay ── */}
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsModal isOpen={isSettingsOpen} onClose={closeSettings} />
     </div>
   );
 }

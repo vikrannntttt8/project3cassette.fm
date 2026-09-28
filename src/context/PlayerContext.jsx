@@ -5,6 +5,7 @@ import { DEMO_LRC } from '../utils/lrcParser.js';
 import { useLibrary } from '../hooks/useLibrary.js';
 import { apiUrl } from '../utils/apiConfig.js';
 import { getOfflineTracks, saveTrackOffline, removeOfflineTrack, isTrackOffline } from '../services/offlineStorage.js';
+import { getHighResImage } from '../utils/imageUtils.js';
 
 const PlayerContext = createContext(null);
 
@@ -142,9 +143,26 @@ export function PlayerProvider({ children }) {
     }
     return { view: 'home', currentId: null, extra: null };
   });
-  const [navHistory, setNavHistory] = useState([]);
+  // ── Hierarchical Modal & Overlay Stack (Synchronized with Browser History) ──
+  const [isPlayerSheetOpen, setIsPlayerSheetOpen] = useState(false);
+  const [playerSheetTab, setPlayerSheetTab] = useState('player'); // 'player' | 'queue' | 'lyrics'
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsSubPage, setSettingsSubPage] = useState(null);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [activeChip, setActiveChip] = useState('all');
+
+  const isPlayerSheetOpenRef = useRef(false);
+  const playerSheetTabRef = useRef('player');
+  const isSettingsOpenRef = useRef(false);
+  const settingsSubPageRef = useRef(null);
+  const isMobileSearchOpenRef = useRef(false);
+  const audioElementRef = useRef(null);
+
+  useEffect(() => { isPlayerSheetOpenRef.current = isPlayerSheetOpen; }, [isPlayerSheetOpen]);
+  useEffect(() => { playerSheetTabRef.current = playerSheetTab; }, [playerSheetTab]);
+  useEffect(() => { isSettingsOpenRef.current = isSettingsOpen; }, [isSettingsOpen]);
+  useEffect(() => { settingsSubPageRef.current = settingsSubPage; }, [settingsSubPage]);
+  useEffect(() => { isMobileSearchOpenRef.current = isMobileSearchOpen; }, [isMobileSearchOpen]);
 
   // ── Audio Quality & Stream Bitrate State (max | standard | datasaver) ──
   const [audioQuality, setAudioQualityState] = useState(() => {
@@ -160,12 +178,124 @@ export function PlayerProvider({ children }) {
 
   const view = navState.view;
 
-  // Sync with browser popstate (back / forward buttons)
+  // ── Unified History Modal Stack Actions ───────────────────────────
+  const openPlayerSheet = useCallback((tab = 'player') => {
+    setIsPlayerSheetOpen(true);
+    setPlayerSheetTab(tab);
+    safePushState({ modal: 'nowPlaying', tab }, '', window.location.pathname);
+  }, [safePushState]);
+
+  const closePlayerSheet = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history?.state?.modal === 'nowPlaying') {
+      window.history.back();
+    } else {
+      setIsPlayerSheetOpen(false);
+      setPlayerSheetTab('player');
+    }
+  }, []);
+
+  const setPlayerSheetTabWithHistory = useCallback((newTab) => {
+    if (newTab === playerSheetTabRef.current) return;
+    if (newTab === 'queue' || newTab === 'lyrics') {
+      safePushState({ modal: 'nowPlaying', tab: newTab }, '', window.location.pathname);
+      setPlayerSheetTab(newTab);
+    } else {
+      if (typeof window !== 'undefined' && (window.history?.state?.tab === 'queue' || window.history?.state?.tab === 'lyrics')) {
+        window.history.back();
+      } else {
+        setPlayerSheetTab('player');
+      }
+    }
+  }, [safePushState]);
+
+  const openSettings = useCallback(() => {
+    setIsSettingsOpen(true);
+    setSettingsSubPage(null);
+    safePushState({ modal: 'settings' }, '', window.location.pathname);
+  }, [safePushState]);
+
+  const closeSettings = useCallback(() => {
+    if (typeof window !== 'undefined' && (window.history?.state?.modal === 'settings' || window.history?.state?.modal === 'settingsSubpage')) {
+      window.history.back();
+    } else {
+      setIsSettingsOpen(false);
+      setSettingsSubPage(null);
+    }
+  }, []);
+
+  const openSettingsSubPage = useCallback((subpage) => {
+    setSettingsSubPage(subpage);
+    safePushState({ modal: 'settingsSubpage', subpage }, '', window.location.pathname);
+  }, [safePushState]);
+
+  const closeSettingsSubPage = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history?.state?.modal === 'settingsSubpage') {
+      window.history.back();
+    } else {
+      setSettingsSubPage(null);
+    }
+  }, []);
+
+  const openMobileSearch = useCallback(() => {
+    setIsMobileSearchOpen(true);
+    safePushState({ modal: 'search' }, '', window.location.pathname);
+  }, [safePushState]);
+
+  const closeMobileSearch = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history?.state?.modal === 'search') {
+      window.history.back();
+    } else {
+      setIsMobileSearchOpen(false);
+    }
+  }, []);
+
+  // ── Hierarchical popstate Listener (Intercepts Hardware Back Gesture) ──
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const handlePopState = (e) => {
       const state = e.state;
+
+      // 1. If popped to Now Playing drawer or sheet
+      if (state?.modal === 'nowPlaying') {
+        setIsPlayerSheetOpen(true);
+        setPlayerSheetTab(state.tab || 'player');
+        return;
+      }
+      if (isPlayerSheetOpenRef.current && (!state || state.modal !== 'nowPlaying')) {
+        setIsPlayerSheetOpen(false);
+        setPlayerSheetTab('player');
+        return;
+      }
+
+      // 2. If popped inside Settings (subpage vs main menu)
+      if (state?.modal === 'settingsSubpage') {
+        setIsSettingsOpen(true);
+        setSettingsSubPage(state.subpage || null);
+        return;
+      }
+      if (state?.modal === 'settings') {
+        setIsSettingsOpen(true);
+        setSettingsSubPage(null);
+        return;
+      }
+      if (isSettingsOpenRef.current && (!state || (state.modal !== 'settings' && state.modal !== 'settingsSubpage'))) {
+        setIsSettingsOpen(false);
+        setSettingsSubPage(null);
+        return;
+      }
+
+      // 3. If popped out of Mobile Search
+      if (state?.modal === 'search') {
+        setIsMobileSearchOpen(true);
+        return;
+      }
+      if (isMobileSearchOpenRef.current && (!state || state.modal !== 'search')) {
+        setIsMobileSearchOpen(false);
+        return;
+      }
+
+      // 4. If no modal is active -> standard view router navigation
       if (state && state.view) {
         setNavState(state);
       } else {
@@ -1034,6 +1164,116 @@ export function PlayerProvider({ children }) {
     setTimeout(() => setStreamToast(null), 3000);
   }, [isDownloaded]);
 
+  // ── Media Session API: Sync Metadata and Lock Screen Artwork ──────
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator) || !currentSong) return;
+
+    try {
+      const coverUrl = getHighResImage(currentSong.cover || currentSong.thumbnail || '');
+      const sizes = [96, 128, 192, 256, 384, 512];
+      const artwork = sizes.map((size) => {
+        let src = coverUrl;
+        if (src.includes('googleusercontent.com') || src.includes('yt3.ggpht.com')) {
+          src = src.replace(/=w\d+-h\d+[^=]*$/, `=w${size}-h${size}-l90-rj`);
+        }
+        return {
+          src,
+          sizes: `${size}x${size}`,
+          type: 'image/jpeg',
+        };
+      });
+
+      navigator.mediaSession.metadata = new window.MediaMetadata({
+        title: currentSong.title || 'cassette.fm',
+        artist: currentSong.artist || 'Unknown Artist',
+        album: currentSong.album || 'cassette.fm',
+        artwork: artwork.length ? artwork : undefined,
+      });
+    } catch (e) {
+      console.warn('[MediaSession] Metadata update error:', e);
+    }
+  }, [currentSong]);
+
+  // ── Media Session API: Playback State Synchronization ─────────────
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    } catch (e) {
+      console.warn('[MediaSession] playbackState error:', e);
+    }
+  }, [isPlaying]);
+
+  // ── Media Session API: Position State Synchronization ─────────────
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator) || typeof navigator.mediaSession.setPositionState !== 'function') return;
+    if (duration > 0 && currentTime >= 0 && currentTime <= duration) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: Math.max(duration, 0.1),
+          playbackRate: 1.0,
+          position: Math.min(currentTime, duration),
+        });
+      } catch (e) {
+        // non-blocking
+      }
+    }
+  }, [currentTime, duration]);
+
+  // ── Media Session API: Global Action Handlers ──────────────────────
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+
+    const actionHandlers = [
+      ['play', () => play()],
+      ['pause', () => pause()],
+      ['previoustrack', () => skipToPrev()],
+      ['nexttrack', () => skipToNext()],
+      ['seekto', (details) => {
+        if (details.seekTime != null) seek(details.seekTime);
+      }],
+      ['seekbackward', (details) => {
+        const offset = details.seekOffset || 10;
+        seek(Math.max(currentTime - offset, 0));
+      }],
+      ['seekforward', (details) => {
+        const offset = details.seekOffset || 10;
+        seek(Math.min(currentTime + offset, duration || 100));
+      }],
+      ['stop', () => pause()],
+    ];
+
+    actionHandlers.forEach(([action, handler]) => {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch {
+        // Unsupported action on current browser
+      }
+    });
+  }, [play, pause, skipToPrev, skipToNext, seek, currentTime, duration]);
+
+  // ── Mobile Background Audio Pipeline Keeper ────────────────────────
+  useEffect(() => {
+    if (isPlaying && audioElementRef.current) {
+      try {
+        if (!audioElementRef.current.src) {
+          // Minimal 1-sample silent loop WAV to claim background audio focus on mobile
+          audioElementRef.current.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+          audioElementRef.current.loop = true;
+        }
+        audioElementRef.current.play().catch(() => {});
+      } catch {
+        // non-blocking
+      }
+    } else if (!isPlaying && audioElementRef.current) {
+      try {
+        audioElementRef.current.pause();
+      } catch {
+        // non-blocking
+      }
+    }
+  }, [isPlaying]);
+
   const value = {
     ytPlayerRef,
     isPlaying, currentTime, duration, volume, isMuted, isLoading,
@@ -1046,7 +1286,12 @@ export function PlayerProvider({ children }) {
     handleEntityClick,
     routeToSongEntity,
     routeToArtistEntity,
-    isSettingsOpen, setIsSettingsOpen,
+    // Modal & History Stack
+    isPlayerSheetOpen, setIsPlayerSheetOpen, openPlayerSheet, closePlayerSheet,
+    playerSheetTab, setPlayerSheetTab, setPlayerSheetTabWithHistory,
+    isSettingsOpen, setIsSettingsOpen, openSettings, closeSettings,
+    settingsSubPage, setSettingsSubPage, openSettingsSubPage, closeSettingsSubPage,
+    isMobileSearchOpen, setIsMobileSearchOpen, openMobileSearch, closeMobileSearch,
     activeChip, setActiveChip,
     // Offline Storage & Downloads
     offlineTracks, isDownloaded, toggleDownload,
@@ -1063,6 +1308,21 @@ export function PlayerProvider({ children }) {
   return (
     <PlayerContext.Provider value={value}>
       {children}
+      {/* ── Persistent HTML5 Audio Element for Background / Lockscreen Media Session ── */}
+      <audio
+        ref={audioElementRef}
+        playsInline
+        preload="auto"
+        style={{
+          position: 'absolute',
+          opacity: 0,
+          pointerEvents: 'none',
+          width: '1px',
+          height: '1px',
+          zIndex: -100,
+        }}
+        aria-hidden="true"
+      />
       {/* ── Native YouTube IFrame Audio Engine (Zero CORS / Full Length) ── */}
       <div
         id="youtube-player-container"

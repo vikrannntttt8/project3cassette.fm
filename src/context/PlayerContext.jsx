@@ -391,281 +391,23 @@ export function PlayerProvider({ children }) {
 
   // ── Forward-declare playNext so it can be called inside events ─────
   const playNextRef = useRef(null);
-  // ── isRepeatRef — readable by the YT player ENDED closure without stale closure ──
+  // ── isRepeatRef — readable by the audio player ended closure without stale closure ──
   const isRepeatRef = useRef(false);
   useEffect(() => { isRepeatRef.current = isRepeat; }, [isRepeat]);
 
-  // ── Initialize YouTube IFrame Player API (Direct Embedded Audio) ──
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+  // Fallback indicator if direct CDN stream needs proxy fallback
+  const fallbackAttemptRef = useRef(false);
 
-    // Load YouTube IFrame API script dynamically on app mount if not present
-    if (!window.YT && !document.getElementById('youtube-iframe-api-script')) {
-      try {
-        const script = document.createElement('script');
-        script.id = 'youtube-iframe-api-script';
-        script.src = 'https://www.youtube.com/iframe_api';
-        script.async = true;
-        script.onerror = () => {
-          console.warn('[YouTube Player] Failed to load YouTube IFrame API script. Running in fallback mode.');
-          setIsLoading(false);
-        };
-        document.head.appendChild(script);
-      } catch (err) {
-        console.warn('[YouTube Player] Script injection error:', err);
-      }
-    }
-
-    let pollAttempts = 0;
-    const maxPollAttempts = 35; // ~10.5 seconds max polling before timeout
-
-    const setupPlayer = () => {
-      try {
-        if (!window.YT || typeof window.YT.Player !== 'function' || ytPlayerRef.current) {
-          return;
-        }
-
-        const container = document.getElementById('youtube-player-container');
-        if (!container) {
-          return;
-        }
-
-        ytPlayerRef.current = new window.YT.Player('youtube-player-container', {
-          height: '200',
-          width: '200',
-          playerVars: {
-            autoplay: 1,
-            controls: 0,
-            disablekb: 1,
-            fs: 0,
-            modestbranding: 1,
-            rel: 0,
-            origin: window.location.origin,
-            enablejsapi: 1,
-            playsinline: 1,
-          },
-          events: {
-            onReady: () => {
-              try {
-                ytReadyRef.current = true;
-                if (ytPlayerRef.current && typeof ytPlayerRef.current.setVolume === 'function') {
-                  ytPlayerRef.current.setVolume(volume * 100);
-                }
-                if (pendingSongRef.current) {
-                  const song = pendingSongRef.current;
-                  pendingSongRef.current = null;
-                  executeLoadSong(song);
-                }
-              } catch (e) {
-                console.warn('[YouTube Player] onReady handler error:', e);
-              }
-            },
-            onStateChange: (event) => {
-              try {
-                // YT.PlayerState.PLAYING = 1
-                if (event.data === 1) {
-                  setIsPlaying(true);
-                  setIsLoading(false);
-                  if (ytPlayerRef.current && typeof ytPlayerRef.current.getDuration === 'function') {
-                    const d = ytPlayerRef.current.getDuration();
-                    if (typeof d === 'number' && d > 0) setDuration(d);
-                  }
-                }
-                // YT.PlayerState.PAUSED = 2
-                else if (event.data === 2) {
-                  setIsPlaying(false);
-                  setIsLoading(false);
-                }
-                // YT.PlayerState.BUFFERING = 3
-                else if (event.data === 3) {
-                  setIsLoading(true);
-                }
-                // YT.PlayerState.ENDED = 0
-                else if (event.data === 0) {
-                  setIsPlaying(false);
-                  setIsLoading(false);
-                  // If repeat is active, loop the current track
-                  if (isRepeatRef.current) {
-                    try {
-                      const p = ytPlayerRef.current;
-                      if (p && typeof p.seekTo === 'function') {
-                        p.seekTo(0, true);
-                        p.playVideo();
-                        setIsPlaying(true);
-                        setCurrentTime(0);
-                      }
-                    } catch (e) {
-                      console.warn('[YouTube Player] repeat seek error:', e);
-                    }
-                  } else if (playNextRef.current) {
-                    playNextRef.current();
-                  }
-                }
-              } catch (e) {
-                console.warn('[YouTube Player] onStateChange handler error:', e);
-              }
-            },
-            onError: (err) => {
-              console.warn('[YouTube Player] Playback error code:', err?.data);
-              setIsLoading(false);
-            },
-          },
-        });
-      } catch (err) {
-        console.warn('[YouTube Player] Init error (fallback active):', err);
-        ytReadyRef.current = false;
-        setIsLoading(false);
-      }
-    };
-
-    if (window.YT && typeof window.YT.Player === 'function') {
-      setupPlayer();
-    } else {
-      window.onYouTubeIframeAPIReady = () => {
-        try {
-          setupPlayer();
-        } catch (e) {
-          console.warn('[YouTube Player] onYouTubeIframeAPIReady error:', e);
-        }
-      };
-
-      const interval = setInterval(() => {
-        pollAttempts += 1;
-        if (window.YT?.Player && !ytPlayerRef.current) {
-          setupPlayer();
-        } else if (ytPlayerRef.current || pollAttempts >= maxPollAttempts) {
-          clearInterval(interval);
-          if (!ytPlayerRef.current && pollAttempts >= maxPollAttempts) {
-            console.warn('[YouTube Player] IFrame API load timeout. Running in resilient fallback state.');
-            setIsLoading(false);
-          }
-        }
-      }, 300);
-
-      return () => clearInterval(interval);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // ── Track progress polling (smooth 200ms interval loop for time-synced lyrics) ──
-  useEffect(() => {
-    let timer = null;
-    if (isPlaying) {
-      timer = setInterval(() => {
-        try {
-          const p = ytPlayerRef.current;
-          if (p && typeof p.getCurrentTime === 'function') {
-            const t = p.getCurrentTime();
-            const d = typeof p.getDuration === 'function' ? p.getDuration() : 0;
-            if (typeof t === 'number' && !isNaN(t)) {
-              setCurrentTime(t);
-            }
-            if (typeof d === 'number' && !isNaN(d) && d > 0) {
-              setDuration(d);
-            }
-          }
-        } catch (e) {
-          console.warn('[YouTube Player] Progress polling error:', e);
-        }
-      }, 200);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [isPlaying]);
-
-  // ── Unified YouTube Control Bindings ──────────────────────────────
-
-  const play = useCallback(() => {
-    try {
-      if (ytPlayerRef.current && typeof ytPlayerRef.current.playVideo === 'function') {
-        ytPlayerRef.current.playVideo();
-      }
-    } catch (e) {
-      console.warn('[YouTube Player] play error:', e);
-    }
-  }, []);
-
-  const pause = useCallback(() => {
-    try {
-      if (ytPlayerRef.current && typeof ytPlayerRef.current.pauseVideo === 'function') {
-        ytPlayerRef.current.pauseVideo();
-      }
-    } catch (e) {
-      console.warn('[YouTube Player] pause error:', e);
-    }
-  }, []);
-
-  const togglePlay = useCallback(() => {
-    try {
-      const p = ytPlayerRef.current;
-      if (!p) return;
-      if (isPlaying) {
-        if (typeof p.pauseVideo === 'function') p.pauseVideo();
-      } else {
-        if (typeof p.playVideo === 'function') p.playVideo();
-      }
-    } catch (e) {
-      console.warn('[YouTube Player] togglePlay error:', e);
-    }
-  }, [isPlaying]);
-
-  const seek = useCallback((time) => {
-    try {
-      const p = ytPlayerRef.current;
-      if (p && typeof p.seekTo === 'function') {
-        p.seekTo(time, true);
-        setCurrentTime(time);
-      }
-    } catch (e) {
-      console.warn('[YouTube Player] seek error:', e);
-    }
-  }, []);
-
-  const changeVolume = useCallback((v) => {
-    try {
-      const clamped = Math.max(0, Math.min(1, v));
-      const p = ytPlayerRef.current;
-      if (p && typeof p.setVolume === 'function') {
-        p.setVolume(clamped * 100);
-        if (typeof p.unMute === 'function') p.unMute();
-      }
-      setVolume(clamped);
-      setIsMuted(false);
-    } catch (e) {
-      console.warn('[YouTube Player] changeVolume error:', e);
-    }
-  }, []);
-
-  const toggleMute = useCallback(() => {
-    try {
-      const p = ytPlayerRef.current;
-      if (!p) return;
-      if (typeof p.isMuted === 'function' && p.isMuted()) {
-        if (typeof p.unMute === 'function') p.unMute();
-        setIsMuted(false);
-      } else if (typeof p.mute === 'function') {
-        p.mute();
-        setIsMuted(true);
-      }
-    } catch (e) {
-      console.warn('[YouTube Player] toggleMute error:', e);
-    }
-  }, []);
-
-  const toggleRepeat = useCallback(() => {
-    setIsRepeat((prev) => !prev);
-  }, []);
-
-  // ── Helper to execute load on the YouTube Player ──────────────────
+  // ── Helper to execute load on the Global HTML5 Audio Player ─────────
   const executeLoadSong = useCallback(async (song) => {
-    const p = ytPlayerRef.current;
-    if (!p) return;
+    const a = audioElementRef.current;
+    if (!a) return;
 
     try {
       setIsLoading(true);
       setCurrentTime(0);
       setDuration(0);
+      fallbackAttemptRef.current = false;
 
       // Completely decoupled from Saavn preview URLs (preventing 30s limits)
       const cleanSong = { ...song };
@@ -676,35 +418,191 @@ export function PlayerProvider({ children }) {
       if (!targetVideoId) {
         targetVideoId = await resolveYouTubeVideoId(cleanSong.title, cleanSong.artist);
       }
+      if (!targetVideoId) {
+        targetVideoId = cleanSong.id;
+      }
 
       if (targetVideoId) {
         cleanSong.videoId = targetVideoId;
         cleanSong.youtubeId = targetVideoId;
-        if (typeof p.loadVideoById === 'function') {
-          p.loadVideoById(targetVideoId);
+      }
+
+      // Try fetching direct stream metadata or direct proxy
+      let streamUrl = '';
+      if (targetVideoId) {
+        try {
+          const res = await fetch(apiUrl(`/api/stream/${targetVideoId}?format=json&quality=${audioQuality}`));
+          if (res.ok) {
+            const meta = await res.json();
+            if (meta?.streamUrl) {
+              streamUrl = meta.streamUrl;
+              setActiveStreamMeta(meta);
+            }
+          }
+        } catch (err) {
+          console.warn('[Audio Engine] format=json stream fetch error:', err);
         }
-      } else {
-        // Direct YouTube search playlist loading fallback
-        const searchQuery = `${cleanSong.title} ${cleanSong.artist || ''}`.trim();
-        if (typeof p.loadPlaylist === 'function') {
-          p.loadPlaylist({ listType: 'search', list: searchQuery, index: 0, startSeconds: 0 });
+
+        if (!streamUrl) {
+          streamUrl = apiUrl(`/api/stream/${targetVideoId}?quality=${audioQuality}`);
         }
       }
 
-      if (typeof p.setVolume === 'function') {
-        p.setVolume(volume * 100);
-        if (isMuted && typeof p.mute === 'function') p.mute();
-        else if (typeof p.unMute === 'function') p.unMute();
-      }
+      if (streamUrl) {
+        a.src = streamUrl;
+        a.volume = isMuted ? 0 : volume;
+        a.load();
 
-      if (typeof p.playVideo === 'function') {
-        p.playVideo();
+        const playPromise = a.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+              setIsLoading(false);
+              if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+                try {
+                  navigator.mediaSession.playbackState = 'playing';
+                } catch {}
+              }
+            })
+            .catch((err) => {
+              console.warn('[Audio Engine] Direct audio play caught:', err);
+            });
+        }
       }
     } catch (err) {
-      console.warn('[YouTube Player] Error during executeLoadSong:', err);
+      console.warn('[Audio Engine] executeLoadSong caught:', err);
       setIsLoading(false);
     }
-  }, [volume, isMuted]);
+  }, [audioQuality, volume, isMuted]);
+
+  // ── Unified HTML5 Audio Control Bindings ───────────────────────────
+  const play = useCallback(() => {
+    try {
+      const a = audioElementRef.current;
+      if (a) {
+        const playPromise = a.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setIsPlaying(true);
+              setIsLoading(false);
+              if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+                try {
+                  navigator.mediaSession.playbackState = 'playing';
+                } catch {}
+              }
+            })
+            .catch((e) => console.warn('[Audio Engine] play error:', e));
+        }
+      }
+    } catch (e) {
+      console.warn('[Audio Engine] play error:', e);
+    }
+  }, []);
+
+  const pause = useCallback(() => {
+    try {
+      const a = audioElementRef.current;
+      if (a) {
+        a.pause();
+        setIsPlaying(false);
+        if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+          try {
+            navigator.mediaSession.playbackState = 'paused';
+          } catch {}
+        }
+      }
+    } catch (e) {
+      console.warn('[Audio Engine] pause error:', e);
+    }
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    try {
+      const a = audioElementRef.current;
+      if (!a) return;
+      if (a.paused) {
+        play();
+      } else {
+        pause();
+      }
+    } catch (e) {
+      console.warn('[Audio Engine] togglePlay error:', e);
+    }
+  }, [play, pause]);
+
+  const seek = useCallback((time) => {
+    try {
+      const a = audioElementRef.current;
+      if (a) {
+        const clamped = Math.max(0, Math.min(time, a.duration || time));
+        a.currentTime = clamped;
+        setCurrentTime(clamped);
+      }
+    } catch (e) {
+      console.warn('[Audio Engine] seek error:', e);
+    }
+  }, []);
+
+  const changeVolume = useCallback((v) => {
+    try {
+      const clamped = Math.max(0, Math.min(1, v));
+      const a = audioElementRef.current;
+      if (a) {
+        a.volume = clamped;
+        a.muted = false;
+      }
+      setVolume(clamped);
+      setIsMuted(false);
+    } catch (e) {
+      console.warn('[Audio Engine] changeVolume error:', e);
+    }
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    try {
+      const a = audioElementRef.current;
+      if (!a) return;
+      const nextMuted = !a.muted;
+      a.muted = nextMuted;
+      setIsMuted(nextMuted);
+    } catch (e) {
+      console.warn('[Audio Engine] toggleMute error:', e);
+    }
+  }, []);
+
+  const toggleRepeat = useCallback(() => {
+    setIsRepeat((prev) => !prev);
+  }, []);
+
+  // ── Native Audio Error & Fallback Proxy Handler ────────────────────
+  const handleAudioElementError = useCallback(async (e) => {
+    const a = audioElementRef.current;
+    if (!a) return;
+    const activeTrack = currentSongRef.current;
+    const targetVideoId = activeTrack?.videoId || activeTrack?.youtubeId || activeTrack?.id;
+
+    console.warn('[Audio Engine] HTML5 playback error on source:', a.src, e?.nativeEvent);
+
+    if (!fallbackAttemptRef.current && targetVideoId) {
+      fallbackAttemptRef.current = true;
+      console.log('[Audio Engine] Retrying playback via server-side proxy stream:', targetVideoId);
+      const proxyUrl = apiUrl(`/api/stream/${targetVideoId}?quality=${audioQuality}`);
+      a.src = proxyUrl;
+      a.load();
+      try {
+        await a.play();
+        setIsPlaying(true);
+        setIsLoading(false);
+        return;
+      } catch (err) {
+        console.warn('[Audio Engine] Proxy stream playback also caught:', err);
+      }
+    }
+
+    setIsLoading(false);
+  }, [audioQuality]);
 
   // ── Helper to fetch recommendations and populate/append to queue ──
   const populateWatchNextQueue = useCallback(async (track, isAppend = false) => {
@@ -748,12 +646,7 @@ export function PlayerProvider({ children }) {
     setQueue([cleanTrack]);
     setQueueIndex(0);
 
-    if (!ytReadyRef.current || !ytPlayerRef.current) {
-      pendingSongRef.current = cleanTrack;
-      setIsLoading(true);
-    } else {
-      executeLoadSong(cleanTrack);
-    }
+    executeLoadSong(cleanTrack);
 
     if (typeof library.recordPlayback === 'function') {
       library.recordPlayback(cleanTrack);
@@ -786,12 +679,7 @@ export function PlayerProvider({ children }) {
       setQueueIndex(0);
     }
 
-    if (!ytReadyRef.current || !ytPlayerRef.current) {
-      pendingSongRef.current = cleanSong;
-      setIsLoading(true);
-    } else {
-      executeLoadSong(cleanSong);
-    }
+    executeLoadSong(cleanSong);
 
     // Record into local & Supabase playback history
     if (typeof library.recordPlayback === 'function') {
@@ -1169,12 +1057,25 @@ export function PlayerProvider({ children }) {
     if (typeof window === 'undefined' || !('mediaSession' in navigator) || !currentSong) return;
 
     try {
-      const coverUrl = getHighResImage(currentSong.cover || currentSong.thumbnail || '');
-      const sizes = [96, 128, 192, 256, 384, 512];
+      let rawCover = currentSong.cover || currentSong.thumbnail || '';
+      let coverUrl = getHighResImage(rawCover);
+      if (coverUrl.startsWith('//')) {
+        coverUrl = 'https:' + coverUrl;
+      } else if (coverUrl.startsWith('/')) {
+        coverUrl = window.location.origin + coverUrl;
+      }
+
+      const sizes = [96, 128, 256, 512];
       const artwork = sizes.map((size) => {
         let src = coverUrl;
-        if (src.includes('googleusercontent.com') || src.includes('yt3.ggpht.com')) {
-          src = src.replace(/=w\d+-h\d+[^=]*$/, `=w${size}-h${size}-l90-rj`);
+        if (src.includes('googleusercontent.com') || src.includes('yt3.ggpht.com') || src.includes('ggpht.com')) {
+          if (/=w\d+-h\d+[^?#]*/.test(src)) {
+            src = src.replace(/=w\d+-h\d+[^?#]*/, `=w${size}-h${size}-l90-rj`);
+          } else if (/=s\d+[^?#]*/.test(src)) {
+            src = src.replace(/=s\d+[^?#]*/, `=w${size}-h${size}-l90-rj`);
+          } else {
+            src += src.includes('?') ? `&w=${size}&h=${size}` : `=w${size}-h${size}-l90-rj`;
+          }
         }
         return {
           src,
@@ -1187,7 +1088,7 @@ export function PlayerProvider({ children }) {
         title: currentSong.title || 'cassette.fm',
         artist: currentSong.artist || 'Unknown Artist',
         album: currentSong.album || 'cassette.fm',
-        artwork: artwork.length ? artwork : undefined,
+        artwork: artwork.length > 0 ? artwork : undefined,
       });
     } catch (e) {
       console.warn('[MediaSession] Metadata update error:', e);
@@ -1230,15 +1131,18 @@ export function PlayerProvider({ children }) {
       ['previoustrack', () => skipToPrev()],
       ['nexttrack', () => skipToNext()],
       ['seekto', (details) => {
-        if (details.seekTime != null) seek(details.seekTime);
+        if (details?.seekTime != null) seek(details.seekTime);
       }],
       ['seekbackward', (details) => {
-        const offset = details.seekOffset || 10;
-        seek(Math.max(currentTime - offset, 0));
+        const offset = details?.seekOffset || 10;
+        const cur = audioElementRef.current?.currentTime ?? currentTime;
+        seek(Math.max(cur - offset, 0));
       }],
       ['seekforward', (details) => {
-        const offset = details.seekOffset || 10;
-        seek(Math.min(currentTime + offset, duration || 100));
+        const offset = details?.seekOffset || 10;
+        const cur = audioElementRef.current?.currentTime ?? currentTime;
+        const dur = audioElementRef.current?.duration ?? duration ?? 100;
+        seek(Math.min(cur + offset, dur));
       }],
       ['stop', () => pause()],
     ];
@@ -1252,30 +1156,9 @@ export function PlayerProvider({ children }) {
     });
   }, [play, pause, skipToPrev, skipToNext, seek, currentTime, duration]);
 
-  // ── Mobile Background Audio Pipeline Keeper ────────────────────────
-  useEffect(() => {
-    if (isPlaying && audioElementRef.current) {
-      try {
-        if (!audioElementRef.current.src) {
-          // Minimal 1-sample silent loop WAV to claim background audio focus on mobile
-          audioElementRef.current.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-          audioElementRef.current.loop = true;
-        }
-        audioElementRef.current.play().catch(() => {});
-      } catch {
-        // non-blocking
-      }
-    } else if (!isPlaying && audioElementRef.current) {
-      try {
-        audioElementRef.current.pause();
-      } catch {
-        // non-blocking
-      }
-    }
-  }, [isPlaying]);
-
   const value = {
     ytPlayerRef,
+    audioElementRef,
     isPlaying, currentTime, duration, volume, isMuted, isLoading,
     currentSong, queue, queueIndex, history,
     isShuffled, toggleShuffle, isRepeat, toggleRepeat,
@@ -1313,28 +1196,89 @@ export function PlayerProvider({ children }) {
         ref={audioElementRef}
         playsInline
         preload="auto"
+        crossOrigin="anonymous"
+        onPlay={() => {
+          setIsPlaying(true);
+          setIsLoading(false);
+          if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+            try {
+              navigator.mediaSession.playbackState = 'playing';
+            } catch {}
+          }
+        }}
+        onPlaying={() => {
+          setIsPlaying(true);
+          setIsLoading(false);
+          if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+            try {
+              navigator.mediaSession.playbackState = 'playing';
+            } catch {}
+          }
+        }}
+        onPause={() => {
+          setIsPlaying(false);
+          if (typeof window !== 'undefined' && 'mediaSession' in navigator) {
+            try {
+              navigator.mediaSession.playbackState = 'paused';
+            } catch {}
+          }
+        }}
+        onTimeUpdate={(e) => {
+          const a = e.currentTarget;
+          setCurrentTime(a.currentTime);
+          if (a.duration && !isNaN(a.duration)) {
+            setDuration(a.duration);
+            if (
+              typeof window !== 'undefined' &&
+              'mediaSession' in navigator &&
+              typeof navigator.mediaSession.setPositionState === 'function' &&
+              a.duration > 0
+            ) {
+              try {
+                navigator.mediaSession.setPositionState({
+                  duration: Math.max(a.duration, 0.1),
+                  playbackRate: a.playbackRate || 1.0,
+                  position: Math.min(a.currentTime, a.duration),
+                });
+              } catch (err) {}
+            }
+          }
+        }}
+        onLoadedMetadata={(e) => {
+          const a = e.currentTarget;
+          if (a.duration && !isNaN(a.duration)) {
+            setDuration(a.duration);
+          }
+          setIsLoading(false);
+        }}
+        onDurationChange={(e) => {
+          const a = e.currentTarget;
+          if (a.duration && !isNaN(a.duration)) {
+            setDuration(a.duration);
+          }
+        }}
+        onWaiting={() => setIsLoading(true)}
+        onCanPlay={() => setIsLoading(false)}
+        onEnded={() => {
+          setIsPlaying(false);
+          setIsLoading(false);
+          if (isRepeatRef.current && audioElementRef.current) {
+            audioElementRef.current.currentTime = 0;
+            audioElementRef.current.play().catch(() => {});
+          } else if (playNextRef.current) {
+            playNextRef.current();
+          }
+        }}
+        onError={handleAudioElementError}
         style={{
-          position: 'absolute',
+          position: 'fixed',
+          left: '-9999px',
+          bottom: '-9999px',
           opacity: 0,
           pointerEvents: 'none',
           width: '1px',
           height: '1px',
           zIndex: -100,
-        }}
-        aria-hidden="true"
-      />
-      {/* ── Native YouTube IFrame Audio Engine (Zero CORS / Full Length) ── */}
-      <div
-        id="youtube-player-container"
-        style={{
-          position: 'absolute',
-          opacity: 0,
-          pointerEvents: 'none',
-          width: '200px',
-          height: '200px',
-          left: '0px',
-          top: '0px',
-          zIndex: -50,
         }}
         aria-hidden="true"
       />
@@ -1347,3 +1291,4 @@ export function usePlayer() {
   if (!ctx) throw new Error('usePlayer must be used within PlayerProvider');
   return ctx;
 }
+

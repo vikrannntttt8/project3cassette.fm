@@ -248,10 +248,12 @@ export default function Search({ onSelectTrack, onArtistClick }) {
 
               // ── Artist Row / Card ───────────────────────────────────────
               if (itemType === 'artist') {
+                const artistName = item.name || item.title || '';
+                const artistId = item.browseId || item.id || item.artistId || item.channelId || null;
                 return (
                   <div
                     key={item.id || item.browseId || idx}
-                    onClick={() => handleArtistNavigation(item.name, item.browseId || item.id)}
+                    onClick={() => handleArtistNavigation(artistName, artistId)}
                     className="group flex items-center justify-between px-3 py-2 min-h-[48px] hover:bg-white/[0.04] transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">

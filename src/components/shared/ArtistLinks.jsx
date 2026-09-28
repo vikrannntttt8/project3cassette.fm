@@ -24,20 +24,27 @@ export default function ArtistLinks({
 
   if (Array.isArray(artists) && artists.length > 0) {
     list = artists.map((a) => {
+      if (!a) return null;
       if (typeof a === 'string') {
-        return { name: a.trim(), id: null };
+        const trimmed = a.trim();
+        return trimmed ? { name: trimmed, id: artistId || null } : null;
       }
-      return {
-        name: (a.name || a.title || '').trim(),
-        id: a.id || a.browseId || null,
-      };
-    }).filter((a) => a.name);
+      const name = (a.name || a.title || a.artist || '').trim();
+      const id = a.id || a.browseId || a.artistId || a.channelId || a.author?.id || artistId || null;
+      return name ? { name, id } : null;
+    }).filter(Boolean);
   } else if (typeof artist === 'string' && artist.trim()) {
     const parts = artist.split(/,\s*/);
     list = parts.map((name, i) => ({
       name: name.trim(),
       id: i === 0 ? artistId || null : null,
     })).filter((a) => a.name);
+  } else if (artist && typeof artist === 'object') {
+    const name = (artist.name || artist.title || artist.artist || '').trim();
+    const id = artist.id || artist.browseId || artist.artistId || artist.channelId || artist.author?.id || artistId || null;
+    if (name) {
+      list = [{ name, id }];
+    }
   }
 
   if (list.length === 0) {
@@ -46,6 +53,10 @@ export default function ArtistLinks({
 
   const handleClick = (e, a) => {
     e.stopPropagation();
+    if (!a || (!a.name && !a.id)) {
+      console.warn('[ArtistLinks] Guard triggered: missing artist data', a);
+      return;
+    }
     if (onClickArtist) {
       onClickArtist(a.name, a.id);
     } else {

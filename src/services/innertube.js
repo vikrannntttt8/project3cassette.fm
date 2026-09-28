@@ -483,249 +483,320 @@ export async function resolveAudioStream(videoId, quality = 'max') {
  * - Fans might also like (Similar Artists)
  */
 export async function getArtistDetails(rawBrowseId) {
-  if (!rawBrowseId) throw new Error('browseId is required');
+  if (!rawBrowseId) {
+    return {
+      id: '',
+      browseId: '',
+      name: 'Unknown Artist',
+      description: '',
+      thumbnail: '',
+      topSongs: [],
+      albums: [],
+      singles: [],
+      videos: [],
+      playlists: [],
+      similarArtists: [],
+      error: 'browseId is required',
+    };
+  }
 
   const decodedId = decodeURIComponent(String(rawBrowseId)).trim();
-  const yt = await getInnertube();
   let artist = null;
   let resolvedId = decodedId;
 
-  // 1. If it looks like a valid YouTube browseId (UC... or FEmusic_artist_...), try direct fetch
-  if (decodedId.startsWith('UC') || decodedId.startsWith('FEmusic_artist_') || decodedId.startsWith('MPREb_')) {
-    try {
-      artist = await yt.music.getArtist(decodedId);
-      resolvedId = decodedId;
-    } catch (err) {
-      console.warn(`[Innertube] Direct getArtist failed for ${decodedId}:`, err.message);
+  try {
+    const yt = await getInnertube();
+
+    // 1. If it looks like a valid YouTube browseId (UC... or FEmusic_artist_...), try direct fetch
+    if (decodedId.startsWith('UC') || decodedId.startsWith('FEmusic_artist_') || decodedId.startsWith('MPREb_')) {
+      try {
+        artist = await yt.music.getArtist(decodedId);
+        resolvedId = decodedId;
+      } catch (err) {
+        console.warn(`[Innertube] Direct getArtist failed for ${decodedId}:`, err?.message || err);
+      }
     }
+
+    // 2. If artist wasn't resolved yet (e.g. decodedId is a name like "K.K." or direct getArtist failed), search YT Music
+    if (!artist) {
+      try {
+        const searchRes = await yt.music.search(decodedId, { type: 'artist' });
+        const candidates = searchRes.artists?.contents || searchRes.contents || [];
+        const bestMatch = candidates.find((c) => (c?.id || c?.browseId)?.startsWith('UC')) || candidates[0];
+        const foundId = bestMatch?.id || bestMatch?.browseId;
+        if (foundId && foundId.startsWith('UC')) {
+          artist = await yt.music.getArtist(foundId);
+          resolvedId = foundId;
+        }
+      } catch (err) {
+        console.warn(`[Innertube] Search-based artist resolution failed for "${decodedId}":`, err?.message || err);
+      }
+    }
+
+    // 3. If yt.music.getArtist succeeded, parse rich sections safely
+    if (artist) {
+      try {
+        const name =
+          artist.header?.title?.text ||
+          artist.header?.title ||
+          artist.title?.text ||
+          artist.title ||
+          artist.name ||
+          decodedId;
+
+        const description =
+          artist.header?.description?.text ||
+          artist.header?.description ||
+          artist.description?.text ||
+          artist.description ||
+          '';
+
+        const thumbnail = resolveThumbnail(
+          artist.header?.thumbnail ||
+          artist.header?.thumbnails ||
+          artist.header?.foreground_thumbnail ||
+          artist.header?.background_thumbnail ||
+          artist.header ||
+          artist.thumbnail ||
+          artist.thumbnails
+        );
+
+        const parseDuration = (durObj) => {
+          if (typeof durObj?.seconds === 'number') return durObj.seconds;
+          if (durObj?.text) {
+            const parts = String(durObj.text).split(':').map(Number);
+            if (parts.length === 2 && !parts.some(isNaN)) return parts[0] * 60 + parts[1];
+            if (parts.length === 3 && !parts.some(isNaN)) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+          }
+          return 0;
+        };
+
+        const topSongs = [];
+        const albums = [];
+        const singles = [];
+        const videos = [];
+        const playlists = [];
+        const similarArtists = [];
+
+        const sections = Array.isArray(artist.sections) ? artist.sections : [];
+
+        for (const sec of sections) {
+          if (!sec) continue;
+          const rawTitle = (sec.title?.text || sec.header?.title?.text || sec.title || '').toLowerCase();
+          const contents = Array.isArray(sec.contents) ? sec.contents : Array.isArray(sec.items) ? sec.items : [];
+
+          // Top Songs
+          if (rawTitle.includes('song') || rawTitle.includes('popular') || rawTitle.includes('top track')) {
+            for (const s of contents) {
+              if (!s) continue;
+              const id = s.id || s.videoId || '';
+              if (!id) continue;
+              const dur = parseDuration(s.duration);
+              const thumb = resolveThumbnail(s, id);
+              topSongs.push({
+                id,
+                videoId: id,
+                title: s.title?.text || s.title || 'Unknown Title',
+                artist: Array.isArray(s.artists)
+                  ? s.artists.map((a) => a?.name || a).filter(Boolean).join(', ')
+                  : name,
+                artistId: resolvedId,
+                album: s.album?.name || (typeof s.album === 'string' ? s.album : undefined),
+                duration: dur,
+                thumbnail: thumb,
+                cover: thumb,
+                isOfficial: true,
+                type: 'song',
+              });
+            }
+          }
+          // Singles & EPs
+          else if (rawTitle.includes('single') || rawTitle.includes('ep')) {
+            for (const a of contents) {
+              if (!a) continue;
+              const id = a.id || a.browseId || '';
+              if (!id) continue;
+              const thumb = resolveThumbnail(a);
+              singles.push({
+                id,
+                browseId: id,
+                title: a.title?.text || a.title || 'Unknown Single',
+                artist: name,
+                artistId: resolvedId,
+                year: a.year || (a.subtitle?.text ? a.subtitle.text.match(/\b(19\d\d|20\d\d)\b/)?.[1] : ''),
+                thumbnail: thumb,
+                cover: thumb,
+                type: 'album',
+                isSingle: true,
+              });
+            }
+          }
+          // Albums
+          else if (rawTitle.includes('album')) {
+            for (const a of contents) {
+              if (!a) continue;
+              const id = a.id || a.browseId || '';
+              if (!id) continue;
+              const thumb = resolveThumbnail(a);
+              albums.push({
+                id,
+                browseId: id,
+                title: a.title?.text || a.title || 'Unknown Album',
+                artist: name,
+                artistId: resolvedId,
+                year: a.year || (a.subtitle?.text ? a.subtitle.text.match(/\b(19\d\d|20\d\d)\b/)?.[1] : ''),
+                thumbnail: thumb,
+                cover: thumb,
+                type: 'album',
+              });
+            }
+          }
+          // Videos & Live Performances
+          else if (rawTitle.includes('video') || rawTitle.includes('live') || rawTitle.includes('performance')) {
+            for (const v of contents) {
+              if (!v) continue;
+              const id = v.id || v.videoId || '';
+              if (!id) continue;
+              const dur = parseDuration(v.duration);
+              const thumb = resolveThumbnail(v, id);
+              videos.push({
+                id,
+                videoId: id,
+                title: v.title?.text || v.title || 'Music Video',
+                artist: name,
+                artistId: resolvedId,
+                duration: dur,
+                views: v.views?.text || v.short_view_count?.text || '',
+                thumbnail: thumb,
+                cover: thumb,
+                type: 'video',
+              });
+            }
+          }
+          // Playlists
+          else if (rawTitle.includes('playlist') || rawTitle.includes('featured')) {
+            for (const p of contents) {
+              if (!p) continue;
+              const id = p.id || p.browseId || '';
+              if (!id) continue;
+              const thumb = resolveThumbnail(p);
+              playlists.push({
+                id,
+                browseId: id,
+                title: p.title?.text || p.title || 'Playlist',
+                artist: name,
+                songCount: p.item_count?.text || p.song_count || '',
+                thumbnail: thumb,
+                cover: thumb,
+                type: 'playlist',
+              });
+            }
+          }
+          // Similar Artists
+          else if (rawTitle.includes('fan') || rawTitle.includes('similar') || rawTitle.includes('like')) {
+            for (const art of contents) {
+              if (!art) continue;
+              const id = art.id || art.browseId || '';
+              if (!id) continue;
+              const thumb = resolveThumbnail(art);
+              similarArtists.push({
+                id,
+                browseId: id,
+                name: art.title?.text || art.name || 'Similar Artist',
+                subscribers: art.subscribers?.text || art.subtitle?.text || 'Artist',
+                thumbnail: thumb,
+                cover: thumb,
+                type: 'artist',
+              });
+            }
+          }
+        }
+
+        if (topSongs.length === 0 && sections[0]?.contents?.length) {
+          for (const s of sections[0].contents) {
+            if (!s) continue;
+            const id = s.id || s.videoId || '';
+            if (!id) continue;
+            const dur = parseDuration(s.duration);
+            const thumb = resolveThumbnail(s, id);
+            topSongs.push({
+              id,
+              videoId: id,
+              title: s.title?.text || s.title || 'Unknown Title',
+              artist: name,
+              artistId: resolvedId,
+              album: s.album?.name || (typeof s.album === 'string' ? s.album : undefined),
+              duration: dur,
+              thumbnail: thumb,
+              cover: thumb,
+              isOfficial: true,
+              type: 'song',
+            });
+          }
+        }
+
+        return {
+          id: resolvedId,
+          browseId: resolvedId,
+          name,
+          description,
+          thumbnail,
+          topSongs,
+          albums,
+          singles,
+          videos,
+          playlists,
+          similarArtists,
+        };
+      } catch (parseErr) {
+        console.warn(`[Innertube] Failed to parse rich artist structure for "${decodedId}":`, parseErr);
+      }
+    }
+  } catch (outerErr) {
+    console.warn(`[Innertube] Error in getArtistDetails for "${decodedId}":`, outerErr);
   }
 
-  // 2. If artist wasn't resolved yet (e.g. decodedId is a name like "K.K."), search YT Music for the artist
-  if (!artist) {
-    try {
-      const searchRes = await yt.music.search(decodedId, { type: 'artist' });
-      const candidates = searchRes.artists?.contents || searchRes.contents || [];
-      const bestMatch = candidates.find((c) => (c.id || c.browseId)?.startsWith('UC')) || candidates[0];
-      const foundId = bestMatch?.id || bestMatch?.browseId;
-      if (foundId && foundId.startsWith('UC')) {
-        artist = await yt.music.getArtist(foundId);
-        resolvedId = foundId;
-      }
-    } catch (err) {
-      console.warn(`[Innertube] Search-based artist resolution failed for "${decodedId}":`, err.message);
-    }
-  }
+  // 4. Fallback search mode if channel couldn't be loaded or parsed directly
+  try {
+    const [songResults, albumResults] = await Promise.all([
+      searchMusic(decodedId, 'songs').catch(() => []),
+      searchMusic(decodedId, 'albums').catch(() => []),
+    ]);
 
-  // 3. If yt.music.getArtist succeeded, parse rich sections
-  if (artist) {
-    const name = artist.header?.title?.text || artist.name || decodedId;
-    const description = artist.header?.description?.text || '';
-    const thumbnail = resolveThumbnail(
-      artist.header?.thumbnail
-      || artist.header?.thumbnails
-      || artist.header
-      || artist.thumbnail
-      || artist.thumbnails
-    );
-
-    const parseDuration = (durObj) => {
-      if (typeof durObj?.seconds === 'number') return durObj.seconds;
-      if (durObj?.text) {
-        const parts = durObj.text.split(':').map(Number);
-        if (parts.length === 2) return parts[0] * 60 + parts[1];
-        if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-      }
-      return 0;
-    };
-
-    const topSongs = [];
-    const albums = [];
-    const singles = [];
-    const videos = [];
-    const playlists = [];
-    const similarArtists = [];
-
-    for (const sec of artist.sections || []) {
-      const rawTitle = (sec.title?.text || sec.header?.title?.text || '').toLowerCase();
-      const contents = sec.contents || [];
-
-      // Top Songs
-      if (rawTitle.includes('song') || rawTitle.includes('popular') || rawTitle.includes('top track')) {
-        for (const s of contents) {
-          const id = s.id || s.videoId || '';
-          if (!id) continue;
-          const dur = parseDuration(s.duration);
-          const thumb = resolveThumbnail(s, id);
-          topSongs.push({
-            id,
-            videoId: id,
-            title: s.title?.text || s.title || 'Unknown Title',
-            artist: s.artists?.map((a) => a.name).filter(Boolean).join(', ') || name,
-            artistId: resolvedId,
-            album: s.album?.name || (typeof s.album === 'string' ? s.album : undefined),
-            duration: dur,
-            thumbnail: thumb,
-            cover: thumb,
-            isOfficial: true,
-            type: 'song',
-          });
-        }
-      }
-      // Singles & EPs
-      else if (rawTitle.includes('single') || rawTitle.includes('ep')) {
-        for (const a of contents) {
-          const id = a.id || a.browseId || '';
-          if (!id) continue;
-          const thumb = resolveThumbnail(a);
-          singles.push({
-            id,
-            browseId: id,
-            title: a.title?.text || a.title || 'Unknown Single',
-            artist: name,
-            artistId: resolvedId,
-            year: a.year || (a.subtitle?.text ? a.subtitle.text.match(/\b(19\d\d|20\d\d)\b/)?.[1] : ''),
-            thumbnail: thumb,
-            cover: thumb,
-            type: 'album',
-            isSingle: true,
-          });
-        }
-      }
-      // Albums
-      else if (rawTitle.includes('album')) {
-        for (const a of contents) {
-          const id = a.id || a.browseId || '';
-          if (!id) continue;
-          const thumb = resolveThumbnail(a);
-          albums.push({
-            id,
-            browseId: id,
-            title: a.title?.text || a.title || 'Unknown Album',
-            artist: name,
-            artistId: resolvedId,
-            year: a.year || (a.subtitle?.text ? a.subtitle.text.match(/\b(19\d\d|20\d\d)\b/)?.[1] : ''),
-            thumbnail: thumb,
-            cover: thumb,
-            type: 'album',
-          });
-        }
-      }
-      // Videos & Live Performances
-      else if (rawTitle.includes('video') || rawTitle.includes('live') || rawTitle.includes('performance')) {
-        for (const v of contents) {
-          const id = v.id || v.videoId || '';
-          if (!id) continue;
-          const dur = parseDuration(v.duration);
-          const thumb = resolveThumbnail(v, id);
-          videos.push({
-            id,
-            videoId: id,
-            title: v.title?.text || v.title || 'Music Video',
-            artist: name,
-            artistId: resolvedId,
-            duration: dur,
-            views: v.views?.text || v.short_view_count?.text || '',
-            thumbnail: thumb,
-            cover: thumb,
-            type: 'video',
-          });
-        }
-      }
-      // Playlists
-      else if (rawTitle.includes('playlist') || rawTitle.includes('featured')) {
-        for (const p of contents) {
-          const id = p.id || p.browseId || '';
-          if (!id) continue;
-          const thumb = resolveThumbnail(p);
-          playlists.push({
-            id,
-            browseId: id,
-            title: p.title?.text || p.title || 'Playlist',
-            artist: name,
-            songCount: p.item_count?.text || p.song_count || '',
-            thumbnail: thumb,
-            cover: thumb,
-            type: 'playlist',
-          });
-        }
-      }
-      // Similar Artists
-      else if (rawTitle.includes('fan') || rawTitle.includes('similar') || rawTitle.includes('like')) {
-        for (const art of contents) {
-          const id = art.id || art.browseId || '';
-          if (!id) continue;
-          const thumb = resolveThumbnail(art);
-          similarArtists.push({
-            id,
-            browseId: id,
-            name: art.title?.text || art.name || 'Similar Artist',
-            subscribers: art.subscribers?.text || art.subtitle?.text || 'Artist',
-            thumbnail: thumb,
-            cover: thumb,
-            type: 'artist',
-          });
-        }
-      }
-    }
-
-    if (topSongs.length === 0 && artist.sections?.[0]?.contents?.length) {
-      for (const s of artist.sections[0].contents) {
-        const id = s.id || s.videoId || '';
-        if (!id) continue;
-        const dur = parseDuration(s.duration);
-        const thumb = resolveThumbnail(s, id);
-        topSongs.push({
-          id,
-          videoId: id,
-          title: s.title?.text || s.title || 'Unknown Title',
-          artist: name,
-          artistId: resolvedId,
-          album: s.album?.name || (typeof s.album === 'string' ? s.album : undefined),
-          duration: dur,
-          thumbnail: thumb,
-          cover: thumb,
-          isOfficial: true,
-          type: 'song',
-        });
-      }
-    }
+    const safeSongs = Array.isArray(songResults) ? songResults : [];
+    const safeAlbums = Array.isArray(albumResults) ? albumResults : [];
+    const fallbackThumb = safeSongs[0]?.thumbnail || safeAlbums[0]?.thumbnail || '';
 
     return {
       id: resolvedId,
       browseId: resolvedId,
-      name,
-      description,
-      thumbnail,
-      topSongs,
-      albums,
-      singles,
-      videos,
-      playlists,
-      similarArtists,
+      name: decodedId,
+      description: `Discography and tracks for ${decodedId}`,
+      thumbnail: fallbackThumb,
+      topSongs: safeSongs.slice(0, 20),
+      albums: safeAlbums.slice(0, 10),
+      singles: [],
+      videos: [],
+      playlists: [],
+      similarArtists: [],
+    };
+  } catch (searchErr) {
+    console.error(`[Innertube] Total failure resolving artist "${decodedId}":`, searchErr);
+    return {
+      id: resolvedId,
+      browseId: resolvedId,
+      name: decodedId,
+      description: `Artist details for ${decodedId}`,
+      thumbnail: '',
+      topSongs: [],
+      albums: [],
+      singles: [],
+      videos: [],
+      playlists: [],
+      similarArtists: [],
+      error: searchErr?.message || 'Unable to load artist',
     };
   }
-
-  // 4. Fallback search mode if channel couldn't be loaded directly
-  const [songResults, albumResults] = await Promise.all([
-    searchMusic(decodedId, 'songs').catch(() => []),
-    searchMusic(decodedId, 'albums').catch(() => []),
-  ]);
-
-  const fallbackThumb = songResults[0]?.thumbnail || albumResults[0]?.thumbnail || '';
-
-  return {
-    id: resolvedId,
-    browseId: resolvedId,
-    name: decodedId,
-    description: `Discography and tracks for ${decodedId}`,
-    thumbnail: fallbackThumb,
-    topSongs: songResults.slice(0, 20),
-    albums: albumResults.slice(0, 10),
-    singles: [],
-    videos: [],
-    playlists: [],
-    similarArtists: [],
-  };
 }
 
 /**

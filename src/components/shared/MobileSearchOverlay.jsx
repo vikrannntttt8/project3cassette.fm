@@ -368,26 +368,32 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
                       Artists
                     </p>
                     <div className="grid grid-cols-2 gap-2.5">
-                      {results.artists.slice(0, 4).map((art) => (
-                        <div
-                          key={art.id}
-                          onClick={() => {
-                            routeToArtistEntity(art.title || art.name, art.id);
-                            onClose();
-                          }}
-                          className="p-2.5 rounded-2xl bg-[#18181a] border border-white/5 flex items-center gap-2.5 cursor-pointer active:scale-95 transition-transform"
-                        >
-                          <img
-                            src={art.thumbnail || art.cover}
-                            alt=""
-                            className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                          />
-                          <div className="min-w-0">
-                            <p className="text-label-sm font-semibold text-white truncate">{art.title || art.name}</p>
-                            <p className="text-body-xs text-neutral-400">Artist</p>
+                      {results.artists.slice(0, 4).map((art) => {
+                        const artistName = art.title || art.name || art.artist || '';
+                        const artistId = art.browseId || art.id || art.artistId || art.channelId || null;
+                        return (
+                          <div
+                            key={art.id || art.browseId || artistName}
+                            onClick={() => {
+                              if (artistName || artistId) {
+                                routeToArtistEntity(artistName, artistId);
+                                onClose();
+                              }
+                            }}
+                            className="p-2.5 rounded-2xl bg-[#18181a] border border-white/5 flex items-center gap-2.5 cursor-pointer active:scale-95 transition-transform"
+                          >
+                            <img
+                              src={art.thumbnail || art.cover}
+                              alt=""
+                              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-label-sm font-semibold text-white truncate">{artistName}</p>
+                              <p className="text-body-xs text-neutral-400">Artist</p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -453,26 +459,32 @@ export default function MobileSearchOverlay({ isOpen, onClose }) {
 
             {activeTab === 'artists' && (
               <div className="grid grid-cols-2 gap-2.5 pt-1">
-                {(Array.isArray(results) ? results : results.artists || []).map((art) => (
-                  <div
-                    key={art.id}
-                    onClick={() => {
-                      routeToArtistEntity(art.title || art.name, art.id);
-                      onClose();
-                    }}
-                    className="p-2.5 rounded-2xl bg-[#18181a] border border-white/5 flex items-center gap-2.5 cursor-pointer active:scale-95 transition-transform"
-                  >
-                    <img
-                      src={art.thumbnail || art.cover}
-                      alt=""
-                      className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <p className="text-label-sm font-semibold text-white truncate">{art.title || art.name}</p>
-                      <p className="text-body-xs text-neutral-400">Artist</p>
+                {(Array.isArray(results) ? results : results.artists || []).map((art) => {
+                  const artistName = art.title || art.name || art.artist || '';
+                  const artistId = art.browseId || art.id || art.artistId || art.channelId || null;
+                  return (
+                    <div
+                      key={art.id || art.browseId || artistName}
+                      onClick={() => {
+                        if (artistName || artistId) {
+                          routeToArtistEntity(artistName, artistId);
+                          onClose();
+                        }
+                      }}
+                      className="p-2.5 rounded-2xl bg-[#18181a] border border-white/5 flex items-center gap-2.5 cursor-pointer active:scale-95 transition-transform"
+                    >
+                      <img
+                        src={art.thumbnail || art.cover}
+                        alt=""
+                        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-label-sm font-semibold text-white truncate">{artistName}</p>
+                        <p className="text-body-xs text-neutral-400">Artist</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {((Array.isArray(results) ? results : results.artists || []).length === 0) && (
                   <div className="col-span-2 py-12 text-center text-neutral-400 text-body-sm">
                     No artists found for "{query}"

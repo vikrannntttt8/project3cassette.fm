@@ -92,9 +92,12 @@ export default function HomeView() {
 
   const handleArtistClick = useCallback(
     (artist) => {
-      const name = typeof artist === 'string' ? artist : artist.title || artist.name;
-      const id = typeof artist === 'string' ? null : artist.id || artist.browseId;
-      routeToArtistEntity(name, id);
+      if (!artist) return;
+      const name = typeof artist === 'string' ? artist : artist.title || artist.name || artist.artist || '';
+      const id = typeof artist === 'string' ? null : artist.id || artist.browseId || artist.artistId || artist.channelId || artist.author?.id || null;
+      if (name || id) {
+        routeToArtistEntity(name, id);
+      }
     },
     [routeToArtistEntity]
   );

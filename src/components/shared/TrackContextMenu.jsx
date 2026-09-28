@@ -72,7 +72,25 @@ export default function TrackContextMenu({ track, onAddToPlaylist }) {
   const handleGoToArtist = (e) => {
     e.stopPropagation();
     setIsOpen(false);
-    routeToArtistEntity(track.artist, track.artistId);
+    const artistName =
+      track.artists?.[0]?.name ||
+      track.artist ||
+      track.author?.name ||
+      (typeof track.artists === 'string' ? track.artists : '') ||
+      '';
+    const artistId =
+      track.artists?.[0]?.id ||
+      track.artists?.[0]?.browseId ||
+      track.artistId ||
+      track.channelId ||
+      track.author?.id ||
+      null;
+
+    if (!artistName && !artistId) {
+      console.warn('[TrackContextMenu] Guard clause: missing artist identifier and name', track);
+      return;
+    }
+    routeToArtistEntity(artistName, artistId);
   };
 
   const handlePlaylist = (e) => {

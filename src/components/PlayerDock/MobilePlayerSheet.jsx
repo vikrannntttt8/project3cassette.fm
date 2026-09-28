@@ -222,13 +222,27 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                 </div>
                 <div
                   onClick={() => {
-                    routeToArtistEntity(currentSong.artist, currentSong.artistId);
-                    onClose();
+                    const artistName =
+                      currentSong?.artists?.[0]?.name ||
+                      currentSong?.artist ||
+                      currentSong?.author?.name ||
+                      '';
+                    const artistId =
+                      currentSong?.artists?.[0]?.id ||
+                      currentSong?.artists?.[0]?.browseId ||
+                      currentSong?.artistId ||
+                      currentSong?.channelId ||
+                      currentSong?.author?.id ||
+                      null;
+                    if (artistName || artistId) {
+                      routeToArtistEntity(artistName, artistId);
+                      onClose();
+                    }
                   }}
                   className="text-[14px] text-neutral-400 font-medium hover:text-accent hover:underline truncate block mt-1 cursor-pointer"
                   title="View artist discography"
                 >
-                  {currentSong.artist || 'Unknown Artist'}
+                  {currentSong?.artist || 'Unknown Artist'}
                 </div>
               </div>
 

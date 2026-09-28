@@ -771,14 +771,50 @@ export function PlayerProvider({ children }) {
     }
   }, [navigateTo, loadSong]);
 
-  const routeToArtistEntity = useCallback((artistName, artistId = null) => {
-    if (artistId) {
-      navigateTo('artist', artistId, { name: artistName });
+  const routeToArtistEntity = useCallback((artistNameOrObj, explicitArtistId = null) => {
+    let resolvedName = '';
+    let resolvedId = null;
+
+    if (artistNameOrObj && typeof artistNameOrObj === 'object') {
+      resolvedName =
+        artistNameOrObj.artists?.[0]?.name ||
+        artistNameOrObj.name ||
+        artistNameOrObj.title ||
+        artistNameOrObj.artist ||
+        artistNameOrObj.author?.name ||
+        '';
+
+      resolvedId =
+        explicitArtistId ||
+        artistNameOrObj.artists?.[0]?.id ||
+        artistNameOrObj.artists?.[0]?.browseId ||
+        artistNameOrObj.artistId ||
+        artistNameOrObj.channelId ||
+        artistNameOrObj.author?.id ||
+        artistNameOrObj.browseId ||
+        artistNameOrObj.id ||
+        null;
+    } else if (typeof artistNameOrObj === 'string') {
+      resolvedName = artistNameOrObj.trim();
+      resolvedId = explicitArtistId || null;
+    }
+
+    if (resolvedId && typeof resolvedId === 'string') {
+      resolvedId = resolvedId.trim();
+    } else if (typeof resolvedId !== 'string') {
+      resolvedId = null;
+    }
+
+    if (!resolvedId && !resolvedName) {
+      console.warn('[routeToArtistEntity] Guard clause triggered: Missing artist identifier and name', {
+        artistNameOrObj,
+        explicitArtistId,
+      });
       return;
     }
-    if (artistName) {
-      navigateTo('artist', encodeURIComponent(artistName), { name: artistName });
-    }
+
+    const targetId = resolvedId || encodeURIComponent(resolvedName);
+    navigateTo('artist', targetId, { name: resolvedName || targetId });
   }, [navigateTo]);
 
   // ── Queue Management & Auto-Advance Engine ────────────────────────

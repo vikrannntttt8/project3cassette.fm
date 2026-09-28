@@ -529,125 +529,127 @@ export default function SettingsModal({ isOpen, onClose }) {
       // ── 1. Quality & Playback ──────────────────────────────────────
       case 'quality':
         return (
-          <div className="space-y-3 animate-fade-in">
-            {/* Section Header */}
+          <div className="space-y-5 animate-fade-in">
             <div className="pb-0.5">
-              <h3 className="text-title-md font-bold text-white">Quality & Playback</h3>
-              <p className="text-body-xs text-neutral-400 mt-0.5">
-                Tune stream fidelity, volume normalization, and continuous radio playback.
+              <h3 className="text-title-md font-bold text-white">Quality &amp; Playback</h3>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Tune stream fidelity, normalization, and radio playback.
               </p>
             </div>
 
-            {/* Audio Quality Stream Card */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 space-y-3 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-label-md font-bold text-white">Streaming Audio Fidelity</h4>
-                  <p className="text-body-xs text-neutral-400 mt-0.5">
-                    High-bitrate OPUS stream negotiation directly from YouTube Music backend.
-                  </p>
+            {/* ── Stream Quality picker ── */}
+            <div>
+              <p className="text-[10.5px] font-mono uppercase tracking-widest text-neutral-500 font-bold mb-2 px-1">STREAM QUALITY</p>
+              <div className="rounded-2xl bg-neutral-900/60 border border-white/5 overflow-hidden">
+                <div className="px-4 pt-3.5 pb-3 border-b border-white/[0.05]">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-label-md font-bold text-white">Audio Fidelity</h4>
+                      <p className="text-xs text-neutral-400 mt-0.5 truncate">
+                        High-bitrate OPUS from YouTube Music backend.
+                      </p>
+                    </div>
+                    <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0">
+                      <span className="material-symbols-outlined text-[16px]">graphic_eq</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 flex-shrink-0">
-                  <span className="material-symbols-outlined text-[18px]">graphic_eq</span>
+                <div className="px-4 py-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      { id: 'max',       label: 'Maximum (256k)', detail: 'High-Res OPUS' },
+                      { id: 'standard',  label: 'Balanced (160k)', detail: 'Smooth Bandwidth' },
+                      { id: 'datasaver', label: 'Data Saver (128k)', detail: 'Minimal Usage' },
+                    ].map((q) => (
+                      <button
+                        key={q.id}
+                        onClick={() => handleQualityChange(q.id)}
+                        className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                          audioQuality === q.id
+                            ? 'bg-accent/15 border-accent text-accent font-bold'
+                            : 'bg-black/30 border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
+                        }`}
+                      >
+                        <p className="text-label-sm font-bold">{q.label}</p>
+                        <p className="text-xs opacity-70 mt-0.5">{q.detail}</p>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {[
-                  { id: 'max',       label: 'Maximum (256k)', detail: 'High-Res OPUS Audio' },
-                  { id: 'standard',  label: 'Balanced (160k)', detail: 'Smooth Bandwidth' },
-                  { id: 'datasaver', label: 'Data Saver (128k)', detail: 'Minimal Network Footprint' },
-                ].map((q) => (
+            {/* ── Playback toggles grouped card ── */}
+            <div>
+              <p className="text-[10.5px] font-mono uppercase tracking-widest text-neutral-500 font-bold mb-2 px-1">PLAYBACK</p>
+              <div className="rounded-2xl bg-neutral-900/60 border border-white/5 overflow-hidden divide-y divide-white/[0.05]">
+
+                {/* Normalize row */}
+                <div className="px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-label-md font-semibold text-white">Normalize Volume</p>
+                    <p className="text-xs text-neutral-400 truncate">Equalize gain across album masters</p>
+                  </div>
                   <button
-                    key={q.id}
-                    onClick={() => handleQualityChange(q.id)}
-                    className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
-                      audioQuality === q.id
-                        ? 'bg-accent/15 border-accent text-accent font-bold shadow-sm'
-                        : 'bg-[#101012] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
+                    onClick={handleNormalizeToggle}
+                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                      normalizeAudio ? 'bg-accent' : 'bg-neutral-700'
                     }`}
                   >
-                    <p className="text-label-sm font-bold">{q.label}</p>
-                    <p className="text-body-xs opacity-75 mt-0.5 text-[11px]">{q.detail}</p>
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
+                      normalizeAudio ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
                   </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Volume Normalization Card */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 flex items-center justify-between shadow-lg">
-              <div className="pr-4">
-                <p className="text-label-md font-bold text-white">Normalize Volume</p>
-                <p className="text-body-xs text-neutral-400 mt-0.5">
-                  Equalize gain across different album masters to prevent loud audio spikes
-                </p>
-              </div>
-              <button
-                onClick={handleNormalizeToggle}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
-                  normalizeAudio ? 'bg-accent' : 'bg-neutral-700'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
-                    normalizeAudio ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Crossfade Card */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 space-y-2.5 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-label-md font-bold text-white">Crossfade Duration</p>
-                  <p className="text-body-xs text-neutral-400 mt-0.5">Smoothly fade between ending and upcoming songs</p>
                 </div>
-                <span className="text-label-xs font-mono font-bold text-accent px-2 py-0.5 rounded-full bg-accent/15 border border-accent/30">
-                  {crossfadeDuration}s
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="12"
-                step="1"
-                value={crossfadeDuration}
-                onChange={(e) => {
-                  setCrossfadeDuration(Number(e.target.value));
-                  localStorage.setItem('pulse_crossfade', e.target.value);
-                }}
-                className="w-full accent-accent"
-              />
-            </div>
 
-            {/* Smart Radio Auto-Queue Card */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 flex items-center justify-between shadow-lg">
-              <div className="pr-4">
-                <p className="text-label-md font-bold text-white">Smart Radio & Continuous Queue</p>
-                <p className="text-body-xs text-neutral-400 mt-0.5">
-                  Automatically fetch related mixes and recommendations when your playlist completes
-                </p>
+                {/* Smart Radio row */}
+                <div className="px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-label-md font-semibold text-white">Smart Radio Queue</p>
+                    <p className="text-xs text-neutral-400 truncate">Auto-fetch tracks when queue ends</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !smartRecs;
+                      setSmartRecs(next);
+                      localStorage.setItem('pulse_smart_recs', String(next));
+                    }}
+                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                      smartRecs ? 'bg-accent' : 'bg-neutral-700'
+                    }`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
+                      smartRecs ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Crossfade row */}
+                <div className="px-4 py-3 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0">
+                      <p className="text-label-md font-semibold text-white">Crossfade Duration</p>
+                      <p className="text-xs text-neutral-400 truncate">Fade between ending and next song</p>
+                    </div>
+                    <span className="text-label-xs font-mono font-bold text-accent px-2 py-0.5 rounded-full bg-accent/15 border border-accent/30 flex-shrink-0 ml-4">
+                      {crossfadeDuration}s
+                    </span>
+                  </div>
+                  <input
+                    type="range" min="0" max="12" step="1"
+                    value={crossfadeDuration}
+                    onChange={(e) => {
+                      setCrossfadeDuration(Number(e.target.value));
+                      localStorage.setItem('pulse_crossfade', e.target.value);
+                    }}
+                    className="w-full accent-accent"
+                  />
+                </div>
               </div>
-              <button
-                onClick={() => {
-                  const next = !smartRecs;
-                  setSmartRecs(next);
-                  localStorage.setItem('pulse_smart_recs', String(next));
-                }}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
-                  smartRecs ? 'bg-accent' : 'bg-neutral-700'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
-                    smartRecs ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
             </div>
           </div>
         );
+
 
       // ── 2. Interface & Themes ──────────────────────────────────────
       case 'interface':
@@ -813,85 +815,85 @@ export default function SettingsModal({ isOpen, onClose }) {
               )}
             </div>
 
-            {/* Ambient Glow Toggle */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 flex items-center justify-between shadow-lg">
-              <div className="pr-4">
-                <p className="text-label-md font-bold text-white">Dynamic Ambient Glow</p>
-                <p className="text-body-xs text-neutral-400 mt-0.5">
-                  Diffuse real-time cover art colors into background and modals
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  const next = !ambientGlow;
-                  setAmbientGlow(next);
-                  localStorage.setItem('pulse_ambient_glow', String(next));
-                }}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
-                  ambientGlow ? 'bg-accent' : 'bg-neutral-700'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
-                    ambientGlow ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
+            {/* â”€â”€ Appearance toggles grouped card â”€â”€ */}
+            <div>
+              <p className="text-[10.5px] font-mono uppercase tracking-widest text-neutral-500 font-bold mb-2 px-1">APPEARANCE</p>
+              <div className="rounded-2xl bg-neutral-900/60 border border-white/5 overflow-hidden divide-y divide-white/[0.05]">
 
-            {/* Lyrics Font Size Card */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 space-y-3 shadow-lg">
-              <div>
-                <h4 className="text-label-md font-bold text-white">Synced Lyrics Font Size</h4>
-                <p className="text-body-xs text-neutral-400 mt-0.5">Adjust text size in the full-screen lyrics sheet</p>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2.5">
-                {[
-                  { id: 'compact', label: 'Compact' },
-                  { id: 'normal',  label: 'Standard' },
-                  { id: 'large',   label: 'Large' },
-                ].map((s) => (
+                {/* Ambient Glow row */}
+                <div className="px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-label-md font-semibold text-white">Dynamic Ambient Glow</p>
+                    <p className="text-xs text-neutral-400 truncate">Diffuse cover art colors into backgrounds</p>
+                  </div>
                   <button
-                    key={s.id}
                     onClick={() => {
-                      setLyricFontSize(s.id);
-                      localStorage.setItem('pulse_lyric_size', s.id);
+                      const next = !ambientGlow;
+                      setAmbientGlow(next);
+                      localStorage.setItem('pulse_ambient_glow', String(next));
                     }}
-                    className={`py-2 px-3 rounded-lg border text-center text-body-xs font-semibold transition-all cursor-pointer ${
-                      lyricFontSize === s.id
-                        ? 'bg-accent text-black font-bold border-accent shadow-sm'
-                        : 'bg-[#101012] border-white/5 text-neutral-400 hover:text-white'
+                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                      ambientGlow ? 'bg-accent' : 'bg-neutral-700'
                     }`}
                   >
-                    {s.label}
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
+                      ambientGlow ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
                   </button>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* Romanized Lyrics Toggle */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 flex items-center justify-between shadow-lg">
-              <div className="pr-4">
-                <p className="text-label-md font-bold text-white">Romanized Phonetic Lyrics</p>
-                <p className="text-body-xs text-neutral-400 mt-0.5">Render Romaji, Pinyin, and Hindi phonetic pronunciation subtitles</p>
+                {/* Romanized Lyrics row */}
+                <div className="px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-label-md font-semibold text-white">Romanized Phonetic Lyrics</p>
+                    <p className="text-xs text-neutral-400 truncate">Romaji, Pinyin, Hindi phonetics</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !romanizedLyrics;
+                      setRomanizedLyrics(next);
+                      localStorage.setItem('pulse_romanized', String(next));
+                    }}
+                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                      romanizedLyrics ? 'bg-accent' : 'bg-neutral-700'
+                    }`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
+                      romanizedLyrics ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Lyrics Font Size row */}
+                <div className="px-4 py-3 space-y-2.5">
+                  <div>
+                    <p className="text-label-md font-semibold text-white">Synced Lyrics Font Size</p>
+                    <p className="text-xs text-neutral-400 truncate">Text size in full-screen lyrics sheet</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: 'compact', label: 'Compact' },
+                      { id: 'normal',  label: 'Standard' },
+                      { id: 'large',   label: 'Large' },
+                    ].map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => {
+                          setLyricFontSize(s.id);
+                          localStorage.setItem('pulse_lyric_size', s.id);
+                        }}
+                        className={`py-2 px-3 rounded-xl border text-center text-xs font-semibold transition-all cursor-pointer ${
+                          lyricFontSize === s.id
+                            ? 'bg-accent text-black font-bold border-accent'
+                            : 'bg-black/30 border-white/5 text-neutral-400 hover:text-white'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={() => {
-                  const next = !romanizedLyrics;
-                  setRomanizedLyrics(next);
-                  localStorage.setItem('pulse_romanized', String(next));
-                }}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
-                  romanizedLyrics ? 'bg-accent' : 'bg-neutral-700'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
-                    romanizedLyrics ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
             </div>
           </div>
         );
@@ -935,77 +937,80 @@ export default function SettingsModal({ isOpen, onClose }) {
               </select>
             </div>
 
-            {/* Explicit Filter Toggle */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 flex items-center justify-between shadow-lg">
-              <div className="pr-4">
-                <p className="text-label-md font-bold text-white">Filter Explicit Content</p>
-                <p className="text-body-xs text-neutral-400 mt-0.5">Hide tracks with explicit lyric advisories in feeds and search</p>
+
+            {/* â”€â”€ Content toggles grouped card â”€â”€ */}
+            <div>
+              <p className="text-[10.5px] font-mono uppercase tracking-widest text-neutral-500 font-bold mb-2 px-1">FILTERS</p>
+              <div className="rounded-2xl bg-neutral-900/60 border border-white/5 overflow-hidden divide-y divide-white/[0.05]">
+
+                {/* Explicit Filter row */}
+                <div className="px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-label-md font-semibold text-white">Filter Explicit Content</p>
+                    <p className="text-xs text-neutral-400 truncate">Hide explicit tracks from feeds</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !explicitFilter;
+                      setExplicitFilter(next);
+                      localStorage.setItem('pulse_explicit_filter', String(next));
+                    }}
+                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                      explicitFilter ? 'bg-accent' : 'bg-neutral-700'
+                    }`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
+                      explicitFilter ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Remember Last Song row */}
+                <div className="px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-label-md font-semibold text-white">Remember Last Song</p>
+                    <p className="text-xs text-neutral-400 truncate">Restore position on next launch</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !rememberLastSong;
+                      setRememberLastSong(next);
+                      localStorage.setItem('pulse_remember_song', String(next));
+                    }}
+                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                      rememberLastSong ? 'bg-accent' : 'bg-neutral-700'
+                    }`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
+                      rememberLastSong ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Data Saver row */}
+                <div className="px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-label-md font-semibold text-white">Data Saver Mode</p>
+                    <p className="text-xs text-neutral-400 truncate">Lightweight 128k on mobile networks</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const next = !dataSaver;
+                      setDataSaver(next);
+                      localStorage.setItem('pulse_data_saver', String(next));
+                    }}
+                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
+                      dataSaver ? 'bg-accent' : 'bg-neutral-700'
+                    }`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
+                      dataSaver ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => {
-                  const next = !explicitFilter;
-                  setExplicitFilter(next);
-                  localStorage.setItem('pulse_explicit_filter', String(next));
-                }}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
-                  explicitFilter ? 'bg-accent' : 'bg-neutral-700'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
-                    explicitFilter ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
             </div>
 
-            {/* Remember Last Song Toggle */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 flex items-center justify-between shadow-lg">
-              <div className="pr-4">
-                <p className="text-label-md font-bold text-white">Remember Last Playing Song</p>
-                <p className="text-body-xs text-neutral-400 mt-0.5">Restore your last active song and playback position upon launching app</p>
-              </div>
-              <button
-                onClick={() => {
-                  const next = !rememberLastSong;
-                  setRememberLastSong(next);
-                  localStorage.setItem('pulse_remember_song', String(next));
-                }}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
-                  rememberLastSong ? 'bg-accent' : 'bg-neutral-700'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
-                    rememberLastSong ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Data Saver Toggle */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 flex items-center justify-between shadow-lg">
-              <div className="pr-4">
-                <p className="text-label-md font-bold text-white">Data Saver Mode</p>
-                <p className="text-body-xs text-neutral-400 mt-0.5">Switch to lightweight 128k audio format when on mobile networks</p>
-              </div>
-              <button
-                onClick={() => {
-                  const next = !dataSaver;
-                  setDataSaver(next);
-                  localStorage.setItem('pulse_data_saver', String(next));
-                }}
-                className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
-                  dataSaver ? 'bg-accent' : 'bg-neutral-700'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
-                    dataSaver ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
 
             {/* Listening Stats Overview Card */}
             <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 space-y-2.5 shadow-lg">

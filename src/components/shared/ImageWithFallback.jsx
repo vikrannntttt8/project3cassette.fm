@@ -5,7 +5,8 @@ import { getHighResImage } from '../../utils/imageUtils.js';
  * ImageWithFallback
  * Gracefully loads image URLs and falls back to a clean dark icon
  * on error, broken link, or undefined/empty src.
- * Automatically upgrades thumbnails to high-resolution (=s800, hq720).
+ * Automatically upgrades thumbnails to high-resolution (=w1080-h1080-l90-rj, maxresdefault).
+ * If maxresdefault is 404 (unavailable for certain videos), gracefully falls back to hqdefault before placeholder.
  */
 export default function ImageWithFallback({
   src,
@@ -17,14 +18,25 @@ export default function ImageWithFallback({
   ...props
 }) {
   const normalizedSrc = getHighResImage(src);
+  const [currentSrc, setCurrentSrc] = useState(normalizedSrc);
   const [hasError, setHasError] = useState(!normalizedSrc);
 
-  // Reset error state if src changes
   useEffect(() => {
-    setHasError(!normalizedSrc);
-  }, [normalizedSrc]);
+    const updated = getHighResImage(src);
+    setCurrentSrc(updated);
+    setHasError(!updated);
+  }, [src]);
 
-  if (hasError || !normalizedSrc) {
+  const handleError = () => {
+    // If maxresdefault failed on ytimg, fall back to hqdefault before giving up
+    if (currentSrc && currentSrc.includes('maxresdefault.jpg')) {
+      setCurrentSrc(currentSrc.replace('maxresdefault.jpg', 'hqdefault.jpg'));
+    } else {
+      setHasError(true);
+    }
+  };
+
+  if (hasError || !currentSrc) {
     return (
       <div
         className={`flex items-center justify-center bg-white/5 select-none ${className}`}
@@ -39,11 +51,11 @@ export default function ImageWithFallback({
 
   return (
     <img
-      src={normalizedSrc}
+      src={currentSrc}
       alt={alt}
       className={className}
       loading={loading}
-      onError={() => setHasError(true)}
+      onError={handleError}
       {...props}
     />
   );

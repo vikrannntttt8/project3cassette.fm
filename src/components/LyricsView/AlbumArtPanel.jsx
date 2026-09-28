@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import { formatTime, formatRemaining } from '../../utils/timeFormat.js';
+import { getHighResImage } from '../../utils/imageUtils.js';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
 import MarqueeText from '../shared/MarqueeText.jsx';
@@ -28,9 +29,9 @@ export default function AlbumArtPanel() {
           {/* Ambient dynamic glow */}
           <div className="absolute -inset-2 rounded-[24px] bg-white/10 opacity-30 blur-xl group-hover:opacity-40 transition-all duration-700 pointer-events-none" />
           {/* Art */}
-          {currentSong?.thumbnail ? (
+          {currentSong?.thumbnail || currentSong?.cover ? (
             <img
-              src={currentSong.thumbnail}
+              src={getHighResImage(currentSong.cover || currentSong.thumbnail)}
               alt={currentSong?.title || 'Album Art'}
               className="relative w-full h-full object-cover rounded-2xl shadow-2xl border border-white/10 ring-1 ring-white/5"
             />

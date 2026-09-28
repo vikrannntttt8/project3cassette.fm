@@ -843,6 +843,26 @@ export function PlayerProvider({ children }) {
     setQueue((prevQueue) => [...prevQueue, track]);
   }, []);
 
+  const clearQueue = useCallback(() => {
+    if (currentSongRef.current) {
+      setQueue([currentSongRef.current]);
+      setQueueIndex(0);
+    } else {
+      setQueue([]);
+      setQueueIndex(0);
+    }
+  }, []);
+
+  const removeFromQueue = useCallback((indexToRemove) => {
+    setQueue((prev) => {
+      const next = prev.filter((_, idx) => idx !== indexToRemove);
+      if (indexToRemove < queueIndexRef.current) {
+        setQueueIndex((i) => Math.max(0, i - 1));
+      }
+      return next;
+    });
+  }, []);
+
   const skipToNext = useCallback(async () => {
     const currentQ = queueRef.current;
     const currentIdx = queueIndexRef.current;
@@ -978,16 +998,19 @@ export function PlayerProvider({ children }) {
     });
   }, []);
 
+  const [autoplay, setAutoplay] = useState(true);
+  const toggleAutoplay = useCallback(() => setAutoplay((prev) => !prev), []);
+
   // ── Infinite Radio / Smart Queue Auto-Refill ──
-  // Whenever the remaining queue drops below 3 tracks, auto-fetch more recommendations
+  // Whenever the remaining queue drops below 3 tracks, auto-fetch more recommendations (if autoplay enabled)
   useEffect(() => {
-    if (!currentSong || isFetchingNextRef.current) return;
+    if (!currentSong || isFetchingNextRef.current || !autoplay) return;
     const remaining = queue.length - queueIndex;
     if (remaining <= 3 && queue.length > 0) {
       const lastTrack = queue[queue.length - 1] || currentSong;
       populateWatchNextQueue(lastTrack, true);
     }
-  }, [queue.length, queueIndex, currentSong, populateWatchNextQueue]);
+  }, [queue.length, queueIndex, currentSong, populateWatchNextQueue, autoplay]);
 
   const isDownloaded = useCallback((trackId) => {
     if (!trackId) return false;
@@ -1016,6 +1039,7 @@ export function PlayerProvider({ children }) {
     isPlaying, currentTime, duration, volume, isMuted, isLoading,
     currentSong, queue, queueIndex, history,
     isShuffled, toggleShuffle, isRepeat, toggleRepeat,
+    autoplay, setAutoplay, toggleAutoplay,
     lrcString, lyricsSource, lyricsLoading, fetchLyricsForSong,
     view, setView,
     navState, setNavState, navigateTo, goBack, canGoBack, navHistory, playAlbum,
@@ -1030,7 +1054,7 @@ export function PlayerProvider({ children }) {
     audioQuality, setAudioQuality, activeStreamMeta, streamToast, setStreamToast,
     // Actions
     play, pause, togglePlay, seek, changeVolume, toggleMute,
-    loadSong, playTrackNow, startRadio, populateWatchNextQueue, playNextTrack, addToQueue, skipToNext, skipToPrev,
+    loadSong, playTrackNow, startRadio, populateWatchNextQueue, playNextTrack, addToQueue, clearQueue, removeFromQueue, setQueue, setQueueIndex, skipToNext, skipToPrev,
     playNext: skipToNext, playPrev: skipToPrev, playCollection, toggleView,
     // Library
     ...library,

@@ -19,6 +19,10 @@
     "ios:mobile": "npm run ios --workspace=@cassette/mobile"
   },
   "devDependencies": {
+    "tailwindcss": "3.3.2",
     "turbo": "^2.0.0"
+  },
+  "overrides": {
+    "tailwindcss": "3.3.2"
   }
 }

@@ -657,9 +657,16 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                             className="w-10 h-10 rounded-xl object-cover bg-neutral-800 flex-shrink-0"
                           />
                           <div className="min-w-0 flex-1 overflow-hidden">
-                            <p className="text-[13px] font-semibold text-white truncate leading-tight group-hover:underline">
-                              {track.title}
-                            </p>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <p className="text-[13px] font-semibold text-white truncate leading-tight group-hover:underline">
+                                {track.title}
+                              </p>
+                              {(track.isRadioTrack || track.source === 'radio') && (
+                                <span className="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/10 text-neutral-300 border border-white/10 flex-shrink-0">
+                                  Radio
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[11.5px] text-neutral-400 truncate mt-0.5">
                               {track.artist}
                             </p>

@@ -240,8 +240,9 @@ export default async function handler(req, res) {
     if (pathname.startsWith('/api/stream/')) {
       const videoId = pathname.replace('/api/stream/', '').split('?')[0];
       const quality = url.searchParams.get('quality') || 'max';
+      const codec = url.searchParams.get('codec') || 'auto';
       try {
-        const streamInfo = await resolveAudioStream(videoId, quality);
+        const streamInfo = await resolveAudioStream(videoId, quality, codec);
 
         // If JSON requested via query param or header
         if (url.searchParams.get('format') === 'json' || req.headers.accept?.includes('application/json')) {

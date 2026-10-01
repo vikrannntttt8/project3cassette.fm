@@ -1,16 +1,20 @@
 /**
  * offlineStorage.js — Cache API & IndexedDB Offline Audio & Track Store
  *
- * Enables full offline playback for tracks downloaded by the user.
- * Stores audio streams/blobs and artwork in Cache API / IndexedDB.
+ * Implements:
+ * 1. Manual user downloads ('offline_tracks')
+ * 2. Rolling FIFO "Last 70" auto-cache of recently played tracks ('last_70_cache')
+ *    with background audio, metadata, and lyrics caching in CacheStorage & IndexedDB.
  */
 
 const DB_NAME = 'cassette_offline_db';
-const DB_VERSION = 1;
-const STORE_TRACKS = 'offline_tracks';
+const DB_VERSION = 2;
+const STORE_MANUAL_TRACKS = 'offline_tracks';
+const STORE_LAST70 = 'last_70_cache';
 const CACHE_NAME = 'cassette-offline-audio-v1';
+const MAX_LAST70_LIMIT = 70;
 
-// Open IndexedDB database
+// Open IndexedDB database with multi-store schema
 function openDB() {
   return new Promise((resolve, reject) => {
     if (typeof indexedDB === 'undefined') {
@@ -20,8 +24,12 @@ function openDB() {
 
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      if (!db.objectStoreNames.contains(STORE_TRACKS)) {
-        db.createObjectStore(STORE_TRACKS, { keyPath: 'id' });
+      if (!db.objectStoreNames.contains(STORE_MANUAL_TRACKS)) {
+        db.createObjectStore(STORE_MANUAL_TRACKS, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(STORE_LAST70)) {
+        const last70Store = db.createObjectStore(STORE_LAST70, { keyPath: 'id' });
+        last70Store.createIndex('savedAt', 'savedAt', { unique: false });
       }
     };
 
@@ -31,22 +39,21 @@ function openDB() {
 }
 
 /**
- * Get all downloaded offline tracks
+ * Get all explicitly downloaded offline tracks
  * @returns {Promise<Array>}
  */
 export async function getOfflineTracks() {
   try {
     const db = await openDB();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_TRACKS, 'readonly');
-      const store = tx.objectStore(STORE_TRACKS);
+      const tx = db.transaction(STORE_MANUAL_TRACKS, 'readonly');
+      const store = tx.objectStore(STORE_MANUAL_TRACKS);
       const req = store.getAll();
       req.onsuccess = () => resolve(req.result || []);
       req.onerror = () => reject(req.error);
     });
   } catch (err) {
     console.warn('[OfflineStorage] getOfflineTracks error:', err);
-    // LocalStorage fallback
     try {
       const raw = localStorage.getItem('cassette_offline_meta');
       return raw ? JSON.parse(raw) : [];
@@ -57,27 +64,67 @@ export async function getOfflineTracks() {
 }
 
 /**
- * Check if a track is downloaded offline
+ * Get the Last 70 played songs rolling cache
+ * @returns {Promise<Array>}
+ */
+export async function getLast70OfflineTracks() {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_LAST70, 'readonly');
+      const store = tx.objectStore(STORE_LAST70);
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const items = req.result || [];
+        // Sort descending by savedAt
+        items.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+        resolve(items);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[OfflineStorage] getLast70OfflineTracks error:', err);
+    try {
+      const raw = localStorage.getItem('cassette_last70_meta');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+}
+
+/**
+ * Check if a track is downloaded offline (either manual or in last 70)
  * @param {string} trackId
  * @returns {Promise<boolean>}
  */
 export async function isTrackOffline(trackId) {
   if (!trackId) return false;
+  const idStr = String(trackId);
   try {
     const db = await openDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction(STORE_TRACKS, 'readonly');
-      const store = tx.objectStore(STORE_TRACKS);
-      const req = store.get(String(trackId));
-      req.onsuccess = () => resolve(Boolean(req.result));
-      req.onerror = () => resolve(false);
+    const checkStore = (storeName) => new Promise((res) => {
+      try {
+        const tx = db.transaction(storeName, 'readonly');
+        const store = tx.objectStore(storeName);
+        const req = store.get(idStr);
+        req.onsuccess = () => res(Boolean(req.result));
+        req.onerror = () => res(false);
+      } catch {
+        res(false);
+      }
     });
+
+    const isManual = await checkStore(STORE_MANUAL_TRACKS);
+    if (isManual) return true;
+    return await checkStore(STORE_LAST70);
   } catch {
     try {
       const raw = localStorage.getItem('cassette_offline_meta');
-      if (!raw) return false;
-      const list = JSON.parse(raw);
-      return list.some((t) => (t.id === trackId || t.videoId === trackId));
+      if (raw && JSON.parse(raw).some((t) => t.id === idStr || t.videoId === idStr)) return true;
+      const raw70 = localStorage.getItem('cassette_last70_meta');
+      if (raw70 && JSON.parse(raw70).some((t) => t.id === idStr || t.videoId === idStr)) return true;
+      return false;
     } catch {
       return false;
     }
@@ -85,7 +132,105 @@ export async function isTrackOffline(trackId) {
 }
 
 /**
- * Save a track and its assets for offline playback
+ * Silently record and cache a played track into the rolling "Last 70" store.
+ * Automatically evicts oldest items when exceeding 70 songs (FIFO).
+ * @param {Object} track
+ * @param {string} [lyrics]
+ * @returns {Promise<boolean>}
+ */
+export async function recordPlayedSongOffline(track, lyrics = '') {
+  if (!track || (!track.id && !track.videoId)) return false;
+  const trackId = String(track.videoId || track.id);
+  const cleanTrack = {
+    ...track,
+    id: trackId,
+    videoId: trackId,
+    lyrics: lyrics || track.lyrics || '',
+    savedAt: Date.now(),
+    isOfflineAvailable: true,
+  };
+
+  try {
+    // 1. Silently background-cache artwork
+    const imgUrl = track.thumbnail || track.cover;
+    if (imgUrl && typeof caches !== 'undefined') {
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.add(imgUrl).catch(() => {});
+      } catch {}
+    }
+
+    // 2. Silently background-cache audio stream blob
+    if (typeof caches !== 'undefined') {
+      try {
+        const cache = await caches.open(CACHE_NAME);
+        const streamUrl = `/api/stream/${trackId}`;
+        const match = await cache.match(streamUrl);
+        if (!match) {
+          const res = await fetch(streamUrl);
+          if (res.ok) {
+            await cache.put(streamUrl, res);
+          }
+        }
+      } catch (e) {
+        console.warn('[OfflineStorage] Stream pre-cache note:', e.message);
+      }
+    }
+
+    // 3. Put into IndexedDB rolling store
+    const db = await openDB();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_LAST70, 'readwrite');
+      const store = tx.objectStore(STORE_LAST70);
+      const req = store.put(cleanTrack);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+
+    // 4. FIFO Eviction Enforcement (strictly cap at 70 songs)
+    const allItems = await new Promise((resolve) => {
+      const tx = db.transaction(STORE_LAST70, 'readonly');
+      const store = tx.objectStore(STORE_LAST70);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => resolve([]);
+    });
+
+    if (allItems.length > MAX_LAST70_LIMIT) {
+      allItems.sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0));
+      const excess = allItems.slice(0, allItems.length - MAX_LAST70_LIMIT);
+
+      const delTx = db.transaction(STORE_LAST70, 'readwrite');
+      const delStore = delTx.objectStore(STORE_LAST70);
+      for (const item of excess) {
+        delStore.delete(item.id);
+        // Evict from CacheStorage
+        if (typeof caches !== 'undefined') {
+          caches.open(CACHE_NAME).then((c) => {
+            c.delete(`/api/stream/${item.id}`).catch(() => {});
+          });
+        }
+      }
+    }
+
+    // Update LocalStorage mirror
+    try {
+      const last70List = await getLast70OfflineTracks();
+      localStorage.setItem('cassette_last70_meta', JSON.stringify(last70List.slice(0, MAX_LAST70_LIMIT)));
+    } catch {}
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cassette:offline-changed', { detail: { trackId, action: 'last70-updated' } }));
+    }
+    return true;
+  } catch (err) {
+    console.warn('[OfflineStorage] recordPlayedSongOffline error:', err);
+    return false;
+  }
+}
+
+/**
+ * Save a track explicitly for offline playback (Manual Downloads)
  * @param {Object} track
  * @returns {Promise<boolean>}
  */
@@ -105,7 +250,7 @@ export async function saveTrackOffline(track) {
     if (imgUrl && typeof caches !== 'undefined') {
       try {
         const cache = await caches.open(CACHE_NAME);
-        await cache.add(imgUrl);
+        await cache.add(imgUrl).catch(() => {});
       } catch (e) {
         console.warn('[OfflineStorage] Artwork cache notice:', e);
       }
@@ -129,8 +274,8 @@ export async function saveTrackOffline(track) {
     // 3. Save track metadata in IndexedDB
     const db = await openDB();
     await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_TRACKS, 'readwrite');
-      const store = tx.objectStore(STORE_TRACKS);
+      const tx = db.transaction(STORE_MANUAL_TRACKS, 'readwrite');
+      const store = tx.objectStore(STORE_MANUAL_TRACKS);
       const req = store.put(cleanTrack);
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
@@ -143,7 +288,9 @@ export async function saveTrackOffline(track) {
       localStorage.setItem('cassette_offline_meta', JSON.stringify([...filtered, cleanTrack]));
     } catch {}
 
-    window.dispatchEvent(new CustomEvent('cassette:offline-changed', { detail: { trackId, action: 'added' } }));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cassette:offline-changed', { detail: { trackId, action: 'added' } }));
+    }
     return true;
   } catch (err) {
     console.error('[OfflineStorage] Save error:', err);
@@ -163,8 +310,8 @@ export async function removeOfflineTrack(trackId) {
   try {
     const db = await openDB();
     await new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_TRACKS, 'readwrite');
-      const store = tx.objectStore(STORE_TRACKS);
+      const tx = db.transaction(STORE_MANUAL_TRACKS, 'readwrite');
+      const store = tx.objectStore(STORE_MANUAL_TRACKS);
       const req = store.delete(idStr);
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
@@ -180,7 +327,9 @@ export async function removeOfflineTrack(trackId) {
       }
     } catch {}
 
-    window.dispatchEvent(new CustomEvent('cassette:offline-changed', { detail: { trackId: idStr, action: 'removed' } }));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cassette:offline-changed', { detail: { trackId: idStr, action: 'removed' } }));
+    }
     return true;
   } catch (err) {
     console.warn('[OfflineStorage] Remove error:', err);

@@ -162,11 +162,20 @@ function parseSongItem(item) {
     || (item.album?.name && item.artists?.length)
   );
 
+  const artistsList = Array.isArray(item.artists) && item.artists.length > 0
+    ? item.artists.map((a) => ({
+        name: typeof a === 'string' ? a : (a?.name || a?.title || 'Artist'),
+        id: a?.channel_id || a?.id || a?.browseId || a?.browse_id || undefined,
+      }))
+    : [{ name: artist, id: artistId }];
+
   return {
     id,
     videoId: id,
+    youtubeId: id,
     title,
     artist,
+    artists: artistsList,
     artistId,
     album,
     albumId,
@@ -317,12 +326,105 @@ export async function searchMusic(query, type = 'all') {
     }
   }
 
-  // ── Tab: All (Mix official songs, albums, and artists) ───────────────────
+  // ── Tab: Videos ─────────────────────────────────────────────────────────
+  if (type === 'videos' || type === 'video') {
+    try {
+      const searchResults = await yt.music.search(q, { type: 'video' });
+      const contents = searchResults.videos?.contents || searchResults.contents || [];
+      const videos = contents.map(parseSongItem).filter((t) => t.id && t.id.length >= 10);
+      if (videos.length > 0) return videos;
+    } catch (err) {
+      console.warn('[Innertube] YouTube Music video search note:', err.message);
+    }
+    return await searchGeneralVideos(20);
+  }
+
+  // ── Tab: Podcasts ───────────────────────────────────────────────────────
+  if (type === 'podcasts' || type === 'podcast') {
+    try {
+      const searchResults = await yt.music.search(q, { type: 'podcast' }).catch(() => null)
+        || await yt.music.search(q, { type: 'episode' }).catch(() => null);
+      const contents = searchResults?.podcasts?.contents || searchResults?.episodes?.contents || searchResults?.contents || [];
+      const podcasts = contents.map((item) => {
+        const id = item.id || item.video_id || '';
+        const thumb = resolveThumbnail(item, id);
+        return {
+          id,
+          videoId: id,
+          title: item.title?.text || item.title || 'Unknown Episode',
+          artist: item.author?.name || item.author || item.artists?.[0]?.name || 'Podcast Host',
+          duration: typeof item.duration?.seconds === 'number' ? item.duration.seconds : 0,
+          thumbnail: thumb,
+          cover: thumb,
+          type: 'podcast',
+        };
+      }).filter((p) => p.id);
+      if (podcasts.length > 0) return podcasts;
+    } catch (err) {
+      console.warn('[Innertube] Podcast search note:', err.message);
+    }
+    return await searchGeneralVideos(15);
+  }
+
+  // ── Tab: Community Playlists / Playlists ─────────────────────────────────
+  if (type === 'community_playlists' || type === 'community' || type === 'playlists' || type === 'playlist') {
+    try {
+      const searchResults = await yt.music.search(q, { type: 'playlist' });
+      const contents = searchResults.playlists?.contents || searchResults.contents || [];
+      return contents.map((pl) => {
+        const id = pl.id || pl.playlist_id || pl.browse_id || '';
+        const thumb = resolveThumbnail(pl);
+        return {
+          id,
+          browseId: id,
+          playlistId: id,
+          title: pl.title?.text || pl.title || 'Community Playlist',
+          artist: pl.author?.name || pl.author || 'YouTube Music Curator',
+          itemCount: pl.item_count || pl.track_count || 'Playlist',
+          thumbnail: thumb,
+          cover: thumb,
+          type: 'playlist',
+        };
+      }).filter((pl) => pl.id);
+    } catch (err) {
+      console.warn('[Innertube] Community playlist search error:', err);
+      return [];
+    }
+  }
+
+  // ── Tab: Featured Playlists ─────────────────────────────────────────────
+  if (type === 'featured_playlists' || type === 'featured') {
+    try {
+      const searchResults = await yt.music.search(q, { type: 'featured_playlist' }).catch(() => null)
+        || await yt.music.search(`${q} mix`, { type: 'playlist' }).catch(() => null);
+      const contents = searchResults?.featured_playlists?.contents || searchResults?.playlists?.contents || searchResults?.contents || [];
+      return contents.map((pl) => {
+        const id = pl.id || pl.playlist_id || pl.browse_id || '';
+        const thumb = resolveThumbnail(pl);
+        return {
+          id,
+          browseId: id,
+          playlistId: id,
+          title: pl.title?.text || pl.title || 'Featured Mix',
+          artist: pl.author?.name || 'Curated by YouTube Music',
+          thumbnail: thumb,
+          cover: thumb,
+          type: 'playlist',
+        };
+      }).filter((pl) => pl.id);
+    } catch (err) {
+      console.warn('[Innertube] Featured playlist search error:', err);
+      return [];
+    }
+  }
+
+  // ── Tab: All (Mix official songs, albums, artists, and videos) ───────────
   try {
-    const [songRes, albumRes, artistRes] = await Promise.allSettled([
+    const [songRes, albumRes, artistRes, videoRes] = await Promise.allSettled([
       yt.music.search(q, { type: 'song' }),
       yt.music.search(q, { type: 'album' }),
       yt.music.search(q, { type: 'artist' }),
+      yt.music.search(q, { type: 'video' }),
     ]);
 
     let songs = (songRes.status === 'fulfilled' ? (songRes.value.songs?.contents || songRes.value.contents || []) : [])
@@ -364,11 +466,16 @@ export async function searchMusic(query, type = 'all') {
       })
       .filter((art) => art.id);
 
+    const videos = (videoRes.status === 'fulfilled' ? (videoRes.value.videos?.contents || videoRes.value.contents || []) : [])
+      .map(parseSongItem)
+      .filter((t) => t.id && t.id.length >= 10);
+
     // Return combined result list with official releases prioritized
     return [
       ...songs.slice(0, 15),
       ...albums.slice(0, 6),
       ...artists.slice(0, 4),
+      ...videos.slice(0, 4),
     ];
   } catch (err) {
     console.error('[Innertube] Search all error:', err);
@@ -385,7 +492,7 @@ export async function searchMusic(query, type = 'all') {
  * - datasaver: Restricts to low-bandwidth ~70-96kbps equivalents (itag 250/249/139)
  * Handles player cipher extraction to return a deciphered, direct streaming URL.
  */
-export async function resolveAudioStream(videoId, quality = 'max') {
+export async function resolveAudioStream(videoId, quality = 'max', codecPreference = 'auto') {
   if (!videoId) throw new Error('videoId is required');
 
   const yt = await getInnertube();
@@ -397,38 +504,48 @@ export async function resolveAudioStream(videoId, quality = 'max') {
   let selectedAudio = null;
 
   if (audioFormats.length > 0) {
-    if (quality === 'datasaver' || quality === 'low') {
-      // Low-bandwidth ~70-96kbps ceiling (itag 250, 249, 139)
-      const low = audioFormats.filter((f) => (f.bitrate || 0) <= 98000);
-      if (low.length > 0) {
-        low.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-        selectedAudio = low[0];
-      } else {
-        const sorted = [...audioFormats].sort((a, b) => (a.bitrate || 0) - (b.bitrate || 0));
-        selectedAudio = sorted[0];
-      }
-    } else if (quality === 'standard' || quality === 'medium') {
-      // Mid-tier ~160kbps ceiling (prefer AAC itag 140 or mid-tier Opus)
-      const mid = audioFormats.filter((f) => (f.bitrate || 0) <= 165000);
-      if (mid.length > 0) {
-        const aac = mid.find((f) => f.itag === 140);
-        if (aac) {
-          selectedAudio = aac;
+    if (codecPreference === 'mp4' || codecPreference === 'aac' || quality === 'high_aac') {
+      const aac = audioFormats.find((f) => f.itag === 140 || (f.mime_type && f.mime_type.includes('mp4a.40.2')));
+      if (aac) selectedAudio = aac;
+    } else if (codecPreference === 'opus' || codecPreference === 'webm') {
+      const opus = audioFormats.find((f) => f.itag === 251 || (f.mime_type && f.mime_type.includes('opus')));
+      if (opus) selectedAudio = opus;
+    }
+
+    if (!selectedAudio) {
+      if (quality === 'datasaver' || quality === 'low') {
+        // Low-bandwidth ~70-96kbps ceiling (itag 250, 249, 139)
+        const low = audioFormats.filter((f) => (f.bitrate || 0) <= 98000);
+        if (low.length > 0) {
+          low.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+          selectedAudio = low[0];
         } else {
-          mid.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-          selectedAudio = mid[0];
+          const sorted = [...audioFormats].sort((a, b) => (a.bitrate || 0) - (b.bitrate || 0));
+          selectedAudio = sorted[0];
+        }
+      } else if (quality === 'standard' || quality === 'medium') {
+        // Mid-tier ~160kbps ceiling (prefer AAC itag 140 or mid-tier Opus)
+        const mid = audioFormats.filter((f) => (f.bitrate || 0) <= 165000);
+        if (mid.length > 0) {
+          const aac = mid.find((f) => f.itag === 140);
+          if (aac) {
+            selectedAudio = aac;
+          } else {
+            mid.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+            selectedAudio = mid[0];
+          }
+        } else {
+          selectedAudio = audioFormats[0];
         }
       } else {
-        selectedAudio = audioFormats[0];
-      }
-    } else {
-      // 'max' / 'high' -> Prefer Opus itag 251 or highest bitrate available
-      const opus251 = audioFormats.find((f) => f.itag === 251);
-      if (opus251) {
-        selectedAudio = opus251;
-      } else {
-        const sorted = [...audioFormats].sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-        selectedAudio = sorted[0];
+        // 'max' / 'high' -> Prefer Opus itag 251 or highest bitrate available
+        const opus251 = audioFormats.find((f) => f.itag === 251);
+        if (opus251) {
+          selectedAudio = opus251;
+        } else {
+          const sorted = [...audioFormats].sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+          selectedAudio = sorted[0];
+        }
       }
     }
   }

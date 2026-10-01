@@ -7,8 +7,9 @@ import { usePlayer } from '../../context/PlayerContext.jsx';
  * - Array of artist strings: ['Artist 1', 'Artist 2']
  * - Comma-separated string: "Artist 1, Artist 2, Artist 3"
  *
- * Each artist has e.stopPropagation() so clicks navigate to their profile
- * without triggering track playback or player dock expansion.
+ * On mobile (< 768px), by default disables pointer events so tapping the track row
+ * triggers track playback rather than navigation.
+ * On desktop (>= 768px), allows navigating directly to artist discography.
  */
 export default function ArtistLinks({
   artists,
@@ -17,6 +18,7 @@ export default function ArtistLinks({
   className = '',
   linkClassName = '',
   onClickArtist = null,
+  allowMobileClick = false,
 }) {
   const { routeToArtistEntity } = usePlayer();
 
@@ -52,6 +54,10 @@ export default function ArtistLinks({
   }
 
   const handleClick = (e, a) => {
+    // Only process on desktop or if explicitly allowed
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && !allowMobileClick) {
+      return;
+    }
     e.stopPropagation();
     if (!a || (!a.name && !a.id)) {
       console.warn('[ArtistLinks] Guard triggered: missing artist data', a);
@@ -64,13 +70,15 @@ export default function ArtistLinks({
     }
   };
 
+  const mobilePointerClass = allowMobileClick ? 'pointer-events-auto' : 'pointer-events-none md:pointer-events-auto';
+
   return (
-    <span className={className}>
+    <span className={`${className} ${mobilePointerClass}`}>
       {list.map((a, idx) => (
         <span key={idx}>
           <span
             onClick={(e) => handleClick(e, a)}
-            className={`cursor-pointer hover:underline hover:text-white transition-colors ${linkClassName}`}
+            className={`cursor-default md:cursor-pointer md:hover:underline md:hover:text-white transition-colors ${linkClassName}`}
             title={`View artist "${a.name}"`}
           >
             {a.name}

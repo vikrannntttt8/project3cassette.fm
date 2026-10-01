@@ -9,10 +9,14 @@ import TrackContextMenu from './shared/TrackContextMenu.jsx';
 import ArtistLinks from './shared/ArtistLinks.jsx';
 
 const TABS = [
-  { id: 'all',     label: 'All',     icon: 'explore' },
-  { id: 'songs',   label: 'Songs',   icon: 'music_note' },
-  { id: 'albums',  label: 'Albums',  icon: 'album' },
-  { id: 'artists', label: 'Artists', icon: 'person' },
+  { id: 'all',                 label: 'All',                 icon: 'explore' },
+  { id: 'songs',               label: 'Songs',               icon: 'music_note' },
+  { id: 'videos',              label: 'Videos',              icon: 'smart_display' },
+  { id: 'albums',              label: 'Albums',              icon: 'album' },
+  { id: 'artists',             label: 'Artists',             icon: 'person' },
+  { id: 'podcasts',            label: 'Podcasts',            icon: 'podcasts' },
+  { id: 'community_playlists', label: 'Community Playlists', icon: 'queue_music' },
+  { id: 'featured_playlists',  label: 'Featured Playlists',  icon: 'featured_play_list' },
 ];
 
 /**
@@ -323,7 +327,49 @@ export default function Search({ onSelectTrack, onArtistClick }) {
                 );
               }
 
-              // ── Track Row ───────────────────────────────────────────────
+              // ── Playlist Row / Card ──────────────────────────────────────
+              if (itemType === 'playlist') {
+                return (
+                  <div
+                    key={item.id || item.browseId || item.playlistId || idx}
+                    onClick={() => {
+                      if (item.playlistId || item.browseId || item.id) {
+                        navigateTo('library', null, { activeSection: 'playlists' });
+                      }
+                    }}
+                    className="group flex items-center justify-between px-3 py-2 min-h-[48px] hover:bg-white/[0.04] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <ImageWithFallback
+                        src={item.thumbnail || item.cover}
+                        alt={item.title}
+                        icon="queue_music"
+                        iconClassName="text-white/40 text-[20px]"
+                        className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-[#262626] group-hover:scale-105 transition-transform"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13.5px] font-semibold text-white truncate group-hover:underline transition-colors">
+                            {item.title}
+                          </span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#111111] text-[#888888] border border-[#333333] flex-shrink-0">
+                            Playlist
+                          </span>
+                        </div>
+                        <p className="text-[11.5px] text-[#888888] truncate mt-0.5">
+                          {item.artist || item.author || 'Curated Playlist'} {item.itemCount ? `• ${item.itemCount}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#888888] group-hover:text-white transition-colors">
+                      <span className="text-label-sm font-medium hidden sm:inline">View</span>
+                      <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                    </div>
+                  </div>
+                );
+              }
+
+              // ── Track / Video / Podcast Row ─────────────────────────────
               const track = item;
               return (
                 <div

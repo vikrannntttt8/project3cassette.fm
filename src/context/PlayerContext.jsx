@@ -5,7 +5,14 @@ import { DEMO_LRC } from '../utils/lrcParser.js';
 import { useLibrary } from '../hooks/useLibrary.js';
 import { useSettings } from './SettingsContext.jsx';
 import { apiUrl } from '../utils/apiConfig.js';
-import { getOfflineTracks, saveTrackOffline, removeOfflineTrack, isTrackOffline } from '../services/offlineStorage.js';
+import {
+  getOfflineTracks,
+  getLast70OfflineTracks,
+  saveTrackOffline,
+  removeOfflineTrack,
+  isTrackOffline,
+  recordPlayedSongOffline,
+} from '../services/offlineStorage.js';
 import { getHighResImage } from '../utils/imageUtils.js';
 
 const PlayerContext = createContext(null);
@@ -24,19 +31,40 @@ export function PlayerProvider({ children }) {
   const [volume,      setVolume]      = useState(0.8);
   const [isMuted,     setIsMuted]     = useState(false);
   const [isLoading,   setIsLoading]   = useState(false);
+  const [isOnline,    setIsOnline]    = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
-  // ── Offline Downloads state ───────────────────────────────────────
+  // ── Offline Downloads & Last 70 Rolling Cache state ────────────────
   const [offlineTracks, setOfflineTracks] = useState([]);
+  const [last70Tracks,  setLast70Tracks]  = useState([]);
 
   useEffect(() => {
-    getOfflineTracks().then((tracks) => setOfflineTracks(tracks || []));
-
-    const handleOfflineChange = () => {
+    const refreshOffline = () => {
       getOfflineTracks().then((tracks) => setOfflineTracks(tracks || []));
+      getLast70OfflineTracks().then((tracks) => setLast70Tracks(tracks || []));
     };
 
+    refreshOffline();
+
+    const handleOfflineChange = () => refreshOffline();
     window.addEventListener('cassette:offline-changed', handleOfflineChange);
-    return () => window.removeEventListener('cassette:offline-changed', handleOfflineChange);
+
+    const handleNetworkOnline = () => setIsOnline(true);
+    const handleNetworkOffline = () => {
+      setIsOnline(false);
+      // Auto-lock to offline library mode when connection is lost
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cassette:network-offline'));
+      }
+    };
+
+    window.addEventListener('online', handleNetworkOnline);
+    window.addEventListener('offline', handleNetworkOffline);
+
+    return () => {
+      window.removeEventListener('cassette:offline-changed', handleOfflineChange);
+      window.removeEventListener('online', handleNetworkOnline);
+      window.removeEventListener('offline', handleNetworkOffline);
+    };
   }, []);
 
   // ── Song & queue state ────────────────────────────────────────────
@@ -158,7 +186,16 @@ export function PlayerProvider({ children }) {
   const isSettingsOpenRef = useRef(false);
   const settingsSubPageRef = useRef(null);
   const isMobileSearchOpenRef = useRef(false);
+
+  // ── Dual Audio Elements & Prefetch / Gapless Pipeline ─────────────
   const audioElementRef = useRef(null);
+  const nextAudioElementRef = useRef(null);
+  const hasPrefetchedForCurrentTrackRef = useRef(false);
+  const hasRecordedPlayRef = useRef(false);
+  const prefetchTimeoutRef = useRef(null);
+  const prefetchedTrackRef = useRef(null);
+  const prefetchedStreamMetaRef = useRef(null);
+  const prefetchBlobUrlRef = useRef(null);
 
   useEffect(() => { isPlayerSheetOpenRef.current = isPlayerSheetOpen; }, [isPlayerSheetOpen]);
   useEffect(() => { playerSheetTabRef.current = playerSheetTab; }, [playerSheetTab]);
@@ -177,6 +214,19 @@ export function PlayerProvider({ children }) {
   });
   const [activeStreamMeta, setActiveStreamMeta] = useState(null);
   const [streamToast, setStreamToast] = useState(null);
+
+  // ── Sync Playback Speed and Pitch Preserving with Audio Elements ──
+  const settings = useSettings();
+
+  useEffect(() => {
+    const a = audioElementRef.current;
+    if (a) {
+      try {
+        a.playbackRate = settings.playbackSpeed || 1.0;
+        a.preservesPitch = settings.preservesPitch !== false;
+      } catch {}
+    }
+  }, [settings.playbackSpeed, settings.preservesPitch]);
 
   const view = navState.view;
 
@@ -251,7 +301,6 @@ export function PlayerProvider({ children }) {
     }
   }, []);
 
-  const settings = useSettings();
   const interceptBackRef = useRef(true);
   const closeModalsOnNavRef = useRef(true);
 
@@ -458,6 +507,67 @@ export function PlayerProvider({ children }) {
   // Fallback indicator if direct CDN stream needs proxy fallback
   const fallbackAttemptRef = useRef(false);
 
+  // ── Prefetch Next Track Engine (>50% Playback / Auto-Cache) ──────
+  const prefetchNextTrack = useCallback(async (track, queuePos) => {
+    if (!track || !track.id) return;
+    const targetVid = track.videoId || track.youtubeId || track.id;
+    if (!targetVid) return;
+
+    if (prefetchTimeoutRef.current) {
+      clearTimeout(prefetchTimeoutRef.current);
+      prefetchTimeoutRef.current = null;
+    }
+
+    try {
+      prefetchedTrackRef.current = track;
+
+      // 1. Prefetch time-synced lyrics
+      fetchSongLyrics(track.id, track.title, track.artist).catch(() => {});
+
+      // 2. Prefetch high-res artwork into browser memory cache
+      const rawCover = track.thumbnail || track.cover;
+      if (rawCover) {
+        const img = new Image();
+        img.src = getHighResImage(rawCover);
+      }
+
+      // 3. Resolve stream URL
+      const codec = settings.audioCodec || 'auto';
+      const streamRes = await fetch(apiUrl(`/api/stream/${targetVid}?format=json&quality=${audioQuality}&codec=${codec}`));
+      if (streamRes.ok) {
+        const meta = await streamRes.json();
+        prefetchedStreamMetaRef.current = meta;
+        const streamUrl = meta.streamUrl || apiUrl(`/api/stream/${targetVid}?quality=${audioQuality}&codec=${codec}`);
+
+        // 4. Pre-buffer secondary HTML5 Audio element with 2-second decoding watchdog
+        const nextAudio = nextAudioElementRef.current;
+        if (nextAudio) {
+          nextAudio.src = streamUrl;
+          nextAudio.preload = 'auto';
+          nextAudio.load();
+
+          // 2-Second Decoding Fault Tolerance Watchdog:
+          // If stream fails to reach HAVE_ENOUGH_DATA / errors within 2000ms, evict and jump to N+2
+          prefetchTimeoutRef.current = setTimeout(() => {
+            if (nextAudio.readyState < 2) {
+              console.warn('[Prefetch Engine] 2s watchdog timeout on track N+1:', track.title, '— evicting track');
+              if (queueRef.current && queueRef.current[queuePos]?.id === track.id) {
+                setQueue((prev) => prev.filter((_, idx) => idx !== queuePos));
+                // Prefetch N+2
+                const nextInLine = queueRef.current[queuePos];
+                if (nextInLine) {
+                  prefetchNextTrack(nextInLine, queuePos);
+                }
+              }
+            }
+          }, 2000);
+        }
+      }
+    } catch (err) {
+      console.warn('[Prefetch Engine] Background prefetch note:', err.message);
+    }
+  }, [audioQuality, settings.audioCodec]);
+
   // ── Helper to execute load on the Global HTML5 Audio Player ─────────
   const executeLoadSong = useCallback(async (song) => {
     const a = audioElementRef.current;
@@ -468,12 +578,13 @@ export function PlayerProvider({ children }) {
       setCurrentTime(0);
       setDuration(0);
       fallbackAttemptRef.current = false;
+      hasPrefetchedForCurrentTrackRef.current = false;
+      hasRecordedPlayRef.current = false;
 
-      // Completely decoupled from Saavn preview URLs (preventing 30s limits)
+      // Completely decoupled from preview URLs
       const cleanSong = { ...song };
       delete cleanSong.media_preview_url;
 
-      // Dynamically retrieve pre-mapped videoId or resolve dynamically
       let targetVideoId = cleanSong.videoId || cleanSong.youtubeId;
       if (!targetVideoId) {
         targetVideoId = await resolveYouTubeVideoId(cleanSong.title, cleanSong.artist);
@@ -487,11 +598,20 @@ export function PlayerProvider({ children }) {
         cleanSong.youtubeId = targetVideoId;
       }
 
-      // Try fetching direct stream metadata or direct proxy
+      // Check if this track was already prefetched in nextAudioElementRef
       let streamUrl = '';
-      if (targetVideoId) {
+      const nextAudio = nextAudioElementRef.current;
+      if (nextAudio && prefetchedTrackRef.current && (prefetchedTrackRef.current.id === cleanSong.id || prefetchedTrackRef.current.videoId === cleanSong.videoId) && nextAudio.src) {
+        streamUrl = nextAudio.src;
+        if (prefetchedStreamMetaRef.current) {
+          setActiveStreamMeta(prefetchedStreamMetaRef.current);
+        }
+      }
+
+      if (!streamUrl && targetVideoId) {
+        const codec = settings.audioCodec || 'auto';
         try {
-          const res = await fetch(apiUrl(`/api/stream/${targetVideoId}?format=json&quality=${audioQuality}`));
+          const res = await fetch(apiUrl(`/api/stream/${targetVideoId}?format=json&quality=${audioQuality}&codec=${codec}`));
           if (res.ok) {
             const meta = await res.json();
             if (meta?.streamUrl) {
@@ -504,13 +624,17 @@ export function PlayerProvider({ children }) {
         }
 
         if (!streamUrl) {
-          streamUrl = apiUrl(`/api/stream/${targetVideoId}?quality=${audioQuality}`);
+          streamUrl = apiUrl(`/api/stream/${targetVideoId}?quality=${audioQuality}&codec=${codec}`);
         }
       }
 
       if (streamUrl) {
         a.src = streamUrl;
         a.volume = isMuted ? 0 : volume;
+        try {
+          a.playbackRate = settings.playbackSpeed || 1.0;
+          a.preservesPitch = settings.preservesPitch !== false;
+        } catch {}
         a.load();
 
         const playPromise = a.play();
@@ -534,7 +658,7 @@ export function PlayerProvider({ children }) {
       console.warn('[Audio Engine] executeLoadSong caught:', err);
       setIsLoading(false);
     }
-  }, [audioQuality, volume, isMuted]);
+  }, [audioQuality, volume, isMuted, settings.playbackSpeed, settings.preservesPitch, settings.audioCodec]);
 
   // ── Unified HTML5 Audio Control Bindings ───────────────────────────
   const play = useCallback(() => {
@@ -675,12 +799,22 @@ export function PlayerProvider({ children }) {
         if (Array.isArray(recommendations) && recommendations.length > 0) {
           setQueue((prevQueue) => {
             const currentVid = track.videoId || track.id;
+            const historyIds = new Set((history || []).map((h) => h.videoId || h.id));
             const existingIds = new Set(
               isAppend
                 ? prevQueue.map((r) => r.videoId || r.id)
                 : [currentVid]
             );
-            const fresh = recommendations.filter((r) => !existingIds.has(r.videoId || r.id));
+
+            // Filter out tracks already in user queue or recent history
+            const fresh = recommendations
+              .filter((r) => !existingIds.has(r.videoId || r.id) && !historyIds.has(r.videoId || r.id))
+              .map((r) => ({
+                ...r,
+                isRadioTrack: true,
+                source: 'radio',
+              }));
+
             if (isAppend) {
               return [...prevQueue, ...fresh];
             }
@@ -694,7 +828,7 @@ export function PlayerProvider({ children }) {
     } catch (err) {
       console.warn('[Watch Next] Failed to populate queue:', err);
     }
-  }, []);
+  }, [history]);
 
   // ── Explicit Start Radio Engine ────────────────────────────────────
   const startRadio = useCallback((track) => {
@@ -759,7 +893,7 @@ export function PlayerProvider({ children }) {
     // Fetch stream metadata async for quality bitrate verification
     const targetVid = cleanSong.videoId || cleanSong.youtubeId || cleanSong.id;
     if (targetVid) {
-      fetch(`/api/stream/${targetVid}?format=json&quality=${audioQuality}`)
+      fetch(apiUrl(`/api/stream/${targetVid}?format=json&quality=${audioQuality}`))
         .then((r) => (r.ok ? r.json() : null))
         .then((meta) => {
           if (meta) {
@@ -1219,7 +1353,9 @@ export function PlayerProvider({ children }) {
   const value = {
     ytPlayerRef,
     audioElementRef,
+    nextAudioElementRef,
     isPlaying, currentTime, duration, volume, isMuted, isLoading,
+    isOnline,
     currentSong, queue, queueIndex, history,
     isShuffled, toggleShuffle, isRepeat, toggleRepeat,
     autoplay, setAutoplay, toggleAutoplay,
@@ -1236,8 +1372,8 @@ export function PlayerProvider({ children }) {
     settingsSubPage, setSettingsSubPage, openSettingsSubPage, closeSettingsSubPage,
     isMobileSearchOpen, setIsMobileSearchOpen, openMobileSearch, closeMobileSearch,
     activeChip, setActiveChip,
-    // Offline Storage & Downloads
-    offlineTracks, isDownloaded, toggleDownload,
+    // Offline Storage, Downloads & Last 70 Cache
+    offlineTracks, last70Tracks, isDownloaded, toggleDownload,
     // Audio Quality & Bitrate
     audioQuality, setAudioQuality, activeStreamMeta, streamToast, setStreamToast,
     // Actions
@@ -1251,7 +1387,7 @@ export function PlayerProvider({ children }) {
   return (
     <PlayerContext.Provider value={value}>
       {children}
-      {/* ── Persistent HTML5 Audio Element for Background / Lockscreen Media Session ── */}
+      {/* ── Primary Persistent HTML5 Audio Element ── */}
       <audio
         ref={audioElementRef}
         playsInline
@@ -1288,6 +1424,22 @@ export function PlayerProvider({ children }) {
           setCurrentTime(a.currentTime);
           if (a.duration && !isNaN(a.duration)) {
             setDuration(a.duration);
+
+            // 1. Aggressive Prefetching (>50% track progress)
+            if (a.duration > 0 && a.currentTime / a.duration >= 0.5 && !hasPrefetchedForCurrentTrackRef.current) {
+              hasPrefetchedForCurrentTrackRef.current = true;
+              const nextIndex = queueIndexRef.current + 1;
+              if (queueRef.current && nextIndex < queueRef.current.length) {
+                prefetchNextTrack(queueRef.current[nextIndex], nextIndex);
+              }
+            }
+
+            // 2. Offline Rolling "Last 70" Cache (Recorded after 10s playback)
+            if (a.currentTime >= 10 && !hasRecordedPlayRef.current && currentSongRef.current) {
+              hasRecordedPlayRef.current = true;
+              recordPlayedSongOffline(currentSongRef.current, lrcString);
+            }
+
             if (
               typeof window !== 'undefined' &&
               'mediaSession' in navigator &&
@@ -1309,6 +1461,10 @@ export function PlayerProvider({ children }) {
           if (a.duration && !isNaN(a.duration)) {
             setDuration(a.duration);
           }
+          try {
+            a.playbackRate = settings.playbackSpeed || 1.0;
+            a.preservesPitch = settings.preservesPitch !== false;
+          } catch {}
           setIsLoading(false);
         }}
         onDurationChange={(e) => {
@@ -1339,6 +1495,39 @@ export function PlayerProvider({ children }) {
           width: '1px',
           height: '1px',
           zIndex: -100,
+        }}
+        aria-hidden="true"
+      />
+
+      {/* ── Secondary Pre-Cache Hidden Audio Element for Gapless Transitions ── */}
+      <audio
+        ref={nextAudioElementRef}
+        playsInline
+        preload="auto"
+        muted
+        crossOrigin="anonymous"
+        onCanPlay={() => {
+          if (prefetchTimeoutRef.current) {
+            clearTimeout(prefetchTimeoutRef.current);
+            prefetchTimeoutRef.current = null;
+          }
+        }}
+        onError={() => {
+          console.warn('[Prefetch Engine] Pre-buffering error on secondary audio element');
+          if (prefetchTimeoutRef.current) {
+            clearTimeout(prefetchTimeoutRef.current);
+            prefetchTimeoutRef.current = null;
+          }
+        }}
+        style={{
+          position: 'fixed',
+          left: '-9999px',
+          bottom: '-9999px',
+          opacity: 0,
+          pointerEvents: 'none',
+          width: '1px',
+          height: '1px',
+          zIndex: -101,
         }}
         aria-hidden="true"
       />

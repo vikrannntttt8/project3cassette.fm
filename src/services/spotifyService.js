@@ -34,6 +34,22 @@ export function extractSpotifyPlaylistId(urlOrId) {
 export async function fetchSpotifyPlaylistData(playlistId) {
   const targetId = typeof playlistId === 'object' ? playlistId.id : playlistId;
   const isAlbum = typeof playlistId === 'object' && playlistId.type === 'album';
+
+  // If in browser environment, use backend serverless proxy to avoid client CORS restrictions
+  if (typeof window !== 'undefined') {
+    try {
+      const proxyRes = await fetch(`/api/spotify/playlist?id=${encodeURIComponent(targetId)}`);
+      if (proxyRes.ok) {
+        const proxyData = await proxyRes.json();
+        if (proxyData?.playlist?.tracks?.length) {
+          return proxyData.playlist;
+        }
+      }
+    } catch (proxyErr) {
+      console.warn('[Spotify Parser] Serverless proxy fetch warning:', proxyErr.message);
+    }
+  }
+
   const embedUrl = isAlbum 
     ? `https://open.spotify.com/embed/album/${targetId}`
     : `https://open.spotify.com/embed/playlist/${targetId}`;

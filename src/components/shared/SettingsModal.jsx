@@ -453,8 +453,8 @@ export default function SettingsModal({ isOpen, onClose }) {
         return (
           <div className="space-y-6 animate-fade-in text-white pb-6">
             <MonochromeCard
-              title="Streaming Audio Quality"
-              subtitle="High-bitrate OPUS audio streams from YouTube Music"
+              title="Streaming Audio Quality & Codec"
+              subtitle="High-bitrate audio streams and direct encoding selection"
               icon="graphic_eq"
             >
               <div className="p-4 bg-transparent">
@@ -482,13 +482,67 @@ export default function SettingsModal({ isOpen, onClose }) {
                   ))}
                 </div>
               </div>
+
+              <MonochromeSelect
+                icon="code"
+                label="Audio Codec Format"
+                subtitle="Select specific audio stream container preference"
+                value={settings.audioCodec || 'auto'}
+                onChange={settings.setAudioCodec}
+                options={[
+                  { value: 'auto', label: 'Auto (Best Quality OPUS / AAC)' },
+                  { value: 'opus', label: 'OPUS (High Fidelity / WebM)' },
+                  { value: 'aac', label: 'AAC / MP4 (Universal Compatibility)' },
+                ]}
+              />
             </MonochromeCard>
 
             <MonochromeCard
-              title="Playback Mechanics"
-              subtitle="Gain leveling, auto-radio queue, and song transitions"
+              title="Playback Mechanics & Buffering"
+              subtitle="Zero-latency transitions, speed control, and smart radio"
               icon="tune"
             >
+              <MonochromeToggle
+                icon="speed"
+                label="Gapless Audio Engine & Aggressive Prefetch"
+                subtitle="Background-fetch next track audio & lyrics at 50% for zero-latency crossfades"
+                checked={settings.gaplessPlayback}
+                onChange={settings.setGaplessPlayback}
+              />
+
+              <MonochromeToggle
+                icon="motion_photos_off"
+                label="Remove Track Silence"
+                subtitle="Skip leading and trailing dead silence on stream transitions"
+                checked={settings.removeSilence}
+                onChange={settings.setRemoveSilence}
+              />
+
+              <MonochromeSelect
+                icon="slow_motion_video"
+                label="Playback Speed"
+                subtitle="Adjust audio reproduction tempo and speed"
+                value={String(settings.playbackSpeed || 1.0)}
+                onChange={(v) => settings.setPlaybackSpeed(Number(v))}
+                options={[
+                  { value: '0.5', label: '0.5x (Slowed)' },
+                  { value: '0.75', label: '0.75x' },
+                  { value: '1', label: '1.0x (Normal)' },
+                  { value: '1.25', label: '1.25x' },
+                  { value: '1.5', label: '1.5x' },
+                  { value: '1.75', label: '1.75x' },
+                  { value: '2', label: '2.0x (Fast)' },
+                ]}
+              />
+
+              <MonochromeToggle
+                icon="music_note"
+                label="Preserve Pitch on Speed Adjustments"
+                subtitle="Lock original musical key and pitch even when speed is changed"
+                checked={settings.preservesPitch}
+                onChange={settings.setPreservesPitch}
+              />
+
               <MonochromeToggle
                 icon="volume_up"
                 label="Normalize Volume (ReplayGain)"
@@ -546,6 +600,139 @@ export default function SettingsModal({ isOpen, onClose }) {
       case 'interface':
         return (
           <div className="space-y-6 animate-fade-in text-white pb-6">
+            <MonochromeCard
+              title="Themes & Visual Aesthetics"
+              subtitle="Monochrome minimalism, dynamic cover art colors, and typography"
+              icon="palette"
+            >
+              <div className="p-4 space-y-3.5">
+                <p className="text-xs font-medium text-neutral-400">Accent Palette Engine</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setThemeMode('default')}
+                    className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
+                      themeMode === 'default'
+                        ? 'bg-white text-black font-bold border-white shadow-md'
+                        : 'bg-[#101012] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="material-symbols-outlined text-[20px]">contrast</span>
+                      <span className="w-4 h-4 rounded-full bg-white border border-black/20 shadow-sm" />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold block">Monochrome B&amp;W</span>
+                      <span className={`text-xs block mt-0.5 ${themeMode === 'default' ? 'text-neutral-700' : 'text-neutral-400'}`}>
+                        Clean Archive Minimal
+                      </span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setThemeMode('dynamic')}
+                    className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
+                      themeMode === 'dynamic'
+                        ? 'bg-neutral-800 text-white font-bold border-white ring-2 ring-white/30 shadow-md'
+                        : 'bg-[#101012] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="material-symbols-outlined text-[20px]" style={{ color: extractedColor }}>auto_awesome</span>
+                      <span className="w-4 h-4 rounded-full border border-white/20 shadow-sm transition-colors duration-500" style={{ backgroundColor: extractedColor }} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold block">Dynamic Glow</span>
+                      <span className="text-xs text-neutral-400 block mt-0.5">Real-time cover color</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setThemeMode('custom')}
+                    className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
+                      themeMode === 'custom'
+                        ? 'bg-neutral-800 text-white font-bold border-white ring-2 ring-white/30 shadow-md'
+                        : 'bg-[#101012] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="material-symbols-outlined text-[20px]" style={{ color: customColor }}>palette</span>
+                      <span className="w-4 h-4 rounded-full border border-white/20 shadow-sm transition-colors" style={{ backgroundColor: customColor }} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold block">Custom Palette</span>
+                      <span className="text-xs text-neutral-400 block mt-0.5">Pick any hex swatch</span>
+                    </div>
+                  </button>
+                </div>
+
+                {themeMode === 'custom' && (
+                  <div className="p-3 rounded-xl bg-[#101012] border border-white/10 space-y-2.5 animate-fade-in mt-2">
+                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+                      {presetPalettes.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setCustomColor(p.hex)}
+                          title={p.name}
+                          className={`h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer border ${
+                            customColor.toLowerCase() === p.hex.toLowerCase()
+                              ? 'border-white scale-105 shadow-md ring-2 ring-white/40'
+                              : 'border-white/10 hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: p.hex }}
+                        >
+                          {customColor.toLowerCase() === p.hex.toLowerCase() && (
+                            <span className="material-symbols-outlined text-[15px] text-black font-bold">check</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <MonochromeToggle
+                icon="blur_on"
+                label="Ambient Background Glow"
+                subtitle="Diffuse album cover art colors into background radial aura"
+                checked={ambientGlow}
+                onChange={(val) => {
+                  setAmbientGlow(val);
+                  localStorage.setItem('pulse_ambient_glow', String(val));
+                }}
+              />
+
+              <MonochromeToggle
+                icon="translate"
+                label="Romanized Phonetic Lyrics"
+                subtitle="Display Romaji, Pinyin, and Hindi romanized pronunciation in synced lyrics"
+                checked={romanizedLyrics}
+                onChange={(val) => {
+                  setRomanizedLyrics(val);
+                  localStorage.setItem('pulse_romanized', String(val));
+                }}
+              />
+
+              <MonochromeSelect
+                icon="format_size"
+                label="Synced Lyrics Font Size"
+                subtitle="Adjust line text sizing inside full-screen lyrics sheet"
+                value={lyricFontSize}
+                onChange={(val) => {
+                  setLyricFontSize(val);
+                  localStorage.setItem('pulse_lyric_size', val);
+                }}
+                options={[
+                  { value: 'compact', label: 'Compact' },
+                  { value: 'normal', label: 'Standard' },
+                  { value: 'large', label: 'Large' },
+                ]}
+              />
+            </MonochromeCard>
+
             <MonochromeCard
               title="Navigation & Modal Behavior"
               subtitle="Configure modal dismissals, gestures, and view presentation"
@@ -683,139 +870,6 @@ export default function SettingsModal({ isOpen, onClose }) {
                 subtitle="Display quick Settings icon in bottom dock"
                 checked={settings.navVisibility?.settings !== false}
                 onChange={() => settings.toggleNavDestination('settings')}
-              />
-            </MonochromeCard>
-
-            <MonochromeCard
-              title="Themes & Visual Aesthetics"
-              subtitle="Monochrome minimalism, dynamic cover art colors, and typography"
-              icon="palette"
-            >
-              <div className="p-4 space-y-3.5">
-                <p className="text-xs font-medium text-neutral-400">Accent Palette Engine</p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setThemeMode('default')}
-                    className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
-                      themeMode === 'default'
-                        ? 'bg-white text-black font-bold border-white shadow-md'
-                        : 'bg-[#101012] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="material-symbols-outlined text-[20px]">contrast</span>
-                      <span className="w-4 h-4 rounded-full bg-white border border-black/20 shadow-sm" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-bold block">Monochrome B&amp;W</span>
-                      <span className={`text-xs block mt-0.5 ${themeMode === 'default' ? 'text-neutral-700' : 'text-neutral-400'}`}>
-                        Clean Archive Minimal
-                      </span>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setThemeMode('dynamic')}
-                    className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
-                      themeMode === 'dynamic'
-                        ? 'bg-neutral-800 text-white font-bold border-white ring-2 ring-white/30 shadow-md'
-                        : 'bg-[#101012] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="material-symbols-outlined text-[20px]" style={{ color: extractedColor }}>auto_awesome</span>
-                      <span className="w-4 h-4 rounded-full border border-white/20 shadow-sm transition-colors duration-500" style={{ backgroundColor: extractedColor }} />
-                    </div>
-                    <div>
-                      <span className="text-sm font-bold block">Dynamic Glow</span>
-                      <span className="text-xs text-neutral-400 block mt-0.5">Real-time cover color</span>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setThemeMode('custom')}
-                    className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
-                      themeMode === 'custom'
-                        ? 'bg-neutral-800 text-white font-bold border-white ring-2 ring-white/30 shadow-md'
-                        : 'bg-[#101012] border-white/5 text-neutral-400 hover:border-white/20 hover:text-white'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className="material-symbols-outlined text-[20px]" style={{ color: customColor }}>palette</span>
-                      <span className="w-4 h-4 rounded-full border border-white/20 shadow-sm transition-colors" style={{ backgroundColor: customColor }} />
-                    </div>
-                    <div>
-                      <span className="text-sm font-bold block">Custom Palette</span>
-                      <span className="text-xs text-neutral-400 block mt-0.5">Pick any hex swatch</span>
-                    </div>
-                  </button>
-                </div>
-
-                {themeMode === 'custom' && (
-                  <div className="p-3 rounded-xl bg-[#101012] border border-white/10 space-y-2.5 animate-fade-in mt-2">
-                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
-                      {presetPalettes.map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => setCustomColor(p.hex)}
-                          title={p.name}
-                          className={`h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer border ${
-                            customColor.toLowerCase() === p.hex.toLowerCase()
-                              ? 'border-white scale-105 shadow-md ring-2 ring-white/40'
-                              : 'border-white/10 hover:scale-105'
-                          }`}
-                          style={{ backgroundColor: p.hex }}
-                        >
-                          {customColor.toLowerCase() === p.hex.toLowerCase() && (
-                            <span className="material-symbols-outlined text-[15px] text-black font-bold">check</span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <MonochromeToggle
-                icon="blur_on"
-                label="Ambient Background Glow"
-                subtitle="Diffuse album cover art colors into background radial aura"
-                checked={ambientGlow}
-                onChange={(val) => {
-                  setAmbientGlow(val);
-                  localStorage.setItem('pulse_ambient_glow', String(val));
-                }}
-              />
-
-              <MonochromeToggle
-                icon="translate"
-                label="Romanized Phonetic Lyrics"
-                subtitle="Display Romaji, Pinyin, and Hindi romanized pronunciation in synced lyrics"
-                checked={romanizedLyrics}
-                onChange={(val) => {
-                  setRomanizedLyrics(val);
-                  localStorage.setItem('pulse_romanized', String(val));
-                }}
-              />
-
-              <MonochromeSelect
-                icon="format_size"
-                label="Synced Lyrics Font Size"
-                subtitle="Adjust line text sizing inside full-screen lyrics sheet"
-                value={lyricFontSize}
-                onChange={(val) => {
-                  setLyricFontSize(val);
-                  localStorage.setItem('pulse_lyric_size', val);
-                }}
-                options={[
-                  { value: 'compact', label: 'Compact' },
-                  { value: 'normal', label: 'Standard' },
-                  { value: 'large', label: 'Large' },
-                ]}
               />
             </MonochromeCard>
           </div>

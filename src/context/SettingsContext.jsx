@@ -27,6 +27,11 @@ const DEFAULT_SETTINGS = {
 
   // ── 4. Audio & Playback Preferences ──
   audioQuality: 'max', // 'max' | 'standard' | 'datasaver'
+  audioCodec: 'auto', // 'auto' | 'opus' | 'mp4'
+  playbackSpeed: 1.0, // 0.5, 0.75, 1.0, 1.25, 1.5, 2.0
+  preservesPitch: true,
+  gaplessPlayback: true,
+  removeSilence: true,
   normalizeAudio: true,
   crossfadeDuration: 0,
   smartRecs: true,
@@ -151,19 +156,41 @@ export function SettingsProvider({ children }) {
 
     // Playback & Audio Preferences
     audioQuality: settings.audioQuality,
+    setAudioQuality: (val) => updateSetting('audioQuality', val),
+    audioCodec: settings.audioCodec,
+    setAudioCodec: (val) => updateSetting('audioCodec', val),
+    playbackSpeed: settings.playbackSpeed,
+    setPlaybackSpeed: (val) => updateSetting('playbackSpeed', val),
+    preservesPitch: settings.preservesPitch,
+    setPreservesPitch: (val) => updateSetting('preservesPitch', val),
+    gaplessPlayback: settings.gaplessPlayback,
+    setGaplessPlayback: (val) => updateSetting('gaplessPlayback', val),
+    removeSilence: settings.removeSilence,
+    setRemoveSilence: (val) => updateSetting('removeSilence', val),
     normalizeAudio: settings.normalizeAudio,
+    setNormalizeAudio: (val) => updateSetting('normalizeAudio', val),
     crossfadeDuration: settings.crossfadeDuration,
+    setCrossfadeDuration: (val) => updateSetting('crossfadeDuration', val),
     smartRecs: settings.smartRecs,
+    setSmartRecs: (val) => updateSetting('smartRecs', val),
     dataSaver: settings.dataSaver,
+    setDataSaver: (val) => updateSetting('dataSaver', val),
     rememberLastSong: settings.rememberLastSong,
+    setRememberLastSong: (val) => updateSetting('rememberLastSong', val),
 
     // Lyrics & Appearance
     lyricFontSize: settings.lyricFontSize,
+    setLyricFontSize: (val) => updateSetting('lyricFontSize', val),
     romanizedLyrics: settings.romanizedLyrics,
+    setRomanizedLyrics: (val) => updateSetting('romanizedLyrics', val),
     explicitFilter: settings.explicitFilter,
+    setExplicitFilter: (val) => updateSetting('explicitFilter', val),
     selectedLanguage: settings.selectedLanguage,
+    setSelectedLanguage: (val) => updateSetting('selectedLanguage', val),
     ambientGlow: settings.ambientGlow,
+    setAmbientGlow: (val) => updateSetting('ambientGlow', val),
     canvasBg: settings.canvasBg,
+    setCanvasBg: (val) => updateSetting('canvasBg', val),
   };
 
   return (

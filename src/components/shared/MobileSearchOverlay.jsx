@@ -7,10 +7,14 @@ import { FALLBACK_HOME_FEED } from '../../data/fallbackFeed.js';
 import ArtistLinks from './ArtistLinks.jsx';
 
 const SEARCH_TABS = [
-  { id: 'all',     label: 'All',     icon: 'explore' },
-  { id: 'songs',   label: 'Songs',   icon: 'music_note' },
-  { id: 'albums',  label: 'Albums',  icon: 'album' },
-  { id: 'artists', label: 'Artists', icon: 'person' },
+  { id: 'all',                 label: 'All',                 icon: 'explore' },
+  { id: 'songs',               label: 'Songs',               icon: 'music_note' },
+  { id: 'videos',              label: 'Videos',              icon: 'smart_display' },
+  { id: 'albums',              label: 'Albums',              icon: 'album' },
+  { id: 'artists',             label: 'Artists',             icon: 'person' },
+  { id: 'podcasts',            label: 'Podcasts',            icon: 'podcasts' },
+  { id: 'community_playlists', label: 'Community Playlists', icon: 'queue_music' },
+  { id: 'featured_playlists',  label: 'Featured Playlists',  icon: 'featured_play_list' },
 ];
 
 export default function MobileSearchOverlay({ isOpen, onClose }) {

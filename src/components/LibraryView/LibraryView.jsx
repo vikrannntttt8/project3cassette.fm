@@ -12,7 +12,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
     removeFromPlaylist,
     createAlbum, deleteAlbum, renameAlbum, removeFromAlbum,
     loadSong, playCollection, currentSong, isPlaying,
-    offlineTracks = [],
+    offlineTracks = [], last70Tracks = [], isOnline = true,
   } = usePlayer();
 
   const { compactAlbums } = useSettings();
@@ -34,12 +34,16 @@ export default function LibraryView({ initialSection = 'playlists' }) {
 
   const [addMenuSong, setAddMenuSong] = useState(null);
 
-  // Sync if prop changes
+  // Sync if prop changes or when offline
   useEffect(() => {
+    if (!isOnline) {
+      setActiveSection('last70');
+      return;
+    }
     setActiveSection(initialSection);
     setActivePlaylist(null);
     setActiveAlbum(null);
-  }, [initialSection]);
+  }, [initialSection, isOnline]);
 
   const handleCreatePlaylist = () => {
     if (!newPlaylistTitle.trim()) return;
@@ -91,6 +95,18 @@ export default function LibraryView({ initialSection = 'playlists' }) {
 
         {!activePlaylist && !activeAlbum && (
           <div className="flex items-center gap-2 mt-4 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              onClick={() => setActiveSection('last70')}
+              className={`px-4 py-2 rounded-full text-label-md font-medium transition-all flex items-center gap-1.5 whitespace-nowrap min-h-[40px] cursor-pointer ${
+                activeSection === 'last70'
+                  ? 'bg-accent text-black font-bold shadow-md shadow-accent/20'
+                  : 'bg-[#18181a] text-neutral-400 hover:bg-[#222225] hover:text-white'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">cached</span>
+              <span>Offline Cache ({last70Tracks.length})</span>
+            </button>
+
             <button
               onClick={() => setActiveSection('playlists')}
               className={`px-4 py-2 rounded-full text-label-md font-medium transition-all whitespace-nowrap min-h-[40px] cursor-pointer ${
@@ -172,6 +188,60 @@ export default function LibraryView({ initialSection = 'playlists' }) {
             onPlayAll={() => playCollection(alb.songs, 0)}
             onAddToPlaylist={setAddMenuSong}
           />
+        )}
+
+        {/* ── Offline Cache / Last 70 Section ───────────────── */}
+        {!activePlaylist && !activeAlbum && activeSection === 'last70' && (
+          <div className="flex flex-col gap-6">
+            {!isOnline && (
+              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                <span className="material-symbols-outlined text-[22px]">cloud_off</span>
+                <p className="text-body-sm">
+                  You are currently offline. Playback is running seamlessly from your rolling "Last 70" cache and local downloads.
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-headline-sm font-bold text-white">Cached Downloads & Last 70</h2>
+                <p className="text-body-xs text-neutral-400 mt-0.5">
+                  Automated rolling offline store (strictly capped at last 70 played tracks)
+                </p>
+              </div>
+              {last70Tracks.length > 0 && (
+                <button
+                  onClick={() => playCollection(last70Tracks, 0)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-accent text-black font-bold text-label-sm hover:opacity-90 transition-opacity cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
+                  Play All ({last70Tracks.length})
+                </button>
+              )}
+            </div>
+
+            {last70Tracks.length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-16 text-center">
+                <span className="material-symbols-outlined text-[56px] text-white/10">cached</span>
+                <p className="text-headline-sm text-on-surface-variant">No cached tracks yet</p>
+                <p className="text-body-md text-outline">Songs you stream are silently cached here for offline playback</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {last70Tracks.map((song, i) => (
+                  <SongRow
+                    key={song.id || i}
+                    song={song}
+                    index={i}
+                    isActive={currentSong?.id === song.id || currentSong?.videoId === song.id}
+                    isPlaying={(currentSong?.id === song.id || currentSong?.videoId === song.id) && isPlaying}
+                    onPlay={() => loadSong(song, last70Tracks, i)}
+                    onAddToPlaylist={setAddMenuSong}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* ── Playlists Section ──────────────────────────────── */}

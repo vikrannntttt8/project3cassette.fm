@@ -1,0 +1,618 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Backend API Gateway Plugin:
+ * Implements lightweight server routes using Vite middleware:
+ * - GET /api/search?q=:query
+ * - GET /api/stream/:id
+ * - GET /api/artist/:id
+ */
+function innertubeApiPlugin() {
+  return {
+    name: 'innertube-api-plugin',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const parsedUrl = new URL(req.url, 'http://localhost');
+        const pathname = parsedUrl.pathname;
+
+        const readJson = () => new Promise((resolve) => {
+          let data = '';
+          req.on('data', (c) => { data += c; });
+          req.on('end', () => {
+            try { resolve(data ? JSON.parse(data) : {}); } catch { resolve({}); }
+          });
+        });
+
+        // ── 0. POST/GET /api/playlist/import ─────────────────────────────
+        if (pathname === '/api/playlist/import') {
+          try {
+            const body = req.method === 'POST' ? await readJson() : {};
+            const urlOrId = body.url || body.playlistId || parsedUrl.searchParams.get('url') || parsedUrl.searchParams.get('list') || parsedUrl.searchParams.get('id') || '';
+            if (!urlOrId) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Missing "url" or "playlistId" parameter' }));
+              return;
+            }
+
+            const { importPlaylistByUrl } = await import('./src/services/innertube.js');
+            const result = await importPlaylistByUrl(urlOrId);
+
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify(result));
+            return;
+          } catch (err) {
+            console.error('[API /api/playlist/import] Error:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: false, error: err.message || 'Failed to import playlist' }));
+            return;
+          }
+        }
+
+        // ── 0-spotify. POST/GET /api/spotify/playlist ────────────────────
+        if (pathname === '/api/spotify/playlist') {
+          try {
+            const body = req.method === 'POST' ? await readJson() : {};
+            const urlOrId = body.url || body.playlistId || parsedUrl.searchParams.get('url') || parsedUrl.searchParams.get('id') || '';
+            if (!urlOrId) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Missing "url" or "id" parameter' }));
+              return;
+            }
+
+            const { extractSpotifyPlaylistId, fetchSpotifyPlaylistData } = await import('./src/services/spotifyService.js');
+            const playlistId = extractSpotifyPlaylistId(urlOrId);
+            if (!playlistId) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Invalid Spotify playlist or album URL/ID' }));
+              return;
+            }
+
+            const playlistData = await fetchSpotifyPlaylistData(playlistId);
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify({ success: true, playlist: playlistData }));
+            return;
+          } catch (err) {
+            console.error('[API /api/spotify/playlist] Error:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: false, error: err.message || 'Failed to fetch Spotify playlist' }));
+            return;
+          }
+        }
+
+        // ── 0a. POST/GET /api/ytmusic/library ─────────────────────────────
+        if (pathname === '/api/ytmusic/library') {
+          try {
+            const body = req.method === 'POST' ? await readJson() : {};
+            const cookie = body.cookie || req.headers['x-ytmusic-cookie'] || parsedUrl.searchParams.get('cookie') || '';
+            const visitorData = body.visitorData || req.headers['x-visitor-data'] || parsedUrl.searchParams.get('visitorData') || '';
+            const sapisid = body.sapisid || parsedUrl.searchParams.get('sapisid') || '';
+
+            const { getYouTubeMusicLibrary } = await import('./src/services/innertube.js');
+            const libraryData = await getYouTubeMusicLibrary({ cookie, visitorData, sapisid });
+
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify(libraryData));
+            return;
+          } catch (err) {
+            console.error('[API /api/ytmusic/library] Error:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: false, error: err.message, liked: [], playlists: [] }));
+            return;
+          }
+        }
+
+        // ── 0b. POST /api/sync/test ───────────────────────────────────────
+        if (pathname === '/api/sync/test') {
+          try {
+            const body = req.method === 'POST' ? await readJson() : {};
+            const cookie = body.cookie || req.headers['x-ytmusic-cookie'] || body.sapisid || '';
+            const visitorData = body.visitorData || req.headers['x-visitor-data'] || '';
+            const sapisid = body.sapisid || '';
+
+            const { testYouTubeMusicAuth } = await import('./src/services/innertube.js');
+            const testResult = await testYouTubeMusicAuth({ cookie, visitorData, sapisid });
+
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = testResult.success ? 200 : 401;
+            res.end(JSON.stringify(testResult));
+            return;
+          } catch (err) {
+            console.error('[API /api/sync/test] Error:', err);
+            res.statusCode = 401;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: false, message: err.message }));
+            return;
+          }
+        }
+
+        // ── 0-sug. GET /api/search/suggestions?q=:query ─────────────────
+        if (pathname === '/api/search/suggestions' && req.method === 'GET') {
+          const query = (
+            parsedUrl.searchParams.get('q') ||
+            parsedUrl.searchParams.get('query') ||
+            ''
+          ).trim();
+
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+
+          if (!query) {
+            res.statusCode = 200;
+            res.end(JSON.stringify([]));
+            return;
+          }
+
+          try {
+            const { getSearchSuggestions } = await import('./src/services/innertube.js');
+            const suggestions = await getSearchSuggestions(query);
+            res.statusCode = 200;
+            res.end(JSON.stringify(Array.isArray(suggestions) ? suggestions : []));
+            return;
+          } catch (err) {
+            console.error(`[API /api/search/suggestions] Error for "${query}":`, err);
+            res.statusCode = 200;
+            res.end(JSON.stringify([]));
+            return;
+          }
+        }
+
+        // ── 1. GET /api/search?q=:query&type=:type&continuation=:token ────
+        if (pathname === '/api/search' && req.method === 'GET') {
+          const query = (
+            parsedUrl.searchParams.get('q') ||
+            parsedUrl.searchParams.get('query') ||
+            parsedUrl.searchParams.get('search_query') ||
+            ''
+          ).trim();
+          const type = parsedUrl.searchParams.get('type') || 'all';
+          const continuation = parsedUrl.searchParams.get('continuation') || null;
+
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+
+          if (!query && !continuation) {
+            res.statusCode = 200;
+            res.end(JSON.stringify({ results: [], shelves: null, topResult: null, continuation: null }));
+            return;
+          }
+
+          try {
+            const { searchMusic } = await import('./src/services/innertube.js');
+            const payload = await searchMusic(query, type, continuation);
+            res.statusCode = 200;
+            res.end(JSON.stringify(payload));
+            return;
+          } catch (err) {
+            console.error(`[API /api/search] Error searching for "${query}" (type: ${type}):`, err);
+            res.statusCode = 200;
+            res.end(JSON.stringify({
+              success: false,
+              error: err.message || 'Search service temporarily unavailable',
+              results: [],
+              shelves: null,
+              topResult: null,
+              continuation: null,
+            }));
+            return;
+          }
+        }
+
+        // ── 1b. GET /api/album/:id ────────────────────────────────────────
+        if (pathname.startsWith('/api/album/') && req.method === 'GET') {
+          const browseId = pathname.replace('/api/album/', '').split('?')[0];
+          try {
+            const { getAlbumDetails } = await import('./src/services/innertube.js');
+            const albumData = await getAlbumDetails(browseId);
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify(albumData));
+            return;
+          } catch (err) {
+            console.error('[API /api/album] Error:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err.message }));
+            return;
+          }
+        }
+
+        // ── 1c. GET /api/next/:id ─────────────────────────────────────────
+        if (pathname.startsWith('/api/next/') && req.method === 'GET') {
+          const videoId = pathname.replace('/api/next/', '').split('?')[0];
+          try {
+            const { getWatchNext } = await import('./src/services/innertube.js');
+            const recommendations = await getWatchNext(videoId);
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify(recommendations));
+            return;
+          } catch (err) {
+            console.error('[API /api/next] Error:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err.message }));
+            return;
+          }
+        }
+
+        // ── 1d. GET /api/home & /api/home/feed ─────────────────────────────
+        if ((pathname === '/api/home' || pathname === '/api/home/feed') && req.method === 'GET') {
+          try {
+            const { getHomeFeedData } = await import('./src/services/innertube.js');
+            const feedData = await getHomeFeedData();
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify(feedData));
+            return;
+          } catch (err) {
+            console.error('[API /api/home/feed] Error:', err);
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            const { FALLBACK_HOME_FEED } = await import('./src/data/fallbackFeed.js');
+            res.end(JSON.stringify(FALLBACK_HOME_FEED));
+            return;
+          }
+        }
+
+        // ── 1e. GET /api/spotify/credits ──────────────────────────────────
+        if (pathname === '/api/spotify/credits' && req.method === 'GET') {
+          const trackTitle = parsedUrl.searchParams.get('title') || '';
+          const artistName = parsedUrl.searchParams.get('artist') || '';
+          try {
+            const clientId = process.env.SPOTIFY_CLIENT_ID || process.env.VITE_SPOTIFY_CLIENT_ID;
+            const clientSecret = process.env.SPOTIFY_CLIENT_SECRET || process.env.VITE_SPOTIFY_CLIENT_SECRET;
+
+            let spotifyData = null;
+            if (clientId && clientSecret) {
+              try {
+                const tokenRes = await fetch('https://accounts.spotify.com/api/token', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+                  },
+                  body: 'grant_type=client_credentials',
+                });
+                if (tokenRes.ok) {
+                  const tokenJson = await tokenRes.json();
+                  const accessToken = tokenJson.access_token;
+                  
+                  const cleanQ = `${trackTitle.replace(/[^\w\s]/g, '')} ${artistName.replace(/[^\w\s]/g, '')}`.trim();
+                  const searchRes = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(cleanQ)}&type=track&limit=1`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                  });
+                  if (searchRes.ok) {
+                    const searchJson = await searchRes.json();
+                    const track = searchJson.tracks?.items?.[0];
+                    if (track) {
+                      spotifyData = {
+                        title: track.name,
+                        artists: track.artists?.map(a => a.name) || [artistName],
+                        album: track.album?.name,
+                        releaseDate: track.album?.release_date,
+                        spotifyUrl: track.external_urls?.spotify,
+                        popularity: track.popularity,
+                        isrc: track.external_ids?.isrc,
+                      };
+                    }
+                  }
+                }
+              } catch (e) {
+                console.warn('[Spotify API] Request failed:', e.message);
+              }
+            }
+
+            const credits = {
+              title: spotifyData?.title || trackTitle || 'Unknown Track',
+              performers: spotifyData?.artists || [artistName || 'Various Artists'],
+              songwriters: spotifyData?.artists || [artistName || 'Original Writer'],
+              producers: [artistName || 'Pulse Studio', 'Executive Audio'],
+              source: spotifyData ? 'Spotify API' : 'Pulse Music Studio',
+              releaseDate: spotifyData?.releaseDate || new Date().getFullYear().toString(),
+              album: spotifyData?.album || 'Single',
+              isrc: spotifyData?.isrc || null,
+              spotifyUrl: spotifyData?.spotifyUrl || null,
+            };
+
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify(credits));
+            return;
+          } catch (err) {
+            console.error('[API /api/spotify/credits] Error:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err.message }));
+            return;
+          }
+        }
+
+        // ── 2. GET /api/stream/:id ────────────────────────────────────────
+        if (pathname.startsWith('/api/stream/') && req.method === 'GET') {
+          const videoId = pathname.replace('/api/stream/', '').split('?')[0];
+          const quality = parsedUrl.searchParams.get('quality') || 'max';
+          const codec = parsedUrl.searchParams.get('codec') || 'auto';
+          try {
+            const { resolveAudioStream } = await import('./src/services/innertube.js');
+            const streamInfo = await resolveAudioStream(videoId, quality, codec);
+
+            // If JSON requested via query param or Accept header
+            if (parsedUrl.searchParams.get('format') === 'json' || req.headers.accept?.includes('application/json')) {
+              res.setHeader('Content-Type', 'application/json; charset=utf-8');
+              res.setHeader('Access-Control-Allow-Origin', '*');
+              res.statusCode = 200;
+              res.end(JSON.stringify(streamInfo));
+              return;
+            }
+
+            // Pipe audio stream directly with Range support
+            const headers = {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+              'Referer': 'https://music.youtube.com/',
+              'Origin': 'https://music.youtube.com',
+            };
+
+            if (req.headers.range) {
+              headers['Range'] = req.headers.range;
+            }
+
+            const streamRes = await fetch(streamInfo.streamUrl, { headers });
+
+            res.statusCode = streamRes.status;
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Content-Type', streamRes.headers.get('content-type') || 'audio/mp4');
+            res.setHeader('Accept-Ranges', 'bytes');
+
+            if (streamRes.headers.has('content-length')) {
+              res.setHeader('Content-Length', streamRes.headers.get('content-length'));
+            }
+            if (streamRes.headers.has('content-range')) {
+              res.setHeader('Content-Range', streamRes.headers.get('content-range'));
+            }
+
+            if (!streamRes.body) {
+              res.end();
+              return;
+            }
+
+            // Pipe ReadableStream to Node HTTP response
+            const reader = streamRes.body.getReader();
+            const pump = async () => {
+              try {
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  if (!res.write(value)) {
+                    await new Promise((resolve) => res.once('drain', resolve));
+                  }
+                }
+                res.end();
+              } catch (e) {
+                res.destroy(e);
+              }
+            };
+            pump();
+            return;
+          } catch (err) {
+            console.error('[API /api/stream] Error:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err.message }));
+            return;
+          }
+        }
+
+        // ── 3. GET /api/artist/:id ────────────────────────────────────────
+        if (pathname.startsWith('/api/artist/') && req.method === 'GET') {
+          const rawId = pathname.replace('/api/artist/', '').split('?')[0];
+          const browseId = decodeURIComponent(rawId);
+          try {
+            const { getArtistDetails } = await import('./src/services/innertube.js');
+            const artistData = await getArtistDetails(browseId);
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify(artistData));
+            return;
+          } catch (err) {
+            console.error('[API /api/artist] Error for artist:', browseId, err);
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify({
+              id: browseId,
+              browseId: browseId,
+              name: browseId,
+              description: `Artist details for ${browseId}`,
+              thumbnail: '',
+              topSongs: [],
+              albums: [],
+              singles: [],
+              videos: [],
+              playlists: [],
+              similarArtists: [],
+              error: err.message,
+            }));
+            return;
+          }
+        }
+
+        // ── 4. POST /api/sync/test ───────────────────────────────────────
+        if (pathname === '/api/sync/test' && req.method === 'POST') {
+          let body = '';
+          req.on('data', chunk => { body += chunk; });
+          req.on('end', async () => {
+            try {
+              const { mode, sapisid, accessToken } = JSON.parse(body || '{}');
+              const headers = {
+                'Content-Type': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+                'Referer': 'https://music.youtube.com/',
+                'Origin': 'https://music.youtube.com',
+                'X-YouTube-Client-Name': '67',
+                'X-YouTube-Client-Version': '1.20250101.01.00',
+              };
+
+              if (mode === 'oauth' && accessToken) {
+                headers['Authorization'] = `Bearer ${accessToken}`;
+              } else if (mode === 'sapisid' && sapisid) {
+                headers['Cookie'] = `SAPISID=${sapisid}; __Secure-3PAPISID=${sapisid};`;
+              }
+
+              const ytRes = await fetch('https://music.youtube.com/youtubei/v1/browse?prettyPrint=false', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                  context: {
+                    client: {
+                      clientName: 'WEB_REMIX',
+                      clientVersion: '1.20250101.01.00',
+                      hl: 'en',
+                      gl: 'US',
+                    },
+                  },
+                  browseId: 'FEmusic_liked',
+                }),
+              });
+
+              res.setHeader('Content-Type', 'application/json; charset=utf-8');
+              res.setHeader('Access-Control-Allow-Origin', '*');
+
+              if (ytRes.ok) {
+                const data = await ytRes.json();
+                res.statusCode = 200;
+                res.end(JSON.stringify({
+                  success: true,
+                  status: 'connected',
+                  accountName: data.header?.musicHeaderRenderer?.title?.runs?.[0]?.text || 'YouTube Music Account',
+                }));
+              } else {
+                res.statusCode = ytRes.status === 401 || ytRes.status === 403 ? 401 : ytRes.status;
+                res.end(JSON.stringify({
+                  success: false,
+                  status: ytRes.status,
+                  message: `YouTube API returned ${ytRes.status} (Authentication required or token expired)`,
+                }));
+              }
+            } catch (err) {
+              console.error('[API /api/sync/test] Error:', err);
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: false, message: err.message }));
+            }
+          });
+          return;
+        }
+
+        // ── 5. Proxy /youtubei/v1/* ────────────────────────────────────────
+        if (pathname.startsWith('/youtubei/v1/')) {
+          try {
+            const targetUrl = `https://music.youtube.com${pathname}${parsedUrl.search}`;
+            const fwdHeaders = {
+              'Content-Type': req.headers['content-type'] || 'application/json',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+              'Referer': 'https://music.youtube.com/',
+              'Origin': 'https://music.youtube.com',
+              'X-YouTube-Client-Name': '67',
+              'X-YouTube-Client-Version': '1.20250101.01.00',
+            };
+
+            if (req.headers['authorization']) fwdHeaders['Authorization'] = req.headers['authorization'];
+            if (req.headers['cookie']) fwdHeaders['Cookie'] = req.headers['cookie'];
+
+            let body = null;
+            if (req.method === 'POST') {
+              body = await new Promise((resolve) => {
+                let data = '';
+                req.on('data', chunk => { data += chunk; });
+                req.on('end', () => resolve(data));
+              });
+            }
+
+            const proxyRes = await fetch(targetUrl, {
+              method: req.method,
+              headers: fwdHeaders,
+              body,
+            });
+
+            res.statusCode = proxyRes.status;
+            res.setHeader('Content-Type', proxyRes.headers.get('content-type') || 'application/json');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            const data = await proxyRes.text();
+            res.end(data);
+            return;
+          } catch (err) {
+            console.error('[Proxy /youtubei/v1] Error:', err);
+            res.statusCode = 502;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: err.message }));
+            return;
+          }
+        }
+
+        next();
+      });
+    },
+  };
+}
+
+export default defineConfig({
+  plugins: [react(), innertubeApiPlugin()],
+  resolve: {
+    alias: {
+      '@cassette/core': path.resolve(__dirname, '../../packages/core/src'),
+    },
+  },
+  server: {
+    host: true,
+    port: 5173,
+    proxy: {
+      '/api/saavn': {
+        target: 'https://saavn.dev/api',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/saavn/, ''),
+      },
+      '/api/jiosaavn': {
+        target: 'https://www.jiosaavn.com',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/jiosaavn/, ''),
+      },
+      '/api/yt': {
+        target: 'https://www.youtube.com',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/yt/, ''),
+      },
+      '/youtubei/v1': {
+        target: 'https://music.youtube.com',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
+});

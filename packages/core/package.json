@@ -1,0 +1,20 @@
+{
+  "name": "@cassette/core",
+  "version": "1.0.0",
+  "description": "Shared core logic, stores, auth, streaming resolution, and services for Cassette.fm",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./services/*": "./src/services/*.js",
+    "./stores/*": "./src/stores/*.js",
+    "./utils/*": "./src/utils/*.js",
+    "./auth/*": "./src/auth/*.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
+    "crypto-js": "^4.2.0",
+    "youtubei.js": "^18.0.0",
+    "ytmusic-api": "^5.3.1"
+  }
+}

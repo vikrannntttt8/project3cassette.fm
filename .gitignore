@@ -24,3 +24,19 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Tauri
+src-tauri/target
+**/src-tauri/target
+
+# Expo
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Turbo
+.turbo

@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "cassette.fm",
+    "slug": "cassette-fm",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "cassette",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0e0e0e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "fm.cassette.mobile",
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0e0e0e"
+      },
+      "package": "fm.cassette.mobile",
+      "permissions": ["WAKE_LOCK", "FOREGROUND_SERVICE"]
+    },
+    "plugins": [
+      "expo-router"
+    ]
+  }
+}

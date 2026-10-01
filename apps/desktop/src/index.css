@@ -1,0 +1,426 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rubik+Vinyl&family=Shrikhand&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.font-cassette {
+  font-family: 'Keep On Truckin', 'Shrikhand', 'Rubik Vinyl', cursive, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    /* Prevent accidental double-tap zoom on all interactive elements */
+    touch-action: manipulation;
+  }
+
+  html {
+    /* Dynamic viewport height — shrinks/grows with mobile browser chrome (URL bar) */
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
+    /* Prevent rubber-band horizontal scroll bleed on iOS */
+    overflow-x: hidden;
+    overscroll-behavior: none;
+  }
+
+  body {
+    /* Fill the dynamic viewport; no extra height */
+    min-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: #0e0e0e;
+    color: #f3f3f5;
+    overscroll-behavior: none;
+    /* Prevent iOS text size auto-adjustment on rotation */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  #root {
+    height: 100dvh;
+    overflow: hidden;
+    background: #0e0e0e;
+  }
+
+  /* Hide scrollbars globally for immersive UI */
+  ::-webkit-scrollbar { display: none; }
+  * { scrollbar-width: none; -ms-overflow-style: none; }
+}
+
+:root {
+  --accent-color: #ffffff;
+  --accent-color-rgb: 255, 255, 255;
+  --accent-color-glow: rgba(255, 255, 255, 0.25);
+  --accent-hover: #e4e4e7;
+  --accent-subtle: rgba(255, 255, 255, 0.10);
+  --accent-border: rgba(255, 255, 255, 0.20);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --mobile-nav-h: 56px;
+  --mobile-header-h: 48px;
+  --mobile-header-total-h: calc(var(--mobile-header-h) + var(--safe-top));
+  --mobile-bottom-total-h: calc(var(--mobile-nav-h) + var(--safe-bottom));
+}
+
+@media (min-width: 768px) {
+  :root {
+    --safe-top: 0px;
+    --safe-bottom: 0px;
+  }
+}
+
+@layer utilities {
+  /* Dynamic Theme Utility Classes */
+  .text-accent {
+    color: var(--accent-color, #ffffff) !important;
+  }
+  .bg-accent {
+    background-color: var(--accent-color, #ffffff) !important;
+  }
+  .border-accent {
+    border-color: var(--accent-color, #ffffff) !important;
+  }
+  .shadow-accent {
+    box-shadow: 0 10px 25px -5px var(--accent-color-glow, rgba(255, 255, 255, 0.25)) !important;
+  }
+  .ring-accent {
+    --tw-ring-color: var(--accent-color, #ffffff) !important;
+  }
+
+  /* Active lyric glow — dynamic */
+  .lyric-active-glow {
+    text-shadow: 0 0 25px var(--accent-color-glow, rgba(245, 158, 11, 0.45)),
+                 0 0 10px var(--accent-color-glow, rgba(245, 158, 11, 0.25));
+  }
+
+  /* Glass dock elevation */
+  .glass-dock {
+    background: rgba(24, 24, 26, 0.88);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
+  }
+
+  /* Glass card */
+  .glass-card {
+    background: rgba(24, 24, 26, 0.75);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  /* Glass panel */
+  .glass-panel {
+    background: rgba(20, 20, 22, 0.92);
+    backdrop-filter: blur(36px);
+    -webkit-backdrop-filter: blur(36px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Active lyrics highlight */
+  .gradient-text-active {
+    color: var(--accent-color, #f59e0b);
+    text-shadow: 0 0 20px var(--accent-color-glow, rgba(245, 158, 11, 0.35));
+  }
+
+  /* Seek bar dynamic fill */
+  .seek-fill {
+    background: var(--accent-color, #f59e0b);
+  }
+}
+
+/* Custom range input styling — clean pure white & translucent monochrome */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  margin-top: -4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  transition: transform 0.15s ease;
+}
+
+input[type='range']:hover::-webkit-slider-thumb {
+  transform: scale(1.2);
+}
+
+input[type='range'].volume-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+}
+
+input[type='range'].volume-slider::-webkit-slider-thumb {
+  width: 10px;
+  height: 10px;
+  margin-top: -3px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Smooth Continuous Marquee Animation for Text Overflow ───────────────────── */
+@keyframes marqueeInfinite {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-50% - 1rem));
+  }
+}
+
+.animate-marquee-loop {
+  display: inline-flex;
+  width: max-content;
+  will-change: transform;
+  animation: marqueeInfinite linear infinite;
+}
+
+.animate-marquee-loop:hover {
+  animation-play-state: paused;
+}
+
+/* Visualizer bars animation */
+@keyframes bar1 {
+  0%, 100% { height: 30%; }
+  50% { height: 100%; }
+}
+@keyframes bar2 {
+  0%, 100% { height: 80%; }
+  50% { height: 20%; }
+}
+@keyframes bar3 {
+  0%, 100% { height: 50%; }
+  50% { height: 90%; }
+}
+
+.visualizer-bar:nth-child(1) { animation: bar1 0.7s ease-in-out infinite; }
+.visualizer-bar:nth-child(2) { animation: bar2 0.5s ease-in-out infinite; }
+.visualizer-bar:nth-child(3) { animation: bar3 0.9s ease-in-out infinite; }
+
+/* Ambient glow pulse */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.05); }
+}
+.ambient-glow {
+  animation: glow-pulse 6s ease-in-out infinite;
+}
+
+/* View transition */
+.view-enter {
+  opacity: 0;
+  transform: translateY(12px);
+}
+.view-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 400ms ease, transform 400ms ease;
+}
+.view-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+.view-exit-active {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+/* ── Visualizer bars (SongRow active state) ───────────────────────── */
+@keyframes visualizer {
+  0%, 100% { height: 4px; }
+  50%       { height: 14px; }
+}
+
+.visualizer-bar {
+  animation: visualizer 0.8s ease-in-out infinite;
+  transform-origin: bottom;
+}
+.visualizer-bar:nth-child(1) { animation-delay: 0s;    }
+.visualizer-bar:nth-child(2) { animation-delay: 0.15s; }
+.visualizer-bar:nth-child(3) { animation-delay: 0.3s;  }
+
+/* Page Transitions */
+@keyframes pageFadeSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-page-slide {
+  animation: pageFadeSlide 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Bottom nav + header height tokens */
+@media (max-width: 767px) {
+  /* Floating mini player dock on mobile, stacked cleanly above mobile bottom nav with zero overlap */
+  .player-dock-wrap {
+    left: 0.625rem !important;
+    right: 0.625rem !important;
+    bottom: calc(var(--mobile-nav-h, 56px) + var(--safe-bottom, 12px) + 0.625rem) !important;
+  }
+
+  .player-dock-inner {
+    padding: 0.5rem 0.85rem !important;
+    border-radius: 1.25rem !important;
+    background: rgba(24, 24, 26, 0.95) !important;
+    backdrop-filter: blur(28px) !important;
+    -webkit-backdrop-filter: blur(28px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.10) !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7) !important;
+    gap: 0.625rem !important;
+  }
+
+  .player-dock-thumb {
+    width: 2.625rem !important;
+    height: 2.625rem !important;
+    border-radius: 0.625rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .player-dock-title {
+    font-size: 13.5px !important;
+    line-height: 1.25 !important;
+  }
+
+  .player-dock-artist {
+    font-size: 11.5px !important;
+  }
+
+  /* Settings button */
+  .sidebar-settings-btn {
+    min-height: 48px !important;
+    padding: 0.75rem 1rem !important;
+    touch-action: manipulation;
+  }
+
+  /* Mobile bottom navigation bar safe-area padding */
+  .mobile-bottom-nav {
+    padding-bottom: var(--safe-bottom, 12px) !important;
+  }
+
+  /* Lyrics view footer safe-area */
+  .lyrics-footer {
+    padding-bottom: calc(0.75rem + var(--safe-bottom, 12px)) !important;
+  }
+}
+
+/* iOS Sheet Slide Up Animation */
+@keyframes sheetSlideUp {
+  0% {
+    transform: translateY(100%);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-sheet-slide-up {
+  animation: sheetSlideUp 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ── Coarse pointer (touch screens): larger range slider thumb ───────── */
+@media (pointer: coarse) {
+  input[type='range'] {
+    /* Taller invisible hit area for finger accuracy */
+    height: 44px;
+    cursor: pointer;
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    width: 20px;
+    height: 20px;
+    margin-top: -8.5px;
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.7);
+  }
+
+  input[type='range']::-webkit-slider-runnable-track {
+    height: 4px;
+  }
+
+  input[type='range'].volume-slider::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+    margin-top: -7px;
+  }
+}
+
+/* Safe-area padding and positioning utility classes */
+.pt-safe {
+  padding-top: var(--safe-top, 0px) !important;
+}
+
+.pb-safe {
+  padding-bottom: var(--safe-bottom, 0px) !important;
+}
+
+.pl-safe {
+  padding-left: var(--safe-left, 0px) !important;
+}
+
+.pr-safe {
+  padding-right: var(--safe-right, 0px) !important;
+}
+
+.top-safe {
+  top: var(--safe-top, 0px) !important;
+}
+
+.bottom-safe {
+  bottom: var(--safe-bottom, 0px) !important;
+}
+
+.h-safe-screen {
+  height: calc(100dvh - var(--safe-top, 0px) - var(--safe-bottom, 0px)) !important;
+}
+
+.min-h-safe-screen {
+  min-height: calc(100dvh - var(--safe-top, 0px) - var(--safe-bottom, 0px)) !important;
+}
+
+/* Scroll container mobile padding for top header + bottom dock & nav */
+.mobile-view-container {
+  padding-top: calc(var(--mobile-header-h, 48px) + var(--safe-top, 0px));
+  padding-bottom: calc(var(--mobile-nav-h, 56px) + var(--safe-bottom, 0px) + 6.5rem);
+}
+
+@media (min-width: 768px) {
+  .mobile-view-container {
+    padding-top: 0;
+    padding-bottom: 88px;
+  }
+}

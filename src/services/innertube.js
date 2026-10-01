@@ -720,7 +720,32 @@ export async function resolveAudioStream(videoId, quality = 'max', codecPreferen
   if (!videoId) throw new Error('videoId is required');
 
   const yt = await getInnertube();
-  const info = await yt.getBasicInfo(videoId);
+
+  // ── Primary: yt.music.getInfo loads the player script needed for cipher decryption ──
+  let info = null;
+  try {
+    info = await yt.music.getInfo(videoId);
+  } catch (musicErr) {
+    console.error(`[Stream] yt.music.getInfo failed for ${videoId}:`, musicErr.message);
+    try {
+      info = await yt.getBasicInfo(videoId, 'WEB');
+    } catch (basicErr) {
+      console.error(`[Stream] yt.getBasicInfo fallback also failed for ${videoId}:`, basicErr.message);
+      throw new Error(`Cannot resolve stream info for ${videoId}: ${basicErr.message}`);
+    }
+  }
+
+  if (!info) {
+    throw new Error(`No stream info returned for video: ${videoId}`);
+  }
+
+  // Check playability
+  const playStatus = info.playability_status?.status;
+  if (playStatus === 'ERROR' || playStatus === 'UNPLAYABLE') {
+    const reason = info.playability_status?.reason || 'Unplayable';
+    console.error(`[Stream] Video ${videoId} is not playable: ${reason}`);
+    throw new Error(`Video ${videoId} is not playable: ${reason}`);
+  }
 
   const allAdaptive = info.streaming_data?.adaptive_formats || [];
   const audioFormats = allAdaptive.filter((f) => f.has_audio && !f.has_video);
@@ -776,24 +801,53 @@ export async function resolveAudioStream(videoId, quality = 'max', codecPreferen
 
   // Fallback to chooseFormat if adaptive formats empty
   if (!selectedAudio) {
-    selectedAudio = info.chooseFormat({
-      type: 'audio',
-      quality: quality === 'datasaver' ? 'lowest' : 'best',
-    });
+    try {
+      selectedAudio = info.chooseFormat({ type: 'audio', quality: quality === 'datasaver' ? 'lowest' : 'best' });
+    } catch (chooseErr) {
+      console.error(`[Stream] chooseFormat fallback failed for ${videoId}:`, chooseErr.message);
+    }
   }
 
   if (!selectedAudio) {
+    console.error(`[Stream] FATAL: No audio format available for ${videoId}. adaptive_formats count:`, (info.streaming_data?.adaptive_formats || []).length);
     throw new Error(`No audio format found for video: ${videoId}`);
   }
 
-  // Handle player cipher extraction to return deciphered direct streaming URL
+  // ── Cipher Decryption Pipeline ──────────────────────────────────────────
   let directStreamUrl = selectedAudio.url;
-  if (!directStreamUrl && (selectedAudio.signature_cipher || selectedAudio.cipher)) {
-    directStreamUrl = await selectedAudio.decipher(yt.session.player);
+
+  if (!directStreamUrl) {
+    if (selectedAudio.signature_cipher || selectedAudio.cipher) {
+      try {
+        if (!yt.session?.player) {
+          console.error(`[Stream] yt.session.player is null — cipher decryption will likely fail for ${videoId}`);
+        }
+        directStreamUrl = await selectedAudio.decipher(yt.session.player);
+      } catch (decipherErr) {
+        console.error(`[Stream] decipher() failed for ${videoId} (itag ${selectedAudio.itag}):`, decipherErr.message);
+        // Re-init Innertube and retry once with a fresh instance
+        try {
+          innertubeInstance = null;
+          initPromise = null;
+          const freshYt = await getInnertube();
+          const freshInfo = await freshYt.music.getInfo(videoId);
+          const freshFormats = (freshInfo.streaming_data?.adaptive_formats || []).filter((f) => f.has_audio && !f.has_video);
+          const freshFormat = freshFormats.find((f) => f.itag === selectedAudio.itag) || freshFormats[0];
+          if (freshFormat) {
+            directStreamUrl = freshFormat.url || await freshFormat.decipher(freshYt.session.player);
+          }
+        } catch (retryErr) {
+          console.error(`[Stream] Retry decipher also failed for ${videoId}:`, retryErr.message);
+        }
+      }
+    } else {
+      console.error(`[Stream] Format has no URL and no cipher for ${videoId}, itag: ${selectedAudio.itag}`);
+    }
   }
 
   if (!directStreamUrl) {
-    throw new Error('Failed to decipher audio stream URL');
+    console.error(`[Stream] FATAL: Stream URL resolution completely failed for ${videoId}. itag: ${selectedAudio.itag}, has_cipher: ${!!(selectedAudio.signature_cipher || selectedAudio.cipher)}`);
+    throw new Error(`Failed to resolve stream URL for video ${videoId} — check server console for cipher details`);
   }
 
   const rawBitrate = selectedAudio.bitrate || (quality === 'datasaver' ? 72000 : quality === 'standard' ? 128000 : 160000);

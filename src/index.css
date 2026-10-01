@@ -421,6 +421,6 @@ input[type='range'].volume-slider::-webkit-slider-thumb {
 @media (min-width: 768px) {
   .mobile-view-container {
     padding-top: 0;
-    padding-bottom: 5rem;
+    padding-bottom: 88px;
   }
 }

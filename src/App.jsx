@@ -90,7 +90,7 @@ function AppShell() {
       </div>
 
       {/* ── Main content with smooth transitions ─────────────── */}
-      <div className="flex-1 relative z-10 overflow-hidden bg-transparent md:pb-20">
+      <div className="flex-1 relative z-10 overflow-hidden bg-transparent md:pb-[88px]">
         <div key={`${view}-${navState.currentId || ''}`} className="h-full w-full animate-page-slide">
           {(view === 'home' || view === 'search') && <HomeView />}
           {view === 'artist'  && <ArtistView browseId={navState.currentId} artistName={navState.extra?.name} />}
@@ -123,7 +123,7 @@ function AppShell() {
         <MobileBottomNav onOpenSearch={openMobileSearch} />
       )}
 
-      {/* ── Full-Screen ArchiveTune Settings Overlay ── */}
+      {/* ── Settings Overlay ── */}
       <SettingsModal isOpen={isSettingsOpen} onClose={closeSettings} />
     </div>
   );

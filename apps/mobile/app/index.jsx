@@ -1,80 +1,142 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import MobileHeader from '../src/components/shared/MobileHeader.jsx';
+import MobileBottomNav from '../src/components/shared/MobileBottomNav.jsx';
+import MobileSearchOverlay from '../src/components/shared/MobileSearchOverlay.jsx';
+import HomeView from '../src/components/HomeView/HomeView.jsx';
+import LibraryView from '../src/components/LibraryView/LibraryView.jsx';
+import PlayerDock from '../src/components/PlayerDock/PlayerDock.jsx';
+import { usePlayerStore, playerActions } from '@cassette/core';
 
-export default function MobileHomeScreen() {
+// Mock initial data for mobile feed demonstration
+const SAMPLE_TOP_RESULT = {
+  id: 'top-1',
+  type: 'song',
+  title: 'Starboy',
+  artist: 'The Weeknd ft. Daft Punk',
+  thumbnail: 'https://i.ytimg.com/vi/34Na4j8AVgA/hqdefault.jpg',
+  subtitle: 'Featured Global Hit',
+};
+
+const SAMPLE_SONGS = [
+  { id: '1', title: 'Starboy', artist: 'The Weeknd ft. Daft Punk', duration: 230, thumbnail: 'https://i.ytimg.com/vi/34Na4j8AVgA/hqdefault.jpg' },
+  { id: '2', title: 'Blinding Lights', artist: 'The Weeknd', duration: 200, thumbnail: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg' },
+  { id: '3', title: 'Save Your Tears', artist: 'The Weeknd', duration: 215, thumbnail: 'https://i.ytimg.com/vi/XXYlFuWEuKI/hqdefault.jpg' },
+  { id: '4', title: 'Die For You', artist: 'The Weeknd', duration: 260, thumbnail: 'https://i.ytimg.com/vi/QLCpqdqeoII/hqdefault.jpg' },
+];
+
+const SAMPLE_ALBUMS = [
+  { id: 'alb-1', title: 'After Hours', artist: 'The Weeknd', songCount: 14, thumbnail: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg' },
+  { id: 'alb-2', title: 'Dawn FM', artist: 'The Weeknd', songCount: 16, thumbnail: 'https://i.ytimg.com/vi/34Na4j8AVgA/hqdefault.jpg' },
+];
+
+const SAMPLE_ARTISTS = [
+  { id: 'art-1', name: 'The Weeknd', thumbnail: 'https://i.ytimg.com/vi/34Na4j8AVgA/hqdefault.jpg' },
+  { id: 'art-2', name: 'Daft Punk', thumbnail: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg' },
+];
+
+export default function MobileApp() {
   const router = useRouter();
+  const [currentTab, setCurrentTab] = useState('home');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [playerState, setPlayerState] = useState(usePlayerStore.getState());
+  const [likedSongs, setLikedSongs] = useState(SAMPLE_SONGS.slice(0, 2));
+
+  // Subscribe to shared reactive playerStore
+  useEffect(() => {
+    const unsubscribe = usePlayerStore.subscribe(setPlayerState);
+    return () => unsubscribe();
+  }, []);
+
+  const handlePlaySong = (song) => {
+    playerActions.setCurrentSong(song);
+    playerActions.setIsPlaying(true);
+  };
+
+  const handleTogglePlay = () => {
+    playerActions.setIsPlaying(!playerState.isPlaying);
+  };
+
+  const handleToggleLike = (song) => {
+    setLikedSongs((prev) => {
+      const exists = prev.some((s) => s.id === song.id);
+      if (exists) return prev.filter((s) => s.id !== song.id);
+      return [song, ...prev];
+    });
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-[#0e0e0e]" edges={['top', 'left', 'right']}>
       {/* ── Branded Header ── */}
-      <View className="flex-row items-center justify-between px-5 py-3 border-b border-white/5">
-        <View className="flex-row items-center gap-1.5">
-          <Text className="text-2xl font-bold tracking-tight text-white">cassette.fm</Text>
-          <View className="w-2 h-2 rounded-full bg-white shadow-sm" />
-        </View>
-        <TouchableOpacity
-          className="p-2 rounded-full bg-white/5"
-          onPress={() => console.log('Search pressed')}
-        >
-          <Text className="text-white text-xs font-mono uppercase tracking-wider">Search</Text>
-        </TouchableOpacity>
+      <MobileHeader
+        onSearchPress={() => setIsSearchOpen(true)}
+        onProfilePress={() => console.log('Profile')}
+      />
+
+      {/* ── Main Tab Views ── */}
+      <View className="flex-1">
+        {currentTab === 'home' && (
+          <HomeView
+            topResult={SAMPLE_TOP_RESULT}
+            songs={SAMPLE_SONGS}
+            albums={SAMPLE_ALBUMS}
+            artists={SAMPLE_ARTISTS}
+            activeSongId={playerState.currentSong?.id}
+            isPlaying={playerState.isPlaying}
+            onPlaySong={handlePlaySong}
+            onToggleLike={handleToggleLike}
+          />
+        )}
+
+        {currentTab === 'library' && (
+          <LibraryView
+            likedSongs={likedSongs}
+            playlists={[{ id: 'pl-1', title: 'Favorites', songs: likedSongs }]}
+            offlineTracks={[]}
+            activeSongId={playerState.currentSong?.id}
+            isPlaying={playerState.isPlaying}
+            onPlaySong={handlePlaySong}
+            onToggleLike={handleToggleLike}
+          />
+        )}
       </View>
 
-      {/* ── Content Feed ── */}
-      <ScrollView className="flex-1 px-5 pt-4" showsVerticalScrollIndicator={false}>
-        <View className="mb-6">
-          <Text className="text-xs font-mono uppercase tracking-widest text-neutral-400 mb-2">
-            Trending Now
-          </Text>
-          <Text className="text-xl font-bold text-white tracking-tight">
-            Discover Music
-          </Text>
-        </View>
+      {/* ── Floating Fixed Bottom Mini Player Dock ── */}
+      {playerState.currentSong ? (
+        <PlayerDock
+          currentSong={playerState.currentSong}
+          isPlaying={playerState.isPlaying}
+          isLoading={playerState.isLoading}
+          isLiked={likedSongs.some((s) => s.id === playerState.currentSong.id)}
+          onPress={() => router.push('/now-playing')}
+          onTogglePlay={handleTogglePlay}
+          onSkipNext={() => console.log('Next')}
+          onToggleLike={handleToggleLike}
+        />
+      ) : null}
 
-        {/* Quick Shelf placeholder */}
-        <View className="flex-row gap-4 mb-8">
-          <TouchableOpacity
-            className="flex-1 p-4 rounded-2xl bg-[#161616] border border-white/5"
-            onPress={() => router.push('/now-playing')}
-          >
-            <View className="w-12 h-12 rounded-xl bg-white/10 mb-3 items-center justify-center">
-              <Text className="text-white text-lg">▶</Text>
-            </View>
-            <Text className="text-sm font-semibold text-white truncate">Open Player</Text>
-            <Text className="text-xs text-neutral-400">Lock-screen ready</Text>
-          </TouchableOpacity>
+      {/* ── Bottom Navigation Bar ── */}
+      <MobileBottomNav
+        currentTab={currentTab}
+        onTabPress={(tabId) => {
+          if (tabId === 'search') setIsSearchOpen(true);
+          else setCurrentTab(tabId);
+        }}
+      />
 
-          <View className="flex-1 p-4 rounded-2xl bg-[#161616] border border-white/5">
-            <View className="w-12 h-12 rounded-xl bg-white/10 mb-3 items-center justify-center">
-              <Text className="text-white text-lg">✦</Text>
-            </View>
-            <Text className="text-sm font-semibold text-white truncate">Native Audio</Text>
-            <Text className="text-xs text-neutral-400">Background Engine</Text>
-          </View>
-        </View>
-      </ScrollView>
-
-      {/* ── Fixed Bottom Mini-Player Dock ── */}
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => router.push('/now-playing')}
-        className="mx-3 mb-2 p-3 rounded-2xl bg-[#18181a] border border-white/10 flex-row items-center justify-between shadow-2xl"
-      >
-        <View className="flex-row items-center gap-3 flex-1 min-w-0">
-          <View className="w-11 h-11 rounded-xl bg-neutral-800 items-center justify-center">
-            <Text className="text-neutral-500 text-lg">♫</Text>
-          </View>
-          <View className="flex-1 min-w-0">
-            <Text className="text-sm font-semibold text-white truncate">cassette.fm Mobile</Text>
-            <Text className="text-xs text-neutral-400 truncate">Tap to expand player</Text>
-          </View>
-        </View>
-        <View className="w-9 h-9 rounded-full bg-white items-center justify-center">
-          <Text className="text-black text-sm font-bold">▶</Text>
-        </View>
-      </TouchableOpacity>
+      {/* ── Fullscreen Search Modal ── */}
+      <MobileSearchOverlay
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        onSearch={(q) => console.log('Search query:', q)}
+        suggestions={['The Weeknd', 'Starboy', 'Blinding Lights', 'After Hours']}
+        onSelectSuggestion={(q) => {
+          console.log('Selected:', q);
+          setIsSearchOpen(false);
+        }}
+      />
     </SafeAreaView>
   );
 }

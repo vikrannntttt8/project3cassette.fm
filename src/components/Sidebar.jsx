@@ -1,14 +1,18 @@
 import { usePlayer } from '../context/PlayerContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useSettings } from '../context/SettingsContext.jsx';
 
-const NAV_ITEMS = [
-  { icon: 'home',          label: 'Home',     view: 'home'    },
-  { icon: 'local_library', label: 'Library',  view: 'library' },
+const ALL_NAV_ITEMS = [
+  { id: 'home',    icon: 'home',          label: 'Home',     view: 'home'    },
+  { id: 'library', icon: 'local_library', label: 'Library',  view: 'library' },
 ];
 
 export default function Sidebar() {
   const { view, setView, playlists, playCollection, customAlbums = [], setIsSettingsOpen } = usePlayer();
   const { user, openAuthModal } = useAuth();
+  const { navVisibility = { home: true, radio: true, explore: true, library: true, settings: true } } = useSettings();
+
+  const navItems = ALL_NAV_ITEMS.filter(item => navVisibility[item.id] !== false);
 
   const getInitials = (name, mail) => {
     if (name) {
@@ -36,27 +40,29 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation items (Home & Library) */}
-        <nav className="flex flex-col gap-1.5 flex-shrink-0">
-          {NAV_ITEMS.map(item => {
-            const isActive = view === item.view;
-            return (
-              <button
-                key={item.view}
-                onClick={() => setView(item.view)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-150 w-full text-left cursor-pointer min-h-[44px] ${
-                  isActive
-                    ? 'bg-accent text-black font-bold shadow-md shadow-accent'
-                    : 'text-neutral-400 hover:bg-white/[0.05] hover:text-white'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[21px]">
-                  {item.icon}
-                </span>
-                <span className="text-body-md font-semibold">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        {navItems.length > 0 && (
+          <nav className="flex flex-col gap-1.5 flex-shrink-0">
+            {navItems.map(item => {
+              const isActive = view === item.view;
+              return (
+                <button
+                  key={item.view}
+                  onClick={() => setView(item.view)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-150 w-full text-left cursor-pointer min-h-[44px] ${
+                    isActive
+                      ? 'bg-accent text-black font-bold shadow-md shadow-accent'
+                      : 'text-neutral-400 hover:bg-white/[0.05] hover:text-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[21px]">
+                    {item.icon}
+                  </span>
+                  <span className="text-body-md font-semibold">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        )}
 
         {/* Divider */}
         <div className="h-px bg-white/5 flex-shrink-0" />

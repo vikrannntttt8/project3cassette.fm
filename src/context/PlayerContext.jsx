@@ -3,6 +3,7 @@ import { fetchSongLyrics } from '../utils/saavn.js';
 import { resolveYouTubeVideoId } from '../utils/youtubeEngine.js';
 import { DEMO_LRC } from '../utils/lrcParser.js';
 import { useLibrary } from '../hooks/useLibrary.js';
+import { useSettings } from './SettingsContext.jsx';
 import { apiUrl } from '../utils/apiConfig.js';
 import { getOfflineTracks, saveTrackOffline, removeOfflineTrack, isTrackOffline } from '../services/offlineStorage.js';
 import { getHighResImage } from '../utils/imageUtils.js';
@@ -250,12 +251,35 @@ export function PlayerProvider({ children }) {
     }
   }, []);
 
+  const settings = useSettings();
+  const interceptBackRef = useRef(true);
+  const closeModalsOnNavRef = useRef(true);
+
+  useEffect(() => {
+    interceptBackRef.current = settings.interceptBackToCloseModals !== false;
+  }, [settings.interceptBackToCloseModals]);
+
+  useEffect(() => {
+    closeModalsOnNavRef.current = settings.closeModalsOnNavigation !== false;
+  }, [settings.closeModalsOnNavigation]);
+
   // ── Hierarchical popstate Listener (Intercepts Hardware Back Gesture) ──
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const handlePopState = (e) => {
       const state = e.state;
+
+      // When interceptBackToCloseModals is disabled, bypass modal interception
+      if (!interceptBackRef.current) {
+        if (state && state.view) {
+          setNavState(state);
+        } else {
+          setNavState({ view: 'home', currentId: null, extra: null });
+        }
+        setNavHistory((prev) => (prev.length > 0 ? prev.slice(0, -1) : []));
+        return;
+      }
 
       // 1. If popped to Now Playing drawer or sheet
       if (state?.modal === 'nowPlaying') {
@@ -310,6 +334,21 @@ export function PlayerProvider({ children }) {
   }, []);
 
   const navigateTo = useCallback((newView, currentId = null, extra = null) => {
+    // Automatically close open drawers when switching views if setting is enabled
+    if (closeModalsOnNavRef.current) {
+      if (isPlayerSheetOpenRef.current) {
+        setIsPlayerSheetOpen(false);
+        setPlayerSheetTab('player');
+      }
+      if (isSettingsOpenRef.current) {
+        setIsSettingsOpen(false);
+        setSettingsSubPage(null);
+      }
+      if (isMobileSearchOpenRef.current) {
+        setIsMobileSearchOpen(false);
+      }
+    }
+
     const nextState = { view: newView, currentId, extra };
     setNavState((prev) => {
       setNavHistory((h) => [...h, prev]);
@@ -331,6 +370,26 @@ export function PlayerProvider({ children }) {
   }, [navigateTo]);
 
   const goBack = useCallback(() => {
+    // Intercept back to dismiss topmost drawers/modals first
+    if (interceptBackRef.current) {
+      if (isPlayerSheetOpenRef.current) {
+        closePlayerSheet();
+        return;
+      }
+      if (isSettingsOpenRef.current) {
+        if (settingsSubPageRef.current) {
+          closeSettingsSubPage();
+        } else {
+          closeSettings();
+        }
+        return;
+      }
+      if (isMobileSearchOpenRef.current) {
+        closeMobileSearch();
+        return;
+      }
+    }
+
     if (typeof window !== 'undefined' && (navHistory.length > 0 || window.history.length > 1)) {
       setNavHistory((h) => {
         if (h.length === 0) {
@@ -353,7 +412,7 @@ export function PlayerProvider({ children }) {
         safeReplaceState({ view: 'home', currentId: null, extra: null }, '', '/');
       }
     }
-  }, [navHistory.length, safeReplaceState]);
+  }, [closePlayerSheet, closeSettings, closeSettingsSubPage, closeMobileSearch, navHistory.length, safeReplaceState]);
 
   const canGoBack = navHistory.length > 0 || (typeof window !== 'undefined' && window.history.length > 1);
 

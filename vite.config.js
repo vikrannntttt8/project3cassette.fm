@@ -53,6 +53,42 @@ function innertubeApiPlugin() {
           }
         }
 
+        // ── 0-spotify. POST/GET /api/spotify/playlist ────────────────────
+        if (pathname === '/api/spotify/playlist') {
+          try {
+            const body = req.method === 'POST' ? await readJson() : {};
+            const urlOrId = body.url || body.playlistId || parsedUrl.searchParams.get('url') || parsedUrl.searchParams.get('id') || '';
+            if (!urlOrId) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Missing "url" or "id" parameter' }));
+              return;
+            }
+
+            const { extractSpotifyPlaylistId, fetchSpotifyPlaylistData } = await import('./src/services/spotifyService.js');
+            const playlistId = extractSpotifyPlaylistId(urlOrId);
+            if (!playlistId) {
+              res.statusCode = 400;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Invalid Spotify playlist or album URL/ID' }));
+              return;
+            }
+
+            const playlistData = await fetchSpotifyPlaylistData(playlistId);
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.statusCode = 200;
+            res.end(JSON.stringify({ success: true, playlist: playlistData }));
+            return;
+          } catch (err) {
+            console.error('[API /api/spotify/playlist] Error:', err);
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ success: false, error: err.message || 'Failed to fetch Spotify playlist' }));
+            return;
+          }
+        }
+
         // ── 0a. POST/GET /api/ytmusic/library ─────────────────────────────
         if (pathname === '/api/ytmusic/library') {
           try {

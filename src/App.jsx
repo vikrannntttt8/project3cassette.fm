@@ -14,6 +14,7 @@ import MobileBottomNav     from './components/shared/MobileBottomNav.jsx';
 import MobileHeader        from './components/shared/MobileHeader.jsx';
 import MobileSearchOverlay from './components/shared/MobileSearchOverlay.jsx';
 
+import { SettingsProvider } from './context/SettingsContext.jsx';
 import AuthModal          from './components/shared/AuthModal.jsx';
 import { ThemeProvider, useTheme }   from './context/ThemeContext.jsx';
 
@@ -141,9 +142,11 @@ function ThemedAppShell() {
 export default function App() {
   return (
     <AuthProvider>
-      <PlayerProvider>
-        <ThemedAppShell />
-      </PlayerProvider>
+      <SettingsProvider>
+        <PlayerProvider>
+          <ThemedAppShell />
+        </PlayerProvider>
+      </SettingsProvider>
     </AuthProvider>
   );
 }

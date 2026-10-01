@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
+import { useSettings } from '../../context/SettingsContext.jsx';
 import { useMusicSearch, SEARCH_TABS } from '../../hooks/useMusicSearch.js';
 import { formatTime } from '../../utils/timeFormat.js';
 import SearchBar from './SearchBar.jsx';
@@ -629,6 +630,7 @@ function QuickPickRow({ song, isActive, isPlaying, onPlay, onAddToPlaylist }) {
 
 function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAddToPlaylist }) {
   const { currentSong, isPlaying, history } = usePlayer();
+  const { showQuickPicks = true, showListenAgain = true } = useSettings();
   const [feedData, setFeedData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingMixId, setLoadingMixId] = useState(null);
@@ -869,8 +871,8 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
   // 5. Default: All Feed View
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
-      {/* ── 1. Listen Again (If history exists) ──── */}
-      {history && history.length > 0 && (
+      {/* ── 1. Listen Again (If history exists & setting enabled) ──── */}
+      {showListenAgain && history && history.length > 0 && (
         <section className="flex flex-col gap-3">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-accent text-[20px]">history</span>
@@ -896,7 +898,7 @@ function HomeDefault({ activeChip, onPlaySong, onAlbumClick, onArtistClick, onAd
       )}
 
       {/* ── 2. Quick Picks (Carousel) ── */}
-      {quickPicks.length > 0 && (
+      {showQuickPicks && quickPicks.length > 0 && (
         <section className="flex flex-col">
           <ShelfHeader
             title="Quick Picks"

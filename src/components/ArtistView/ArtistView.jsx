@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
+import { useSettings } from '../../context/SettingsContext.jsx';
 import { formatDuration } from '../../utils/timeFormat.js';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ImageWithFallback from '../shared/ImageWithFallback.jsx';
@@ -21,6 +22,8 @@ export default function ArtistView({ browseId, artistName }) {
     routeToSongEntity,
     routeToArtistEntity,
   } = usePlayer();
+
+  const { artistBanners = true, compactAlbums = false, compactArtists = false } = useSettings();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -245,47 +248,81 @@ export default function ArtistView({ browseId, artistName }) {
       {data && !loading && (
         <>
           {/* Hero Banner */}
-          <div className="relative rounded-2xl overflow-hidden bg-[#0a0a0a] border border-[#222222] p-4 sm:p-6 shadow-xl">
-            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-6">
-              <ImageWithFallback
-                src={artistThumbnail}
-                alt={artistDisplayName}
-                icon="person"
-                iconClassName="text-white/30 text-[48px]"
-                className="w-28 h-28 sm:w-40 sm:h-40 aspect-square rounded-full overflow-hidden object-cover border-2 border-[#333333] shadow-xl flex-shrink-0"
-              />
+          {artistBanners ? (
+            <div className="relative rounded-2xl overflow-hidden bg-[#0a0a0a] border border-[#222222] p-4 sm:p-6 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-6">
+                <ImageWithFallback
+                  src={artistThumbnail}
+                  alt={artistDisplayName}
+                  icon="person"
+                  iconClassName="text-white/30 text-[48px]"
+                  className="w-28 h-28 sm:w-40 sm:h-40 aspect-square rounded-full overflow-hidden object-cover border-2 border-[#333333] shadow-xl flex-shrink-0"
+                />
 
-              <div className="flex-1 text-center sm:text-left min-w-0 space-y-2">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#141414] border border-[#333333] text-[#888888] text-[10.5px] font-semibold uppercase tracking-wider">
-                  <span className="material-symbols-outlined text-[13px]">verified</span>
-                  Verified Artist
-                </div>
-                <h1 className="text-headline-md sm:text-headline-lg font-extrabold text-white tracking-tight truncate">
-                  {artistDisplayName}
-                </h1>
-                {artistDescription && (
-                  <p className="text-body-xs text-[#888888] line-clamp-2 max-w-2xl">
-                    {artistDescription}
-                  </p>
-                )}
-
-                {topSongsList.length > 0 && (
-                  <div className="pt-1.5 flex items-center justify-center sm:justify-start gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handlePlaySong(topSongsList[0], 0)}
-                      className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-black font-bold text-label-md shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        play_arrow
-                      </span>
-                      Play Top Songs
-                    </button>
+                <div className="flex-1 text-center sm:text-left min-w-0 space-y-2">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#141414] border border-[#333333] text-[#888888] text-[10.5px] font-semibold uppercase tracking-wider">
+                    <span className="material-symbols-outlined text-[13px]">verified</span>
+                    Verified Artist
                   </div>
-                )}
+                  <h1 className="text-headline-md sm:text-headline-lg font-extrabold text-white tracking-tight truncate">
+                    {artistDisplayName}
+                  </h1>
+                  {artistDescription && (
+                    <p className="text-body-xs text-[#888888] line-clamp-2 max-w-2xl">
+                      {artistDescription}
+                    </p>
+                  )}
+
+                  {topSongsList.length > 0 && (
+                    <div className="pt-1.5 flex items-center justify-center sm:justify-start gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handlePlaySong(topSongsList[0], 0)}
+                        className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-black font-bold text-label-md shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                          play_arrow
+                        </span>
+                        Play Top Songs
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-[#101012] border border-white/5">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <ImageWithFallback
+                  src={artistThumbnail}
+                  alt={artistDisplayName}
+                  icon="person"
+                  iconClassName="text-white/30 text-[24px]"
+                  className="w-12 h-12 rounded-full object-cover border border-white/10 flex-shrink-0"
+                />
+                <div className="min-w-0">
+                  <h1 className="text-headline-sm font-bold text-white tracking-tight truncate">
+                    {artistDisplayName}
+                  </h1>
+                  <p className="text-body-xs text-neutral-400 truncate">
+                    {topSongsList.length} top songs · {albumsList.length} albums
+                  </p>
+                </div>
+              </div>
+              {topSongsList.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => handlePlaySong(topSongsList[0], 0)}
+                  className="px-4 py-1.5 rounded-full bg-white text-black font-bold text-label-sm hover:bg-neutral-200 transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    play_arrow
+                  </span>
+                  Play
+                </button>
+              )}
+            </div>
+          )}
 
           {/* ── 1. Top Songs (Expandable) ── */}
           {topSongsList.length > 0 && (
@@ -450,42 +487,78 @@ export default function ArtistView({ browseId, artistName }) {
                 <span className="text-body-sm text-[#888888]">{albumsList.length} releases</span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {albumsList.map((alb, i) => {
-                  if (!alb) return null;
-                  const albumTitle = alb.title || 'Unknown Album';
-                  const albumThumb = alb.thumbnail || alb.cover || '';
-                  return (
-                    <div
-                      key={alb.id || alb.browseId || i}
-                      onClick={() => handleEntityClick(alb, { target: 'album' })}
-                      className="group flex flex-col p-3 rounded-2xl bg-[#0a0a0a] border border-[#222222] hover:border-white transition-all duration-200 cursor-pointer shadow-lg"
-                    >
-                      <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-neutral-900 border border-[#262626]">
-                        <ImageWithFallback
-                          src={albumThumb}
-                          alt={albumTitle}
-                          icon="album"
-                          iconClassName="text-white/20 text-[40px]"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-black shadow-lg">
-                            <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                              play_arrow
-                            </span>
+              {compactAlbums ? (
+                <div className="flex flex-col gap-2">
+                  {albumsList.map((alb, i) => {
+                    if (!alb) return null;
+                    const albumTitle = alb.title || 'Unknown Album';
+                    const albumThumb = alb.thumbnail || alb.cover || '';
+                    return (
+                      <div
+                        key={alb.id || alb.browseId || i}
+                        onClick={() => handleEntityClick(alb, { target: 'album' })}
+                        className="flex items-center gap-3.5 p-2.5 rounded-xl bg-[#0e0e10] hover:bg-[#151518] border border-white/5 hover:border-white/20 transition-all cursor-pointer group"
+                      >
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-neutral-900 flex-shrink-0">
+                          <ImageWithFallback
+                            src={albumThumb}
+                            alt={albumTitle}
+                            icon="album"
+                            iconClassName="text-white/20 text-[20px]"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-label-md font-semibold text-white truncate group-hover:text-neutral-200">
+                            {albumTitle}
+                          </p>
+                          <p className="text-body-xs text-[#888888]">{alb.year || 'Album'}</p>
+                        </div>
+                        <span className="material-symbols-outlined text-neutral-500 group-hover:text-white text-[20px] pr-2">
+                          chevron_right
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {albumsList.map((alb, i) => {
+                    if (!alb) return null;
+                    const albumTitle = alb.title || 'Unknown Album';
+                    const albumThumb = alb.thumbnail || alb.cover || '';
+                    return (
+                      <div
+                        key={alb.id || alb.browseId || i}
+                        onClick={() => handleEntityClick(alb, { target: 'album' })}
+                        className="group flex flex-col p-3 rounded-2xl bg-[#0a0a0a] border border-[#222222] hover:border-white transition-all duration-200 cursor-pointer shadow-lg"
+                      >
+                        <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-neutral-900 border border-[#262626]">
+                          <ImageWithFallback
+                            src={albumThumb}
+                            alt={albumTitle}
+                            icon="album"
+                            iconClassName="text-white/20 text-[40px]"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-black shadow-lg">
+                              <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                play_arrow
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <p className="text-label-md font-bold text-white truncate group-hover:underline transition-colors">
-                        {albumTitle}
-                      </p>
-                      <p className="text-label-sm text-[#888888] mt-0.5">{alb.year || 'Album'}</p>
-                    </div>
-                  );
-                })}
-              </div>
+                        <p className="text-label-md font-bold text-white truncate group-hover:underline transition-colors">
+                          {albumTitle}
+                        </p>
+                        <p className="text-label-sm text-[#888888] mt-0.5">{alb.year || 'Album'}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           )}
 
@@ -654,38 +727,75 @@ export default function ArtistView({ browseId, artistName }) {
                 </h2>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {similarArtistsList.map((art, i) => {
-                  if (!art) return null;
-                  const artName = art.name || art.title || 'Similar Artist';
-                  const artThumb = art.thumbnail || art.cover || '';
-                  const artId = art.id || art.browseId || null;
-                  return (
-                    <div
-                      key={artId || i}
-                      onClick={() => routeToArtistEntity(artName, artId)}
-                      className="group flex flex-col items-center text-center p-4 rounded-2xl bg-[#0a0a0a] border border-[#222222] hover:border-white transition-all duration-200 cursor-pointer shadow-lg"
-                    >
-                      <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden mb-3 border border-[#333333] group-hover:border-white transition-colors shadow-md">
-                        <ImageWithFallback
-                          src={artThumb}
-                          alt={artName}
-                          icon="person"
-                          iconClassName="text-white/30 text-[36px]"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
+              {compactArtists ? (
+                <div className="flex flex-col gap-2">
+                  {similarArtistsList.map((art, i) => {
+                    if (!art) return null;
+                    const artName = art.name || art.title || 'Similar Artist';
+                    const artThumb = art.thumbnail || art.cover || '';
+                    const artId = art.id || art.browseId || null;
+                    return (
+                      <div
+                        key={artId || i}
+                        onClick={() => routeToArtistEntity(artName, artId)}
+                        className="flex items-center gap-3.5 p-2.5 rounded-xl bg-[#0e0e10] hover:bg-[#151518] border border-white/5 hover:border-white/20 transition-all cursor-pointer group"
+                      >
+                        <div className="w-11 h-11 rounded-full overflow-hidden bg-neutral-900 border border-white/10 flex-shrink-0">
+                          <ImageWithFallback
+                            src={artThumb}
+                            alt={artName}
+                            icon="person"
+                            iconClassName="text-white/30 text-[20px]"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-label-md font-semibold text-white truncate group-hover:text-neutral-200">
+                            {artName}
+                          </p>
+                          <p className="text-body-xs text-[#888888]">{art.subscribers || 'Artist'}</p>
+                        </div>
+                        <span className="material-symbols-outlined text-neutral-500 group-hover:text-white text-[20px] pr-2">
+                          chevron_right
+                        </span>
                       </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {similarArtistsList.map((art, i) => {
+                    if (!art) return null;
+                    const artName = art.name || art.title || 'Similar Artist';
+                    const artThumb = art.thumbnail || art.cover || '';
+                    const artId = art.id || art.browseId || null;
+                    return (
+                      <div
+                        key={artId || i}
+                        onClick={() => routeToArtistEntity(artName, artId)}
+                        className="group flex flex-col items-center text-center p-4 rounded-2xl bg-[#0a0a0a] border border-[#222222] hover:border-white transition-all duration-200 cursor-pointer shadow-lg"
+                      >
+                        <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden mb-3 border border-[#333333] group-hover:border-white transition-colors shadow-md">
+                          <ImageWithFallback
+                            src={artThumb}
+                            alt={artName}
+                            icon="person"
+                            iconClassName="text-white/30 text-[36px]"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
 
-                      <p className="text-label-md font-bold text-white truncate w-full group-hover:underline transition-colors">
-                        {artName}
-                      </p>
-                      <p className="text-label-sm text-[#888888] mt-0.5 truncate w-full">
-                        {art.subscribers || 'Artist'}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
+                        <p className="text-label-md font-bold text-white truncate w-full group-hover:underline transition-colors">
+                          {artName}
+                        </p>
+                        <p className="text-label-sm text-[#888888] mt-0.5 truncate w-full">
+                          {art.subscribers || 'Artist'}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           )}
 

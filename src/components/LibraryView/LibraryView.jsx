@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
+import { useSettings } from '../../context/SettingsContext.jsx';
 import SongRow from '../HomeView/SongRow.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
+import ImportPlaylistModal from '../shared/ImportPlaylistModal.jsx';
 
 export default function LibraryView({ initialSection = 'playlists' }) {
   const {
@@ -10,9 +12,10 @@ export default function LibraryView({ initialSection = 'playlists' }) {
     removeFromPlaylist,
     createAlbum, deleteAlbum, renameAlbum, removeFromAlbum,
     loadSong, playCollection, currentSong, isPlaying,
-    importPlaylistFromUrl,
     offlineTracks = [],
   } = usePlayer();
+
+  const { compactAlbums } = useSettings();
 
   const [activeSection, setActiveSection]   = useState(initialSection);
   const [activePlaylist, setActivePlaylist] = useState(null);
@@ -25,11 +28,9 @@ export default function LibraryView({ initialSection = 'playlists' }) {
   const [newAlbumTitle, setNewAlbumTitle]       = useState('');
   const [newAlbumArtist, setNewAlbumArtist]     = useState('');
 
-  // YouTube Playlist URL Importer
-  const [importingUrlModal, setImportingUrlModal] = useState(false);
-  const [importUrlInput, setImportUrlInput]       = useState('');
-  const [importLoading, setImportLoading]         = useState(false);
-  const [importMsg, setImportMsg]                 = useState(null);
+  // Playlist Importer Modal (YouTube & Spotify)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importModalTab, setImportModalTab] = useState('youtube');
 
   const [addMenuSong, setAddMenuSong] = useState(null);
 
@@ -45,33 +46,6 @@ export default function LibraryView({ initialSection = 'playlists' }) {
     createPlaylist(newPlaylistTitle.trim());
     setNewPlaylistTitle('');
     setCreatingPlaylist(false);
-  };
-
-  const handleImportPlaylist = async (targetType = 'playlist') => {
-    if (!importUrlInput.trim()) return;
-    setImportLoading(true);
-    setImportMsg(null);
-    try {
-      const res = await importPlaylistFromUrl(importUrlInput.trim(), targetType);
-      setImportMsg({
-        type: 'success',
-        text: targetType === 'liked'
-          ? `Imported ${res.count} songs into Liked!`
-          : `Imported "${res.playlist.title}" (${res.count} tracks)!`,
-      });
-      setImportUrlInput('');
-      setTimeout(() => {
-        setImportingUrlModal(false);
-        setImportMsg(null);
-      }, 2500);
-    } catch (err) {
-      setImportMsg({
-        type: 'error',
-        text: err.message || 'Failed to import playlist.',
-      });
-    } finally {
-      setImportLoading(false);
-    }
   };
 
   const handleCreateAlbum = () => {
@@ -235,57 +209,21 @@ export default function LibraryView({ initialSection = 'playlists' }) {
                 </button>
               )}
 
-              {importingUrlModal ? (
-                <div className="flex-1 p-4 rounded-2xl bg-[#18181a] border border-accent/30 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-label-sm font-bold text-accent flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[18px]">download</span>
-                      Import YouTube Playlist URL
-                    </span>
-                    <button onClick={() => setImportingUrlModal(false)} className="text-neutral-400 hover:text-white cursor-pointer">
-                      <span className="material-symbols-outlined text-[18px]">close</span>
-                    </button>
-                  </div>
-                  <input
-                    autoFocus
-                    value={importUrlInput}
-                    onChange={e => setImportUrlInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleImportPlaylist('playlist')}
-                    placeholder="https://music.youtube.com/playlist?list=..."
-                    className="w-full px-3 py-2 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-body-xs focus:border-accent focus:outline-none placeholder:text-neutral-600"
-                  />
-                  {importMsg && (
-                    <p className={`text-body-xs font-medium ${importMsg.type === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {importMsg.text}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      onClick={() => handleImportPlaylist('playlist')}
-                      disabled={importLoading || !importUrlInput.trim()}
-                      className="px-3.5 py-1.5 rounded-xl bg-accent hover:opacity-90 text-black text-label-sm font-bold transition-opacity disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-                    >
-                      {importLoading && <span className="material-symbols-outlined text-[14px] animate-spin">sync</span>}
-                      {importLoading ? 'Importing...' : 'Import Playlist'}
-                    </button>
-                    <button
-                      onClick={() => handleImportPlaylist('liked')}
-                      disabled={importLoading || !importUrlInput.trim()}
-                      className="px-3.5 py-1.5 rounded-xl bg-[#222225] hover:bg-[#2c2c30] text-neutral-300 text-label-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-                    >
-                      Merge Liked
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setImportingUrlModal(true)}
-                  className="flex-1 flex items-center justify-center gap-3 px-4 py-3 rounded-2xl bg-[#141416] border border-white/10 hover:border-accent/50 hover:bg-[#18181a] transition-all group min-h-[48px] cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[22px] text-accent">download</span>
-                  <span className="text-body-md font-semibold text-neutral-300 group-hover:text-white transition-colors">Import YouTube URL</span>
-                </button>
-              )}
+              <button
+                onClick={() => { setImportModalTab('youtube'); setIsImportModalOpen(true); }}
+                className="flex-1 flex items-center justify-center gap-2.5 px-4 py-3 rounded-2xl bg-[#141416] border border-white/10 hover:border-accent/50 hover:bg-[#18181a] transition-all group min-h-[48px] cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px] text-red-400">play_circle</span>
+                <span className="text-body-md font-semibold text-neutral-300 group-hover:text-white transition-colors">Sync YouTube</span>
+              </button>
+
+              <button
+                onClick={() => { setImportModalTab('spotify'); setIsImportModalOpen(true); }}
+                className="flex-1 flex items-center justify-center gap-2.5 px-4 py-3 rounded-2xl bg-[#141416] border border-white/10 hover:border-[#1DB954]/50 hover:bg-[#18181a] transition-all group min-h-[48px] cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px] text-[#1DB954]">graphic_eq</span>
+                <span className="text-body-md font-semibold text-neutral-300 group-hover:text-white transition-colors">Import Spotify</span>
+              </button>
             </div>
 
             {playlists.length === 0 && !creatingPlaylist && (
@@ -474,34 +412,59 @@ export default function LibraryView({ initialSection = 'playlists' }) {
               </div>
             )}
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {customAlbums.map(a => (
-                <button
-                  key={a.id}
-                  onClick={() => setActiveAlbum(a.id)}
-                  className="group flex flex-col gap-2 rounded-xl p-3 bg-[#0e0e0e] border border-[#222222] hover:border-white/30 transition-all text-left"
-                >
-                  <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-white/5">
-                    {a.thumbnail ? (
-                      <img src={a.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-[#181818]">
-                        <span className="material-symbols-outlined text-white/15 text-[40px]">album</span>
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg">
-                        <span className="material-symbols-outlined text-black text-[20px]" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
+            {compactAlbums ? (
+              <div className="flex flex-col gap-2">
+                {customAlbums.map(a => (
+                  <button
+                    key={a.id}
+                    onClick={() => setActiveAlbum(a.id)}
+                    className="flex items-center gap-3 p-2.5 rounded-xl bg-[#141416] hover:bg-[#1a1a1e] border border-white/5 hover:border-white/20 transition-all text-left group"
+                  >
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-white/5 flex-shrink-0 flex items-center justify-center">
+                      {a.thumbnail ? (
+                        <img src={a.thumbnail} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="material-symbols-outlined text-white/20 text-[22px]">album</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-label-md font-semibold text-white truncate group-hover:text-neutral-200">{a.title}</p>
+                      <p className="text-body-xs text-neutral-400 truncate">{a.artist} · {a.songs.length} tracks</p>
+                    </div>
+                    <span className="material-symbols-outlined text-neutral-500 group-hover:text-white text-[20px] pr-2">chevron_right</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {customAlbums.map(a => (
+                  <button
+                    key={a.id}
+                    onClick={() => setActiveAlbum(a.id)}
+                    className="group flex flex-col gap-2 rounded-xl p-3 bg-[#0e0e0e] border border-[#222222] hover:border-white/30 transition-all text-left"
+                  >
+                    <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-white/5">
+                      {a.thumbnail ? (
+                        <img src={a.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-[#181818]">
+                          <span className="material-symbols-outlined text-white/15 text-[40px]">album</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg">
+                          <span className="material-symbols-outlined text-black text-[20px]" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div>
-                    <p className="text-label-lg font-semibold text-white truncate group-hover:text-neutral-300 transition-colors">{a.title}</p>
-                    <p className="text-body-sm text-on-surface-variant truncate">{a.artist} · {a.songs.length} tracks</p>
-                  </div>
-                </button>
-              ))}
-            </div>
+                    <div>
+                      <p className="text-label-lg font-semibold text-white truncate group-hover:text-neutral-300 transition-colors">{a.title}</p>
+                      <p className="text-body-sm text-on-surface-variant truncate">{a.artist} · {a.songs.length} tracks</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -510,6 +473,13 @@ export default function LibraryView({ initialSection = 'playlists' }) {
       {addMenuSong && (
         <AddToPlaylistMenu song={addMenuSong} onClose={() => setAddMenuSong(null)} />
       )}
+
+      {/* ── YouTube & Spotify Import Modal ───────────────────── */}
+      <ImportPlaylistModal
+        isOpen={isImportModalOpen}
+        initialTab={importModalTab}
+        onClose={() => setIsImportModalOpen(false)}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
+import { useSettings } from '../../context/SettingsContext.jsx';
 import { formatTime, formatDuration } from '../../utils/timeFormat.js';
 import { useLrcSync } from '../../hooks/useLrcSync.js';
 import { getHighResImage } from '../../utils/imageUtils.js';
@@ -50,6 +51,8 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
     setPlayerSheetTabWithHistory,
   } = usePlayer();
 
+  const { nowPlayingViewMode = 'Fullscreen', coverClickAction = 'Show Track Info' } = useSettings();
+
   const [addMenuSong, setAddMenuSong] = useState(null);
   const [devicePillOpen, setDevicePillOpen] = useState(false);
   const lyricsContainerRef = useRef(null);
@@ -61,6 +64,19 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
   const dismissPlayerSheet = onClose || closePlayerSheet;
 
   const { lines, activeIndex } = useLrcSync(lrcString, currentTime);
+
+  // Handle Cover Art Click Action
+  const handleCoverClick = () => {
+    if (coverClickAction === 'Toggle Play/Pause') {
+      togglePlay();
+    } else if (coverClickAction === 'Exit Fullscreen') {
+      dismissPlayerSheet();
+    } else {
+      // Show Track Info (default)
+      routeToSongEntity(currentSong);
+      dismissPlayerSheet();
+    }
+  };
 
   // Fetch lyrics when opening lyrics sheet if not already loaded
   useEffect(() => {
@@ -129,11 +145,17 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
     }
   };
 
+  const isFloating = nowPlayingViewMode === 'Floating Drawer';
+
   return (
     <div
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      className="md:hidden fixed inset-0 z-[95] bg-[#0c0c0e] flex flex-col text-white animate-sheet-slide-up select-none overflow-hidden"
+      className={`md:hidden fixed z-[95] bg-[#0c0c0e] flex flex-col text-white animate-sheet-slide-up select-none overflow-hidden ${
+        isFloating
+          ? 'inset-x-3 bottom-3 top-10 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[420px] sm:top-14 sm:bottom-6 rounded-[32px] border border-white/10 shadow-[0_32px_80px_rgba(0,0,0,0.95)]'
+          : 'inset-0'
+      }`}
     >
       {/* ── 1. SUBTLE AMBIENT DYNAMIC THEME (BACKGROUND GLOW ONLY) ──── */}
       {highResCover && (
@@ -198,12 +220,9 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
           {/* ── High-Res Cover Artwork Card ── */}
           <div className="my-auto pt-2 pb-3 flex flex-col items-center justify-center">
             <div
-              onClick={() => {
-                routeToSongEntity(currentSong);
-                dismissPlayerSheet();
-              }}
+              onClick={handleCoverClick}
               className="relative aspect-square w-full max-w-[310px] sm:max-w-[340px] mx-auto rounded-3xl overflow-hidden bg-neutral-900 border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.9)] ring-1 ring-white/10 cursor-pointer group transition-transform duration-300 active:scale-[0.98]"
-              title="Click to view album release"
+              title={`Click to ${coverClickAction.toLowerCase()}`}
             >
               <ImageWithFallback
                 src={highResCover}

@@ -405,6 +405,69 @@ export function useLibrary() {
     }
   }, [user?.id, liked, playlists, history, performFullSync]);
 
+  // ── 3d. Spotify Playlist Importer & Fuzzy Matcher ───────────────────
+  const importSpotifyPlaylistFromUrl = useCallback(async (urlOrId, onProgress = null, options = {}) => {
+    if (!urlOrId || !urlOrId.trim()) {
+      throw new Error('Please enter a valid Spotify playlist URL or URI.');
+    }
+
+    // 1. Fetch Spotify playlist metadata and tracklist
+    const res = await fetch(`/api/spotify/playlist?url=${encodeURIComponent(urlOrId.trim())}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: urlOrId.trim() }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `Spotify import failed with status ${res.status}`);
+    }
+
+    const data = await res.json();
+    if (!data.success || !data.playlist) {
+      throw new Error(data.error || 'Failed to extract Spotify playlist.');
+    }
+
+    const { title, description, thumbnail, tracks = [] } = data.playlist;
+    if (tracks.length === 0) {
+      throw new Error('No tracks found in this Spotify playlist.');
+    }
+
+    // 2. Sequentially match tracks against YouTube Music engine
+    const { matchSpotifyTracksToYouTube } = await import('../services/spotifyService.js');
+    const matchedSongs = await matchSpotifyTracksToYouTube(tracks, onProgress, options);
+
+    const validSongs = matchedSongs.filter(s => s && s.id);
+    const importedPl = {
+      id: `spotify_${Date.now()}`,
+      title: title || 'Spotify Playlist',
+      description: description || `${validSongs.length} tracks · Imported from Spotify`,
+      thumbnail: thumbnail || validSongs[0]?.thumbnail || '',
+      songs: validSongs,
+      createdAt: new Date().toISOString(),
+      source: 'spotify',
+    };
+
+    let newPlaylists = [];
+    setPlaylists((prevPlaylists) => {
+      newPlaylists = [importedPl, ...(prevPlaylists || [])];
+      savePlaylists(newPlaylists);
+      return newPlaylists;
+    });
+
+    if (user?.id) {
+      performFullSync({ liked, playlists: newPlaylists, history }).catch(console.warn);
+    }
+
+    return {
+      type: 'playlist',
+      count: validSongs.length,
+      matchedCount: validSongs.filter(s => !s.unresolved).length,
+      playlist: importedPl,
+      totalPlaylists: newPlaylists.length,
+    };
+  }, [user?.id, liked, playlists, history, performFullSync]);
+
   // ── 4. Liked tracks ──────────────────────────────────────────────────
   const isLiked = useCallback((target) => {
     if (!target) return false;
@@ -646,9 +709,11 @@ export function useLibrary() {
     recordPlayback,
     clearHistory,
     setHistory,
-    // Cloud & YouTube Music Sync
+    // Cloud, YouTube & Spotify Sync
     syncAllWithCloud,
     syncYouTubeMusicLibrary,
     importPlaylistFromUrl,
+    importSpotifyPlaylistFromUrl,
   };
 }
+

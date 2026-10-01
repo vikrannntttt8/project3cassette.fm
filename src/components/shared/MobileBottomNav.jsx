@@ -1,5 +1,6 @@
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useSettings } from '../../context/SettingsContext.jsx';
 
 /**
  * MobileBottomNav — 5-item YouTube Music & SimpMusic inspired mobile navigation bar.
@@ -19,6 +20,7 @@ export default function MobileBottomNav({ onOpenSearch }) {
     openMobileSearch,
   } = usePlayer();
   const { isAuthModalOpen } = useAuth();
+  const { navVisibility = { home: true, radio: true, explore: true, library: true, settings: true } } = useSettings();
 
   const handleRadioClick = () => {
     if (isSettingsOpen) closeSettings();
@@ -41,7 +43,7 @@ export default function MobileBottomNav({ onOpenSearch }) {
     }
   };
 
-  const tabs = [
+  const allTabs = [
     {
       id: 'home',
       icon: 'home',
@@ -86,14 +88,22 @@ export default function MobileBottomNav({ onOpenSearch }) {
     },
   ];
 
+  const visibleTabs = allTabs.filter(tab => navVisibility[tab.id] !== false);
+
   return (
     <nav
       className="mobile-bottom-nav md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0c0c0e]/96 backdrop-blur-2xl border-t border-white/10 select-none shadow-[0_-8px_24px_rgba(0,0,0,0.7)]"
       style={{ paddingBottom: 'var(--safe-bottom, 12px)' }}
       aria-label="Mobile navigation"
     >
-      <div className="grid grid-cols-5 items-stretch max-w-lg mx-auto" style={{ height: 'var(--mobile-nav-h, 58px)' }}>
-        {tabs.map((tab) => (
+      <div
+        className="grid items-stretch max-w-lg mx-auto"
+        style={{
+          height: 'var(--mobile-nav-h, 58px)',
+          gridTemplateColumns: `repeat(${visibleTabs.length || 1}, minmax(0, 1fr))`,
+        }}
+      >
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={tab.action}

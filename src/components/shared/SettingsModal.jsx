@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useTheme } from '../../context/ThemeContext.jsx';
+import { useSettings } from '../../context/SettingsContext.jsx';
 
 export default function SettingsModal({ isOpen, onClose }) {
   const {
@@ -10,6 +11,7 @@ export default function SettingsModal({ isOpen, onClose }) {
     history,
     syncAllWithCloud,
     importPlaylistFromUrl,
+    importSpotifyPlaylistFromUrl,
     audioQuality,
     setAudioQuality,
     activeStreamMeta,
@@ -19,6 +21,8 @@ export default function SettingsModal({ isOpen, onClose }) {
     openSettingsSubPage,
     closeSettingsSubPage,
   } = usePlayer();
+
+  const settings = useSettings();
 
   const {
     user,
@@ -89,10 +93,17 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [authError, setAuthError] = useState(null);
   const [importStatus, setImportStatus] = useState(null);
 
-  // ── Public Playlist URL Importer State ─────────────────────────────
+  // ── Public Playlist URL Importer State (YouTube) ───────────────────
   const [importUrl, setImportUrl] = useState('');
   const [importingUrl, setImportingUrl] = useState(false);
   const [importUrlStatus, setImportUrlStatus] = useState(null);
+
+  // ── Spotify Playlist URL Importer State ───────────────────────────
+  const [spotifyUrl, setSpotifyUrl] = useState('');
+  const [spotifyImporting, setSpotifyImporting] = useState(false);
+  const [spotifyProgress, setSpotifyProgress] = useState(null);
+  const [spotifyStatus, setSpotifyStatus] = useState(null);
+  const spotifyAbortRef = useRef(null);
 
   useEffect(() => {
     if (isModalOpen) {
@@ -250,14 +261,57 @@ export default function SettingsModal({ isOpen, onClose }) {
     }
   };
 
-  // ── 5 Categorized Settings Sections (Account is featured cleanly at top) ──
+  // ── Public Spotify Playlist URL Importer & Fuzzy Matcher ───────────
+  const handleImportSpotify = async () => {
+    if (!spotifyUrl.trim()) return;
+    setSpotifyImporting(true);
+    setSpotifyStatus(null);
+    setSpotifyProgress({ current: 0, total: 0, percent: 0, currentTrack: null, matchedCount: 0 });
+
+    const controller = new AbortController();
+    spotifyAbortRef.current = controller;
+
+    try {
+      const res = await importSpotifyPlaylistFromUrl(
+        spotifyUrl.trim(),
+        (prog) => setSpotifyProgress(prog),
+        { signal: controller.signal }
+      );
+      setSpotifyStatus({
+        type: 'success',
+        text: `Successfully imported "${res.playlist.title}"! Matched ${res.matchedCount} of ${res.count} tracks on YouTube Music.`,
+      });
+      setSpotifyUrl('');
+      setTimeout(() => setSpotifyStatus(null), 10000);
+    } catch (err) {
+      if (err.name === 'AbortError' || err.message?.includes('cancelled')) {
+        setSpotifyStatus({ type: 'info', text: 'Spotify import stopped.' });
+      } else {
+        setSpotifyStatus({
+          type: 'error',
+          text: err.message || 'Failed to import Spotify playlist. Please check that the URL is public.',
+        });
+      }
+    } finally {
+      setSpotifyImporting(false);
+      spotifyAbortRef.current = null;
+    }
+  };
+
+  const handleCancelSpotify = () => {
+    if (spotifyAbortRef.current) {
+      spotifyAbortRef.current.abort();
+    }
+  };
+
+  // ── 5 Categorized Settings Sections ──
   const CATEGORIES = [
     {
       id: 'interface',
-      label: 'Interface & Themes',
-      description: 'Accent colors, dynamic album art theming & lyric sizing',
-      icon: 'palette',
-      badgeBg: 'bg-rose-500/15 text-rose-400 border border-rose-500/25',
+      label: 'Interface & Behavior',
+      description: 'Modal back gesture, drawer closing, layout styles & themes',
+      icon: 'tune',
+      badgeBg: 'bg-white/10 text-white border border-white/15',
     },
     {
       id: 'quality',
@@ -270,13 +324,13 @@ export default function SettingsModal({ isOpen, onClose }) {
       id: 'content',
       label: 'Content & Language',
       description: 'Regional music charts, explicit filter & data saver mode',
-      icon: 'tune',
+      icon: 'language',
       badgeBg: 'bg-sky-500/15 text-sky-400 border border-sky-500/25',
     },
     {
       id: 'backup',
       label: 'Backup & Import',
-      description: 'Import YouTube playlists & export/restore JSON backups',
+      description: 'YouTube & Spotify playlist sync, JSON backup & restore',
       icon: 'cloud_sync',
       badgeBg: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25',
     },
@@ -424,6 +478,55 @@ export default function SettingsModal({ isOpen, onClose }) {
     </div>
   );
 
+  // ── Monochrome UI Atoms (Sleek Black/White minimal design) ─────────
+  function MonochromeToggle({ label, subtitle, checked, onChange, disabled = false }) {
+    return (
+      <div className="px-4 py-3.5 flex items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-white leading-tight">{label}</p>
+          {subtitle && <p className="text-xs text-neutral-400 mt-0.5 leading-snug">{subtitle}</p>}
+        </div>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(!checked)}
+          className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
+            checked ? 'bg-white' : 'bg-neutral-800 border border-white/10'
+          }`}
+          aria-pressed={checked}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform duration-200 shadow-sm ${
+              checked ? 'translate-x-5 bg-black' : 'translate-x-0 bg-neutral-400'
+            }`}
+          />
+        </button>
+      </div>
+    );
+  }
+
+  function MonochromeSelect({ label, subtitle, value, onChange, options = [] }) {
+    return (
+      <div className="px-4 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-white leading-tight">{label}</p>
+          {subtitle && <p className="text-xs text-neutral-400 mt-0.5 leading-snug">{subtitle}</p>}
+        </div>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="px-3 py-1.5 rounded-lg bg-[#111113] border border-white/10 text-white text-xs font-semibold focus:border-white focus:outline-none cursor-pointer flex-shrink-0"
+        >
+          {options.map((opt) => (
+            <option key={opt.value || opt} value={opt.value || opt}>
+              {opt.label || opt}
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  }
+
   // ── Public YouTube Playlist / Track Importer Component ─────────────
   function renderPlaylistUrlImporterSection() {
     return (
@@ -522,6 +625,133 @@ export default function SettingsModal({ isOpen, onClose }) {
               </span>
               Merge Liked
             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Public Spotify Playlist URL Importer & Fuzzy Matcher Component ──
+  function renderSpotifyPlaylistImporterSection() {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-[#141416] p-4 shadow-lg space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="text-[10.5px] uppercase tracking-widest text-emerald-400 font-mono font-semibold">
+                Library Importer · Spotify Matcher
+              </p>
+              <span className="text-[9.5px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
+                Fuzzy Auto-Matcher
+              </span>
+            </div>
+            <h3 className="text-title-sm font-bold text-white mt-1">
+              Import &amp; Match Spotify Playlists
+            </h3>
+            <p className="text-body-xs text-neutral-400 mt-0.5 max-w-md">
+              Paste public Spotify playlist or album URLs. cassette.fm sequentially maps each track to YouTube Music OPUS audio streams.
+            </p>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 flex-shrink-0">
+            <span className="material-symbols-outlined text-[20px]">graphic_eq</span>
+          </div>
+        </div>
+
+        {spotifyStatus && (
+          <div
+            className={`p-3 rounded-xl text-body-xs font-medium flex items-center gap-2 ${
+              spotifyStatus.type === 'success'
+                ? 'bg-emerald-950/40 border border-emerald-800/60 text-emerald-300'
+                : spotifyStatus.type === 'info'
+                ? 'bg-amber-950/40 border border-amber-800/60 text-amber-300'
+                : 'bg-red-950/40 border border-red-800/60 text-red-300'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px] flex-shrink-0">
+              {spotifyStatus.type === 'success' ? 'check_circle' : 'info'}
+            </span>
+            <span className="flex-1">{spotifyStatus.text}</span>
+          </div>
+        )}
+
+        {/* URL Input */}
+        <div className="space-y-2.5">
+          <div className="relative">
+            <input
+              type="text"
+              value={spotifyUrl}
+              disabled={spotifyImporting}
+              onChange={(e) => setSpotifyUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && spotifyUrl.trim() && !spotifyImporting) {
+                  handleImportSpotify();
+                }
+              }}
+              placeholder="https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
+              className="w-full pl-3 pr-8 py-2.5 rounded-xl bg-[#111113] border border-white/10 text-white font-mono text-body-xs focus:border-white focus:outline-none placeholder:text-neutral-600 disabled:opacity-50"
+            />
+            {spotifyUrl && !spotifyImporting && (
+              <button
+                type="button"
+                onClick={() => setSpotifyUrl('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">close</span>
+              </button>
+            )}
+          </div>
+
+          {/* Real-time Progress Bar */}
+          {spotifyImporting && spotifyProgress && (
+            <div className="p-3.5 rounded-2xl bg-[#101012] border border-white/10 space-y-2.5 animate-fade-in">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span className="text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[15px] text-emerald-400 animate-spin">sync</span>
+                  Matching: {spotifyProgress.current} of {spotifyProgress.total} tracks
+                </span>
+                <span className="font-mono text-emerald-400 font-bold">{spotifyProgress.percent}%</span>
+              </div>
+
+              <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full bg-emerald-400 transition-all duration-300 rounded-full"
+                  style={{ width: `${spotifyProgress.percent}%` }}
+                />
+              </div>
+
+              {spotifyProgress.currentTrack && (
+                <div className="flex items-center justify-between pt-1 text-[11px] text-neutral-400">
+                  <p className="truncate max-w-[280px]">
+                    <span className="text-neutral-200 font-medium">{spotifyProgress.currentTrack.title}</span> — {spotifyProgress.currentTrack.artist}
+                  </p>
+                  <span className="font-mono text-emerald-300">
+                    {spotifyProgress.matchedCount} resolved
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Buttons */}
+          <div className="pt-1 flex items-center gap-2">
+            {!spotifyImporting ? (
+              <button
+                onClick={handleImportSpotify}
+                disabled={!spotifyUrl.trim()}
+                className="px-4 py-2 rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-xs transition-all disabled:opacity-40 flex items-center gap-1.5 cursor-pointer shadow-md"
+              >
+                <span className="material-symbols-outlined text-[15px] text-emerald-600">sync_alt</span>
+                Sync Spotify Playlist
+              </button>
+            ) : (
+              <button
+                onClick={handleCancelSpotify}
+                className="px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">stop</span>
+                Stop / Cancel
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -636,18 +866,18 @@ export default function SettingsModal({ isOpen, onClose }) {
                       <p className="text-label-md font-semibold text-white">Crossfade Duration</p>
                       <p className="text-xs text-neutral-400 truncate">Fade between ending and next song</p>
                     </div>
-                    <span className="text-label-xs font-mono font-bold text-accent px-2 py-0.5 rounded-full bg-accent/15 border border-accent/30 flex-shrink-0 ml-4">
-                      {crossfadeDuration}s
+                    <span className="text-label-xs font-mono font-bold text-accent px-2 py-0.5 rounded-full bg-accent/15 border border-accent/30 flex-shrink-0">
+                      {crossfade}s
                     </span>
                   </div>
                   <input
-                    type="range" min="0" max="12" step="1"
-                    value={crossfadeDuration}
-                    onChange={(e) => {
-                      setCrossfadeDuration(Number(e.target.value));
-                      localStorage.setItem('pulse_crossfade', e.target.value);
-                    }}
-                    className="w-full accent-accent"
+                    type="range"
+                    min="0"
+                    max="12"
+                    step="1"
+                    value={crossfade}
+                    onChange={(e) => handleCrossfadeChange(Number(e.target.value))}
+                    className="w-full accent-white bg-neutral-800 h-1.5 rounded-full cursor-pointer"
                   />
                 </div>
               </div>
@@ -655,249 +885,283 @@ export default function SettingsModal({ isOpen, onClose }) {
           </div>
         );
 
-
-      // ── 2. Interface & Themes ──────────────────────────────────────
+      // ── 2. Interface & Behavior (Monochrome Style) ─────────────────
       case 'interface':
         return (
-          <div className="space-y-3 animate-fade-in">
+          <div className="space-y-6 animate-fade-in text-white pb-6">
             <div className="pb-0.5">
-              <h3 className="text-title-md font-bold text-white">Interface & Themes</h3>
+              <h3 className="text-title-md font-bold text-white tracking-tight">Interface &amp; Behavior</h3>
               <p className="text-body-xs text-neutral-400 mt-0.5">
-                Customize palette accents, dynamic album color extraction, and synced lyric typography.
+                Customize navigation back gestures, modal closing, view presentation, and feed layout.
               </p>
             </div>
 
-            {/* Theming Engine Card */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 space-y-3.5 shadow-lg">
-              <div>
-                <h4 className="text-label-md font-bold text-white">Theme Accent Engine</h4>
-                <p className="text-body-xs text-neutral-400 mt-0.5">
-                  Choose between automatic cover-art colors, clean monochrome B&W, or custom palettes.
-                </p>
+            {/* 1. NAVIGATION & MODAL BEHAVIOR */}
+            <div className="space-y-2">
+              <p className="text-[10.5px] font-mono uppercase tracking-widest text-neutral-500 font-bold px-1">
+                NAVIGATION &amp; MODAL BEHAVIOR
+              </p>
+              <div className="rounded-2xl bg-[#141416] border border-white/10 overflow-hidden divide-y divide-white/5 shadow-lg">
+                <MonochromeToggle
+                  label="Intercept Back to Close Modals"
+                  subtitle="Dismiss topmost drawers and modals first before routing backward in history"
+                  checked={settings.interceptBackToCloseModals}
+                  onChange={settings.setInterceptBackToCloseModals}
+                />
+
+                <MonochromeToggle
+                  label="Close Drawers on Navigation"
+                  subtitle="Automatically close open drawers (lyrics, queue, settings) when switching main views"
+                  checked={settings.closeModalsOnNavigation}
+                  onChange={settings.setCloseModalsOnNavigation}
+                />
+
+                <MonochromeSelect
+                  label="Now Playing View Mode"
+                  subtitle="Configure how the expanded player sheet is presented"
+                  value={settings.nowPlayingViewMode}
+                  onChange={settings.setNowPlayingViewMode}
+                  options={[
+                    { value: 'Fullscreen', label: 'Fullscreen Sheet' },
+                    { value: 'Floating Drawer', label: 'Floating Drawer' },
+                    { value: 'Mini Bar', label: 'Compact Mini Bar' },
+                  ]}
+                />
+
+                <MonochromeSelect
+                  label="Cover Art Click Action"
+                  subtitle="Action executed when tapping album artwork in player"
+                  value={settings.coverClickAction}
+                  onChange={settings.setCoverClickAction}
+                  options={[
+                    { value: 'Show Track Info', label: 'Show Track / Album Info' },
+                    { value: 'Toggle Play/Pause', label: 'Toggle Play / Pause' },
+                    { value: 'Exit Fullscreen', label: 'Exit Fullscreen Sheet' },
+                  ]}
+                />
               </div>
-
-              {/* 3 Theme Mode Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {/* 1. Dynamic */}
-                <button
-                  type="button"
-                  onClick={() => setThemeMode('dynamic')}
-                  className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer relative overflow-hidden ${
-                    themeMode === 'dynamic'
-                      ? 'bg-[#1e1e22] border-white/40 shadow-md ring-2 ring-accent'
-                      : 'bg-[#101012] border-white/5 hover:bg-[#18181a] hover:border-white/10 text-neutral-400'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="material-symbols-outlined text-[20px]" style={{ color: extractedColor }}>
-                      auto_awesome
-                    </span>
-                    <span
-                      className="w-4.5 h-4.5 rounded-full border border-white/20 shadow-sm transition-colors duration-500"
-                      style={{ backgroundColor: extractedColor }}
-                    />
-                  </div>
-                  <div>
-                    <span className="text-label-sm font-bold text-white block">Dynamic (Album Art)</span>
-                    <span className="text-[11px] text-neutral-400 block mt-0.5">
-                      Extracts real-time cover colors
-                    </span>
-                  </div>
-                </button>
-
-                {/* 2. Monochrome B&W */}
-                <button
-                  type="button"
-                  onClick={() => setThemeMode('default')}
-                  className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer relative overflow-hidden ${
-                    themeMode === 'default'
-                      ? 'bg-[#1e1e22] border-white/40 shadow-md ring-2 ring-white'
-                      : 'bg-[#101012] border-white/5 hover:bg-[#18181a] hover:border-white/10 text-neutral-400'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="material-symbols-outlined text-[20px] text-white">
-                      contrast
-                    </span>
-                    <span className="w-4.5 h-4.5 rounded-full bg-white border border-white/20 shadow-sm" />
-                  </div>
-                  <div>
-                    <span className="text-label-sm font-bold text-white block">Default (Monochrome)</span>
-                    <span className="text-[11px] text-neutral-400 block mt-0.5">
-                      Clean B&W minimal aesthetic
-                    </span>
-                  </div>
-                </button>
-
-                {/* 3. Custom Palette */}
-                <button
-                  type="button"
-                  onClick={() => setThemeMode('custom')}
-                  className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer relative overflow-hidden ${
-                    themeMode === 'custom'
-                      ? 'bg-[#1e1e22] border-white/40 shadow-md ring-2 ring-accent'
-                      : 'bg-[#101012] border-white/5 hover:bg-[#18181a] hover:border-white/10 text-neutral-400'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="material-symbols-outlined text-[20px]" style={{ color: customColor }}>
-                      palette
-                    </span>
-                    <span
-                      className="w-4.5 h-4.5 rounded-full border border-white/20 shadow-sm transition-colors"
-                      style={{ backgroundColor: customColor }}
-                    />
-                  </div>
-                  <div>
-                    <span className="text-label-sm font-bold text-white block">Custom Palette</span>
-                    <span className="text-[11px] text-neutral-400 block mt-0.5">
-                      Pick any hex color swatch
-                    </span>
-                  </div>
-                </button>
-              </div>
-
-              {/* Custom Color Selector Panel */}
-              {themeMode === 'custom' && (
-                <div className="p-3.5 rounded-xl bg-[#101012] border border-white/10 space-y-3 animate-fade-in">
-                  <div className="flex items-center justify-between">
-                    <span className="text-label-sm font-bold text-white">Curated Palettes</span>
-                    <span className="text-body-xs font-mono text-neutral-400 uppercase">
-                      Hex: {customColor}
-                    </span>
-                  </div>
-
-                  {/* Preset Swatches */}
-                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
-                    {presetPalettes.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setCustomColor(p.hex)}
-                        title={p.name}
-                        className={`h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer border ${
-                          customColor.toLowerCase() === p.hex.toLowerCase()
-                            ? 'border-white scale-105 shadow-md ring-2 ring-white/40'
-                            : 'border-white/10 hover:scale-105'
-                        }`}
-                        style={{ backgroundColor: p.hex }}
-                      >
-                        {customColor.toLowerCase() === p.hex.toLowerCase() && (
-                          <span className="material-symbols-outlined text-[15px] text-black font-bold">
-                            check
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Native Picker */}
-                  <div className="flex items-center gap-2.5 pt-1">
-                    <label className="relative flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#18181a] border border-white/10 hover:border-white/30 cursor-pointer text-body-xs text-white transition-colors">
-                      <input
-                        type="color"
-                        value={customColor}
-                        onChange={(e) => setCustomColor(e.target.value)}
-                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                      />
-                      <span
-                        className="w-4 h-4 rounded-full border border-white/20 flex-shrink-0"
-                        style={{ backgroundColor: customColor }}
-                      />
-                      <span>Pick Custom Swatch</span>
-                    </label>
-
-                    <input
-                      type="text"
-                      value={customColor}
-                      onChange={(e) => setCustomColor(e.target.value)}
-                      placeholder="#f59e0b"
-                      maxLength={7}
-                      className="w-24 px-2.5 py-1.5 rounded-lg bg-[#18181a] border border-white/10 text-white font-mono text-body-xs text-center focus:border-accent focus:outline-none"
-                    />
-                  </div>
-                </div>
-              )}
             </div>
 
-            {/* â”€â”€ Appearance toggles grouped card â”€â”€ */}
-            <div>
-              <p className="text-[10.5px] font-mono uppercase tracking-widest text-neutral-500 font-bold mb-2 px-1">APPEARANCE</p>
-              <div className="rounded-2xl bg-neutral-900/60 border border-white/5 overflow-hidden divide-y divide-white/[0.05]">
+            {/* 2. INTERFACE & LAYOUT PREFERENCES */}
+            <div className="space-y-2">
+              <p className="text-[10.5px] font-mono uppercase tracking-widest text-neutral-500 font-bold px-1">
+                INTERFACE &amp; LAYOUT PREFERENCES
+              </p>
+              <div className="rounded-2xl bg-[#141416] border border-white/10 overflow-hidden divide-y divide-white/5 shadow-lg">
+                <MonochromeToggle
+                  label="Compact Artist Lists"
+                  subtitle="Switch between card grids and dense horizontal row lists for artists"
+                  checked={settings.compactArtists}
+                  onChange={settings.setCompactArtists}
+                />
 
-                {/* Ambient Glow row */}
-                <div className="px-4 py-3 flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-label-md font-semibold text-white">Dynamic Ambient Glow</p>
-                    <p className="text-xs text-neutral-400 truncate">Diffuse cover art colors into backgrounds</p>
-                  </div>
+                <MonochromeToggle
+                  label="Compact Album Lists"
+                  subtitle="Switch between card grids and dense horizontal row lists for albums"
+                  checked={settings.compactAlbums}
+                  onChange={settings.setCompactAlbums}
+                />
+
+                <MonochromeToggle
+                  label="Artist Page Hero Banners"
+                  subtitle="Display prominent video / high-resolution hero banners on artist profile pages"
+                  checked={settings.artistBanners}
+                  onChange={settings.setArtistBanners}
+                />
+
+                <MonochromeToggle
+                  label="Show Quick Picks Feed"
+                  subtitle="Show instant YouTube Music radio recommendation picks on home screen"
+                  checked={settings.showQuickPicks}
+                  onChange={settings.setShowQuickPicks}
+                />
+
+                <MonochromeToggle
+                  label="Show Listen Again Feed"
+                  subtitle="Show recently played and quick replay shelf on home screen"
+                  checked={settings.showListenAgain}
+                  onChange={settings.setShowListenAgain}
+                />
+              </div>
+            </div>
+
+            {/* 3. MOBILE DOCK / NAV VISIBILITY */}
+            <div className="space-y-2">
+              <p className="text-[10.5px] font-mono uppercase tracking-widest text-neutral-500 font-bold px-1">
+                NAVIGATION BAR DESTINATIONS
+              </p>
+              <div className="rounded-2xl bg-[#141416] border border-white/10 overflow-hidden divide-y divide-white/5 shadow-lg">
+                <MonochromeToggle
+                  label="Home Tab"
+                  subtitle="Display Home feed destination in desktop sidebar & mobile dock"
+                  checked={settings.navVisibility?.home !== false}
+                  onChange={() => settings.toggleNavDestination('home')}
+                />
+
+                <MonochromeToggle
+                  label="Radio Tab"
+                  subtitle="Display Radio / Instant Mixes in navigation bars"
+                  checked={settings.navVisibility?.radio !== false}
+                  onChange={() => settings.toggleNavDestination('radio')}
+                />
+
+                <MonochromeToggle
+                  label="Explore Tab"
+                  subtitle="Display Explore / Search quick launcher in mobile bottom dock"
+                  checked={settings.navVisibility?.explore !== false}
+                  onChange={() => settings.toggleNavDestination('explore')}
+                />
+
+                <MonochromeToggle
+                  label="Library Tab"
+                  subtitle="Display Library, Playlists & Liked songs destination"
+                  checked={settings.navVisibility?.library !== false}
+                  onChange={() => settings.toggleNavDestination('library')}
+                />
+
+                <MonochromeToggle
+                  label="Settings Tab"
+                  subtitle="Display quick Settings icon in mobile bottom dock"
+                  checked={settings.navVisibility?.settings !== false}
+                  onChange={() => settings.toggleNavDestination('settings')}
+                />
+              </div>
+            </div>
+
+            {/* 4. THEMES & ACCENT ENGINE */}
+            <div className="space-y-2">
+              <p className="text-[10.5px] font-mono uppercase tracking-widest text-neutral-500 font-bold px-1">
+                THEMES &amp; TYPOGRAPHY
+              </p>
+              <div className="p-4 rounded-2xl bg-[#141416] border border-white/10 space-y-4 shadow-lg">
+                <div>
+                  <h4 className="text-label-md font-bold text-white">Accent Palette Mode</h4>
+                  <p className="text-body-xs text-neutral-400 mt-0.5">
+                    Choose between dynamic cover art colors, clean monochrome B&W, or custom palettes.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <button
-                    onClick={() => {
-                      const next = !ambientGlow;
-                      setAmbientGlow(next);
-                      localStorage.setItem('pulse_ambient_glow', String(next));
-                    }}
-                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
-                      ambientGlow ? 'bg-accent' : 'bg-neutral-700'
+                    type="button"
+                    onClick={() => setThemeMode('default')}
+                    className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
+                      themeMode === 'default'
+                        ? 'bg-[#1e1e22] border-white ring-2 ring-white shadow-md'
+                        : 'bg-[#101012] border-white/5 hover:border-white/20 text-neutral-400'
                     }`}
                   >
-                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
-                      ambientGlow ? 'translate-x-5' : 'translate-x-0'
-                    }`} />
+                    <div className="flex items-center justify-between w-full">
+                      <span className="material-symbols-outlined text-[20px] text-white">contrast</span>
+                      <span className="w-4.5 h-4.5 rounded-full bg-white border border-white/20 shadow-sm" />
+                    </div>
+                    <div>
+                      <span className="text-label-sm font-bold text-white block">Default (Monochrome)</span>
+                      <span className="text-[11px] text-neutral-400 block mt-0.5">Clean B&W minimal</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setThemeMode('dynamic')}
+                    className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
+                      themeMode === 'dynamic'
+                        ? 'bg-[#1e1e22] border-white/40 ring-2 ring-accent shadow-md'
+                        : 'bg-[#101012] border-white/5 hover:border-white/20 text-neutral-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="material-symbols-outlined text-[20px]" style={{ color: extractedColor }}>auto_awesome</span>
+                      <span className="w-4.5 h-4.5 rounded-full border border-white/20 shadow-sm transition-colors duration-500" style={{ backgroundColor: extractedColor }} />
+                    </div>
+                    <div>
+                      <span className="text-label-sm font-bold text-white block">Dynamic (Album Art)</span>
+                      <span className="text-[11px] text-neutral-400 block mt-0.5">Real-time cover color</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setThemeMode('custom')}
+                    className={`p-3 rounded-xl border text-left flex flex-col justify-between gap-2.5 transition-all cursor-pointer ${
+                      themeMode === 'custom'
+                        ? 'bg-[#1e1e22] border-white/40 ring-2 ring-accent shadow-md'
+                        : 'bg-[#101012] border-white/5 hover:border-white/20 text-neutral-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="material-symbols-outlined text-[20px]" style={{ color: customColor }}>palette</span>
+                      <span className="w-4.5 h-4.5 rounded-full border border-white/20 shadow-sm transition-colors" style={{ backgroundColor: customColor }} />
+                    </div>
+                    <div>
+                      <span className="text-label-sm font-bold text-white block">Custom Palette</span>
+                      <span className="text-[11px] text-neutral-400 block mt-0.5">Pick any hex swatch</span>
+                    </div>
                   </button>
                 </div>
 
-                {/* Romanized Lyrics row */}
-                <div className="px-4 py-3 flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-label-md font-semibold text-white">Romanized Phonetic Lyrics</p>
-                    <p className="text-xs text-neutral-400 truncate">Romaji, Pinyin, Hindi phonetics</p>
+                {themeMode === 'custom' && (
+                  <div className="p-3 rounded-xl bg-[#101012] border border-white/10 space-y-2.5 animate-fade-in">
+                    <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+                      {presetPalettes.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setCustomColor(p.hex)}
+                          title={p.name}
+                          className={`h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer border ${
+                            customColor.toLowerCase() === p.hex.toLowerCase()
+                              ? 'border-white scale-105 shadow-md ring-2 ring-white/40'
+                              : 'border-white/10 hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: p.hex }}
+                        >
+                          {customColor.toLowerCase() === p.hex.toLowerCase() && (
+                            <span className="material-symbols-outlined text-[14px] text-black font-bold">check</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      const next = !romanizedLyrics;
-                      setRomanizedLyrics(next);
-                      localStorage.setItem('pulse_romanized', String(next));
-                    }}
-                    className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${
-                      romanizedLyrics ? 'bg-accent' : 'bg-neutral-700'
-                    }`}
-                  >
-                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-black transition-transform ${
-                      romanizedLyrics ? 'translate-x-5' : 'translate-x-0'
-                    }`} />
-                  </button>
-                </div>
+                )}
+              </div>
 
-                {/* Lyrics Font Size row */}
-                <div className="px-4 py-3 space-y-2.5">
-                  <div>
-                    <p className="text-label-md font-semibold text-white">Synced Lyrics Font Size</p>
-                    <p className="text-xs text-neutral-400 truncate">Text size in full-screen lyrics sheet</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'compact', label: 'Compact' },
-                      { id: 'normal',  label: 'Standard' },
-                      { id: 'large',   label: 'Large' },
-                    ].map((s) => (
-                      <button
-                        key={s.id}
-                        onClick={() => {
-                          setLyricFontSize(s.id);
-                          localStorage.setItem('pulse_lyric_size', s.id);
-                        }}
-                        className={`py-2 px-3 rounded-xl border text-center text-xs font-semibold transition-all cursor-pointer ${
-                          lyricFontSize === s.id
-                            ? 'bg-accent text-black font-bold border-accent'
-                            : 'bg-black/30 border-white/5 text-neutral-400 hover:text-white'
-                        }`}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              {/* Appearance Details Card */}
+              <div className="rounded-2xl bg-[#141416] border border-white/10 overflow-hidden divide-y divide-white/5 shadow-lg">
+                <MonochromeToggle
+                  label="Dynamic Ambient Glow"
+                  subtitle="Diffuse cover art colors into background radial glow"
+                  checked={ambientGlow}
+                  onChange={(val) => {
+                    setAmbientGlow(val);
+                    localStorage.setItem('pulse_ambient_glow', String(val));
+                  }}
+                />
+
+                <MonochromeToggle
+                  label="Romanized Phonetic Lyrics"
+                  subtitle="Display Romaji, Pinyin, and Hindi romanized pronunciation"
+                  checked={romanizedLyrics}
+                  onChange={(val) => {
+                    setRomanizedLyrics(val);
+                    localStorage.setItem('pulse_romanized', String(val));
+                  }}
+                />
+
+                <MonochromeSelect
+                  label="Synced Lyrics Font Size"
+                  subtitle="Adjust text size inside full-screen lyrics sheet"
+                  value={lyricFontSize}
+                  onChange={(val) => {
+                    setLyricFontSize(val);
+                    localStorage.setItem('pulse_lyric_size', val);
+                  }}
+                  options={[
+                    { value: 'compact', label: 'Compact' },
+                    { value: 'normal', label: 'Standard' },
+                    { value: 'large', label: 'Large' },
+                  ]}
+                />
               </div>
             </div>
           </div>
@@ -1208,21 +1472,24 @@ export default function SettingsModal({ isOpen, onClose }) {
       // ── 5. Backup & Import ─────────────────────────────────────────
       case 'backup':
         return (
-          <div className="space-y-3 animate-fade-in">
+          <div className="space-y-4 animate-fade-in pb-8 text-white">
             <div className="pb-0.5">
-              <h3 className="text-title-md font-bold text-white">Backup & Import</h3>
+              <h3 className="text-title-md font-bold text-white tracking-tight">Backup &amp; Import</h3>
               <p className="text-body-xs text-neutral-400 mt-0.5">
-                Import YouTube playlists directly or export/restore your library via JSON.
+                Import YouTube &amp; Spotify playlists directly or export/restore your library via JSON.
               </p>
             </div>
 
             {/* YouTube Playlist URL Importer */}
             {renderPlaylistUrlImporterSection()}
 
+            {/* Spotify Playlist URL Importer & Matcher */}
+            {renderSpotifyPlaylistImporterSection()}
+
             {/* JSON Backup & Restore Card */}
-            <div className="p-3.5 sm:p-4 rounded-xl bg-[#141416] border border-white/10 space-y-3 shadow-lg">
+            <div className="p-4 rounded-2xl bg-[#141416] border border-white/10 space-y-3 shadow-lg">
               <div>
-                <h4 className="text-label-md font-bold text-white">JSON Library Backup & Restore</h4>
+                <h4 className="text-label-md font-bold text-white">JSON Library Backup &amp; Restore</h4>
                 <p className="text-body-xs text-neutral-400 mt-0.5">
                   Export or restore your full cassette.fm library including playlists, liked tracks, and tags.
                 </p>
@@ -1243,13 +1510,13 @@ export default function SettingsModal({ isOpen, onClose }) {
               <div className="flex flex-wrap gap-2.5 pt-0.5">
                 <button
                   onClick={handleExportBackup}
-                  className="px-3.5 py-2 rounded-lg bg-accent text-black font-bold text-label-xs flex items-center gap-1.5 hover:opacity-90 transition-opacity cursor-pointer shadow-md shadow-accent/20"
+                  className="px-3.5 py-2 rounded-xl bg-white hover:bg-neutral-200 text-black font-bold text-label-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
                 >
                   <span className="material-symbols-outlined text-[16px]">download</span>
                   Export Backup JSON
                 </button>
 
-                <label className="px-3.5 py-2 rounded-lg border border-white/10 hover:border-white/30 text-white font-medium text-label-xs flex items-center gap-1.5 cursor-pointer bg-[#101012] transition-colors">
+                <label className="px-3.5 py-2 rounded-xl border border-white/10 hover:border-white/30 text-white font-semibold text-label-xs flex items-center gap-1.5 cursor-pointer bg-[#101012] transition-colors">
                   <span className="material-symbols-outlined text-[16px]">upload</span>
                   Restore from JSON
                   <input type="file" accept=".json" onChange={handleImportBackup} className="hidden" />

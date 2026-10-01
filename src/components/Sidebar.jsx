@@ -61,6 +61,18 @@ export default function Sidebar() {
                 </button>
               );
             })}
+
+            {/* Hardcoded Settings link directly in navigation list */}
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-2xl transition-all duration-150 w-full text-left cursor-pointer min-h-[44px] text-neutral-400 hover:bg-white/[0.05] hover:text-white"
+              title="Settings"
+            >
+              <span className="material-symbols-outlined text-[21px]">
+                settings
+              </span>
+              <span className="text-body-md font-semibold">Settings</span>
+            </button>
           </nav>
         )}
 
@@ -174,9 +186,9 @@ export default function Sidebar() {
           title="Settings"
         >
           <span className="material-symbols-outlined text-[20px] text-neutral-500 group-hover:text-accent group-hover:rotate-45 transition-transform duration-300">
-            tune
+            settings
           </span>
-          <span className="text-body-sm font-semibold">Settings Hub</span>
+          <span className="text-body-sm font-semibold">Settings</span>
         </button>
       </div>
     </aside>

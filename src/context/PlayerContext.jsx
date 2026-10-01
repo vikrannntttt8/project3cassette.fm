@@ -14,6 +14,7 @@ import {
   recordPlayedSongOffline,
 } from '../services/offlineStorage.js';
 import { getHighResImage } from '../utils/imageUtils.js';
+import { resolveDirectAudioStream } from '../services/audioStreamResolver.js';
 
 const PlayerContext = createContext(null);
 
@@ -531,13 +532,14 @@ export function PlayerProvider({ children }) {
         img.src = getHighResImage(rawCover);
       }
 
-      // 3. Resolve stream URL
+      // 3. Resolve direct stream URL (direct CDN / Piped fallback)
       const codec = settings.audioCodec || 'auto';
-      const streamRes = await fetch(apiUrl(`/api/stream/${targetVid}?format=json&quality=${audioQuality}&codec=${codec}`));
-      if (streamRes.ok) {
-        const meta = await streamRes.json();
-        prefetchedStreamMetaRef.current = meta;
-        const streamUrl = meta.streamUrl || apiUrl(`/api/stream/${targetVid}?quality=${audioQuality}&codec=${codec}`);
+      const streamResult = await resolveDirectAudioStream(targetVid, audioQuality, codec);
+      if (streamResult?.streamUrl) {
+        if (streamResult.meta) {
+          prefetchedStreamMetaRef.current = streamResult.meta;
+        }
+        const streamUrl = streamResult.streamUrl;
 
         // 4. Pre-buffer secondary HTML5 Audio element with 2-second decoding watchdog
         const nextAudio = nextAudioElementRef.current;
@@ -610,21 +612,12 @@ export function PlayerProvider({ children }) {
 
       if (!streamUrl && targetVideoId) {
         const codec = settings.audioCodec || 'auto';
-        try {
-          const res = await fetch(apiUrl(`/api/stream/${targetVideoId}?format=json&quality=${audioQuality}&codec=${codec}`));
-          if (res.ok) {
-            const meta = await res.json();
-            if (meta?.streamUrl) {
-              streamUrl = meta.streamUrl;
-              setActiveStreamMeta(meta);
-            }
+        const streamResult = await resolveDirectAudioStream(targetVideoId, audioQuality, codec);
+        if (streamResult?.streamUrl) {
+          streamUrl = streamResult.streamUrl;
+          if (streamResult.meta) {
+            setActiveStreamMeta(streamResult.meta);
           }
-        } catch (err) {
-          console.warn('[Audio Engine] format=json stream fetch error:', err);
-        }
-
-        if (!streamUrl) {
-          streamUrl = apiUrl(`/api/stream/${targetVideoId}?quality=${audioQuality}&codec=${codec}`);
         }
       }
 
@@ -653,6 +646,18 @@ export function PlayerProvider({ children }) {
               console.warn('[Audio Engine] Direct audio play caught:', err);
             });
         }
+      } else {
+        console.error('[Audio Engine] No direct audio stream available for track:', cleanSong.title);
+        setIsLoading(false);
+        setIsPlaying(false);
+        setStreamToast({
+          title: 'Playback Error',
+          detail: 'Direct audio stream unavailable. Skipping to next...',
+        });
+        setTimeout(() => {
+          setStreamToast(null);
+          playNextRef.current?.();
+        }, 2500);
       }
     } catch (err) {
       console.warn('[Audio Engine] executeLoadSong caught:', err);
@@ -771,17 +776,20 @@ export function PlayerProvider({ children }) {
 
     if (!fallbackAttemptRef.current && targetVideoId) {
       fallbackAttemptRef.current = true;
-      console.log('[Audio Engine] Retrying playback via server-side proxy stream:', targetVideoId);
-      const proxyUrl = apiUrl(`/api/stream/${targetVideoId}?quality=${audioQuality}`);
-      a.src = proxyUrl;
-      a.load();
-      try {
-        await a.play();
-        setIsPlaying(true);
-        setIsLoading(false);
-        return;
-      } catch (err) {
-        console.warn('[Audio Engine] Proxy stream playback also caught:', err);
+      console.log('[Audio Engine] Retrying playback via direct stream fallback:', targetVideoId);
+      const fallbackResult = await resolveDirectAudioStream(targetVideoId, audioQuality, 'auto');
+      if (fallbackResult?.streamUrl && fallbackResult.streamUrl !== a.src) {
+        a.src = fallbackResult.streamUrl;
+        a.load();
+        try {
+          await a.play();
+          setIsPlaying(true);
+          setIsLoading(false);
+          if (fallbackResult.meta) setActiveStreamMeta(fallbackResult.meta);
+          return;
+        } catch (err) {
+          console.warn('[Audio Engine] Fallback direct stream playback error:', err);
+        }
       }
     }
 

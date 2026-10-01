@@ -9,9 +9,8 @@ export default function LyricsView() {
   const [creditsOpen, setCreditsOpen] = useState(false);
 
   return (
-    // Desktop: height = 100vh minus the 88px persistent dock = fills canvas perfectly with no void.
-    // Mobile: h-full (no dock visible in lyrics view on mobile).
-    <div className="w-full flex flex-col overflow-hidden h-full md:h-[calc(100vh-88px)]">
+    // Desktop & Mobile: fills the entire available canvas height seamlessly
+    <div className="w-full h-full flex flex-col overflow-hidden">
       {/* ── Minimal header ─────────────────────────────────────────── */}
       <header className="flex-shrink-0 flex items-center justify-between px-4 sm:px-8 lg:px-10 py-3 sm:py-4 pt-safe min-h-[48px] sm:min-h-[56px]">
         {/* Back to home */}

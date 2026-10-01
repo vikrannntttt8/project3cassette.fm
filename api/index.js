@@ -1,5 +1,6 @@
 import {
   searchMusic,
+  getSearchSuggestions,
   getAlbumDetails,
   getWatchNext,
   getHomeFeedData,
@@ -27,6 +28,30 @@ export default async function handler(req, res) {
   const pathname = url.pathname;
 
   try {
+    // ── 0-sug. GET /api/search/suggestions?q=:query ─────────────
+    if (pathname === '/api/search/suggestions') {
+      const query = (
+        url.searchParams.get('q') ||
+        url.searchParams.get('query') ||
+        ''
+      ).trim();
+
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+
+      if (!query) {
+        return res.status(200).json([]);
+      }
+
+      try {
+        const suggestions = await getSearchSuggestions(query);
+        return res.status(200).json(Array.isArray(suggestions) ? suggestions : []);
+      } catch (err) {
+        console.error(`[API /api/search/suggestions] Error for "${query}":`, err);
+        return res.status(200).json([]);
+      }
+    }
+
     // ── 0. POST/GET /api/playlist/import ─────────────────────────
     if (pathname === '/api/playlist/import') {
       try {
@@ -131,7 +156,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── 1. GET /api/search?q=:query&type=:type ──────────────────
+    // ── 1. GET /api/search?q=:query&type=:type&continuation=:continuation ──
     if (pathname === '/api/search') {
       const query = (
         url.searchParams.get('q') ||
@@ -140,23 +165,27 @@ export default async function handler(req, res) {
         ''
       ).trim();
       const type = url.searchParams.get('type') || 'all';
+      const continuation = url.searchParams.get('continuation') || null;
 
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       res.setHeader('Access-Control-Allow-Origin', '*');
 
-      if (!query) {
-        return res.status(200).json([]);
+      if (!query && !continuation) {
+        return res.status(200).json({ results: [], shelves: null, topResult: null, continuation: null });
       }
 
       try {
-        const results = await searchMusic(query, type);
-        return res.status(200).json(Array.isArray(results) ? results : []);
+        const payload = await searchMusic(query, type, continuation);
+        return res.status(200).json(payload);
       } catch (err) {
         console.error(`[API /api/search] Error searching for "${query}" (type: ${type}):`, err);
         return res.status(200).json({
           success: false,
           error: err.message || 'Search service temporarily unavailable',
           results: [],
+          shelves: null,
+          topResult: null,
+          continuation: null,
         });
       }
     }

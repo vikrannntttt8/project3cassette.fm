@@ -189,15 +189,97 @@ function parseSongItem(item) {
 }
 
 /**
- * 1. searchMusic(query: string, type: 'all' | 'songs' | 'albums' | 'artists')
- * Queries specifically via YouTube Music.
- * Supports official-track sorting in 'songs' tab, album shelf renderer parsing, and artist views.
+ * 1a. getSearchSuggestions(query: string)
+ * Fetches real-time debounced autocomplete search predictions from YouTube Music.
  */
-export async function searchMusic(query, type = 'all') {
+export async function getSearchSuggestions(query) {
   if (!query || !query.trim()) return [];
+  try {
+    const yt = await getInnertube();
+    const sug = await yt.getSearchSuggestions(query.trim());
+    if (Array.isArray(sug) && sug.length > 0) {
+      return sug
+        .map((s) => (typeof s === 'string' ? s : (s?.text || s?.query || '')))
+        .filter((s) => Boolean(s && s.trim()));
+    }
+  } catch (err) {
+    console.warn('[Innertube] Suggestions warning:', err.message);
+  }
+  return [];
+}
+
+/**
+ * 1. searchMusic(query: string, type: 'all' | 'songs' | 'albums' | 'artists' | ..., continuationToken?: string)
+ * Queries YouTube Music with shelf-based nested structures for 'all' and continuation tokens for infinite scroll.
+ */
+export async function searchMusic(query, type = 'all', continuationToken = null) {
+  if (!query && !continuationToken) return { results: [], shelves: null, topResult: null, continuation: null };
 
   const yt = await getInnertube();
-  const q = query.trim();
+  const q = (query || '').trim();
+
+  // ── Continuation Fetching ───────────────────────────────────────────────
+  if (continuationToken) {
+    try {
+      const rawCont = await yt.actions.execute('/search', {
+        continuation: continuationToken,
+        client: 'YTMUSIC',
+      });
+      const parsed = Parser.parseResponse(rawCont.data);
+      const rawList = parsed.continuation_contents?.contents || [];
+
+      const items = rawList.map((item) => {
+        if (type === 'artists' || type === 'artist') {
+          const thumb = resolveThumbnail(item);
+          return {
+            id: item.id || '',
+            browseId: item.id || '',
+            name: item.name || item.title || 'Unknown Artist',
+            title: item.name || item.title || 'Unknown Artist',
+            thumbnail: thumb,
+            cover: thumb,
+            type: 'artist',
+          };
+        }
+        if (type === 'albums' || type === 'album') {
+          const thumb = resolveThumbnail(item);
+          return {
+            id: item.id || '',
+            browseId: item.id || '',
+            title: item.title || 'Unknown Album',
+            artist: item.artists?.map((x) => x.name).filter(Boolean).join(', ') || item.author?.name || 'Unknown Artist',
+            year: item.year || '',
+            thumbnail: thumb,
+            cover: thumb,
+            type: 'album',
+          };
+        }
+        if (type === 'community_playlists' || type === 'featured_playlists' || type === 'playlists' || type === 'playlist') {
+          const thumb = resolveThumbnail(item);
+          return {
+            id: item.id || item.playlist_id || item.browse_id || '',
+            browseId: item.id || item.playlist_id || item.browse_id || '',
+            playlistId: item.id || item.playlist_id || item.browse_id || '',
+            title: item.title?.text || item.title || 'Playlist',
+            artist: item.author?.name || item.author || 'YouTube Music',
+            itemCount: item.item_count || item.track_count || 'Playlist',
+            thumbnail: thumb,
+            cover: thumb,
+            type: 'playlist',
+          };
+        }
+        return parseSongItem(item);
+      }).filter((t) => t.id && t.id.length >= 2);
+
+      return {
+        results: items,
+        continuation: parsed.continuation_contents?.continuation || null,
+      };
+    } catch (err) {
+      console.warn('[Innertube] Search continuation error:', err);
+      return { results: [], continuation: null };
+    }
+  }
 
   // Helper for general YouTube video search fallback
   const searchGeneralVideos = async (limit = 20) => {
@@ -239,7 +321,6 @@ export async function searchMusic(query, type = 'all') {
       const qLower = q.toLowerCase();
       const wantsRemixOrSlowed = qLower.includes('slow') || qLower.includes('reverb') || qLower.includes('remix') || qLower.includes('cover');
 
-      // Filter out fan edits, slow-reverb uploads if not explicitly searched
       const filtered = wantsRemixOrSlowed
         ? songs
         : songs.filter((s) => {
@@ -251,19 +332,26 @@ export async function searchMusic(query, type = 'all') {
                    !tLower.includes('8d audio');
           });
 
-      // Bubble official releases to top
       filtered.sort((a, b) => {
         if (a.isOfficial && !b.isOfficial) return -1;
         if (!a.isOfficial && b.isOfficial) return 1;
         return 0;
       });
 
-      if (filtered.length > 0) return filtered;
+      let continuationToken = null;
+      if (searchResults.has_continuation) {
+        continuationToken = searchResults.contents?.firstOfType?.('MusicShelf')?.continuation || searchResults.contents?.[0]?.continuation || null;
+      }
+
+      if (filtered.length > 0) {
+        return { results: filtered, continuation: continuationToken };
+      }
     } catch (err) {
       console.warn('[Innertube] YouTube Music song search failed, trying general search:', err);
     }
 
-    return await searchGeneralVideos(20);
+    const fallback = await searchGeneralVideos(20);
+    return { results: fallback, continuation: null };
   }
 
   // ── Tab: Albums ─────────────────────────────────────────────────────────
@@ -272,7 +360,7 @@ export async function searchMusic(query, type = 'all') {
       const searchResults = await yt.music.search(q, { type: 'album' });
       const contents = searchResults.albums?.contents || searchResults.contents || [];
 
-      return contents.map((a) => {
+      const albums = contents.map((a) => {
         const id = a.id || '';
         const title = a.title || 'Unknown Album';
         const firstArtist = Array.isArray(a.artists) && a.artists.length > 0 ? a.artists[0] : null;
@@ -293,9 +381,16 @@ export async function searchMusic(query, type = 'all') {
           type: 'album',
         };
       }).filter((a) => a.id);
+
+      let continuationToken = null;
+      if (searchResults.has_continuation) {
+        continuationToken = searchResults.contents?.firstOfType?.('MusicShelf')?.continuation || searchResults.contents?.[0]?.continuation || null;
+      }
+
+      return { results: albums, continuation: continuationToken };
     } catch (err) {
       console.warn('[Innertube] Album search error:', err);
-      return [];
+      return { results: [], continuation: null };
     }
   }
 
@@ -305,7 +400,7 @@ export async function searchMusic(query, type = 'all') {
       const searchResults = await yt.music.search(q, { type: 'artist' });
       const contents = searchResults.artists?.contents || searchResults.contents || [];
 
-      return contents.map((art) => {
+      const artists = contents.map((art) => {
         const id = art.id || '';
         const name = art.name || art.title || 'Unknown Artist';
         const thumbnail = resolveThumbnail(art);
@@ -320,9 +415,16 @@ export async function searchMusic(query, type = 'all') {
           type: 'artist',
         };
       }).filter((art) => art.id);
+
+      let continuationToken = null;
+      if (searchResults.has_continuation) {
+        continuationToken = searchResults.contents?.firstOfType?.('MusicShelf')?.continuation || searchResults.contents?.[0]?.continuation || null;
+      }
+
+      return { results: artists, continuation: continuationToken };
     } catch (err) {
       console.warn('[Innertube] Artist search error:', err);
-      return [];
+      return { results: [], continuation: null };
     }
   }
 
@@ -332,11 +434,18 @@ export async function searchMusic(query, type = 'all') {
       const searchResults = await yt.music.search(q, { type: 'video' });
       const contents = searchResults.videos?.contents || searchResults.contents || [];
       const videos = contents.map(parseSongItem).filter((t) => t.id && t.id.length >= 10);
-      if (videos.length > 0) return videos;
+      
+      let continuationToken = null;
+      if (searchResults.has_continuation) {
+        continuationToken = searchResults.contents?.firstOfType?.('MusicShelf')?.continuation || searchResults.contents?.[0]?.continuation || null;
+      }
+
+      if (videos.length > 0) return { results: videos, continuation: continuationToken };
     } catch (err) {
       console.warn('[Innertube] YouTube Music video search note:', err.message);
     }
-    return await searchGeneralVideos(20);
+    const fallback = await searchGeneralVideos(20);
+    return { results: fallback, continuation: null };
   }
 
   // ── Tab: Podcasts ───────────────────────────────────────────────────────
@@ -359,11 +468,13 @@ export async function searchMusic(query, type = 'all') {
           type: 'podcast',
         };
       }).filter((p) => p.id);
-      if (podcasts.length > 0) return podcasts;
+
+      return { results: podcasts, continuation: null };
     } catch (err) {
       console.warn('[Innertube] Podcast search note:', err.message);
     }
-    return await searchGeneralVideos(15);
+    const fallback = await searchGeneralVideos(15);
+    return { results: fallback, continuation: null };
   }
 
   // ── Tab: Community Playlists / Playlists ─────────────────────────────────
@@ -371,7 +482,7 @@ export async function searchMusic(query, type = 'all') {
     try {
       const searchResults = await yt.music.search(q, { type: 'playlist' });
       const contents = searchResults.playlists?.contents || searchResults.contents || [];
-      return contents.map((pl) => {
+      const list = contents.map((pl) => {
         const id = pl.id || pl.playlist_id || pl.browse_id || '';
         const thumb = resolveThumbnail(pl);
         return {
@@ -386,9 +497,16 @@ export async function searchMusic(query, type = 'all') {
           type: 'playlist',
         };
       }).filter((pl) => pl.id);
+
+      let continuationToken = null;
+      if (searchResults.has_continuation) {
+        continuationToken = searchResults.contents?.firstOfType?.('MusicShelf')?.continuation || searchResults.contents?.[0]?.continuation || null;
+      }
+
+      return { results: list, continuation: continuationToken };
     } catch (err) {
       console.warn('[Innertube] Community playlist search error:', err);
-      return [];
+      return { results: [], continuation: null };
     }
   }
 
@@ -398,7 +516,7 @@ export async function searchMusic(query, type = 'all') {
       const searchResults = await yt.music.search(q, { type: 'featured_playlist' }).catch(() => null)
         || await yt.music.search(`${q} mix`, { type: 'playlist' }).catch(() => null);
       const contents = searchResults?.featured_playlists?.contents || searchResults?.playlists?.contents || searchResults?.contents || [];
-      return contents.map((pl) => {
+      const list = contents.map((pl) => {
         const id = pl.id || pl.playlist_id || pl.browse_id || '';
         const thumb = resolveThumbnail(pl);
         return {
@@ -412,19 +530,70 @@ export async function searchMusic(query, type = 'all') {
           type: 'playlist',
         };
       }).filter((pl) => pl.id);
+
+      return { results: list, continuation: null };
     } catch (err) {
       console.warn('[Innertube] Featured playlist search error:', err);
-      return [];
+      return { results: [], continuation: null };
     }
   }
 
-  // ── Tab: All (Mix official songs, albums, artists, and videos) ───────────
+  // ── Tab: All (Shelf-Based Architecture + Top Result Card) ────────────────
   try {
-    const [songRes, albumRes, artistRes, videoRes] = await Promise.allSettled([
+    let topResult = null;
+
+    // 1. Fetch main search to inspect Top Result (MusicCardShelf)
+    try {
+      const mainSearch = await yt.music.search(q);
+      const contents = mainSearch.contents || [];
+      const cardShelf = contents.find((c) => c.type === 'MusicCardShelf');
+      if (cardShelf) {
+        const thumb = resolveThumbnail(cardShelf.thumbnail || cardShelf);
+        const title = cardShelf.title?.toString() || 'Top Result';
+        const subtitle = cardShelf.subtitle?.toString() || '';
+        const subtitleLower = subtitle.toLowerCase();
+
+        let cardType = 'song';
+        if (subtitleLower.includes('artist')) cardType = 'artist';
+        else if (subtitleLower.includes('album') || subtitleLower.includes('ep') || subtitleLower.includes('single')) cardType = 'album';
+        else if (subtitleLower.includes('playlist')) cardType = 'playlist';
+        else if (subtitleLower.includes('video')) cardType = 'video';
+
+        const browseId = cardShelf.title?.endpoint?.payload?.browseId
+          || cardShelf.on_tap?.payload?.browseId
+          || cardShelf.buttons?.[0]?.endpoint?.payload?.browseId
+          || undefined;
+
+        const videoId = cardShelf.title?.endpoint?.payload?.videoId
+          || cardShelf.on_tap?.payload?.videoId
+          || cardShelf.buttons?.[0]?.endpoint?.payload?.videoId
+          || undefined;
+
+        topResult = {
+          id: videoId || browseId || 'top-result',
+          videoId: videoId || undefined,
+          browseId: browseId || undefined,
+          title,
+          subtitle,
+          artist: subtitle,
+          name: title,
+          thumbnail: thumb,
+          cover: thumb,
+          type: cardType,
+          buttons: cardShelf.buttons?.map((b) => b.text?.toString()).filter(Boolean) || [],
+        };
+      }
+    } catch (cardErr) {
+      console.warn('[Innertube] Main card search note:', cardErr.message);
+    }
+
+    // 2. Fetch parallel categories for dedicated shelves
+    const [songRes, albumRes, artistRes, videoRes, plRes] = await Promise.allSettled([
       yt.music.search(q, { type: 'song' }),
       yt.music.search(q, { type: 'album' }),
       yt.music.search(q, { type: 'artist' }),
       yt.music.search(q, { type: 'video' }),
+      yt.music.search(q, { type: 'playlist' }),
     ]);
 
     let songs = (songRes.status === 'fulfilled' ? (songRes.value.songs?.contents || songRes.value.contents || []) : [])
@@ -470,16 +639,71 @@ export async function searchMusic(query, type = 'all') {
       .map(parseSongItem)
       .filter((t) => t.id && t.id.length >= 10);
 
-    // Return combined result list with official releases prioritized
-    return [
+    const playlists = (plRes.status === 'fulfilled' ? (plRes.value.playlists?.contents || plRes.value.contents || []) : [])
+      .map((pl) => {
+        const thumb = resolveThumbnail(pl);
+        return {
+          id: pl.id || pl.playlist_id || pl.browse_id || '',
+          browseId: pl.id || pl.playlist_id || pl.browse_id || '',
+          playlistId: pl.id || pl.playlist_id || pl.browse_id || '',
+          title: pl.title?.text || pl.title || 'Playlist',
+          artist: pl.author?.name || pl.author || 'YouTube Music',
+          itemCount: pl.item_count || pl.track_count || 'Playlist',
+          thumbnail: thumb,
+          cover: thumb,
+          type: 'playlist',
+        };
+      })
+      .filter((pl) => pl.id);
+
+    // If topResult was not found in MusicCardShelf, pick most prominent match
+    if (!topResult) {
+      const qLower = q.toLowerCase();
+      const directArtist = artists.find((a) => a.name.toLowerCase() === qLower || a.name.toLowerCase().startsWith(qLower));
+      if (directArtist) {
+        topResult = { ...directArtist, subtitle: 'Artist' };
+      } else if (songs.length > 0) {
+        topResult = { ...songs[0], subtitle: `Song • ${songs[0].artist || 'Artist'}` };
+      } else if (albums.length > 0) {
+        topResult = { ...albums[0], subtitle: `Album • ${albums[0].artist || 'Artist'}` };
+      }
+    }
+
+    const allCombined = [
       ...songs.slice(0, 15),
       ...albums.slice(0, 6),
       ...artists.slice(0, 4),
       ...videos.slice(0, 4),
+      ...playlists.slice(0, 4),
     ];
+
+    return {
+      topResult,
+      shelves: {
+        songs: songs.slice(0, 10),
+        artists: artists.slice(0, 8),
+        albums: albums.slice(0, 8),
+        videos: videos.slice(0, 6),
+        playlists: playlists.slice(0, 8),
+      },
+      results: allCombined,
+      continuation: null,
+    };
   } catch (err) {
     console.error('[Innertube] Search all error:', err);
-    return await searchGeneralVideos(15);
+    const fallbackSongs = await searchGeneralVideos(15);
+    return {
+      topResult: fallbackSongs[0] || null,
+      shelves: {
+        songs: fallbackSongs,
+        artists: [],
+        albums: [],
+        videos: [],
+        playlists: [],
+      },
+      results: fallbackSongs,
+      continuation: null,
+    };
   }
 }
 

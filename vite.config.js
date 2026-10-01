@@ -139,16 +139,13 @@ function innertubeApiPlugin() {
           }
         }
 
-        // ── 1. GET /api/search?q=:query ───────────────────────────────────
-        // ── 1. GET /api/search?q=:query&type=:type ───────────────────────
-        if (pathname === '/api/search' && req.method === 'GET') {
+        // ── 0-sug. GET /api/search/suggestions?q=:query ─────────────────
+        if (pathname === '/api/search/suggestions' && req.method === 'GET') {
           const query = (
             parsedUrl.searchParams.get('q') ||
             parsedUrl.searchParams.get('query') ||
-            parsedUrl.searchParams.get('search_query') ||
             ''
           ).trim();
-          const type = parsedUrl.searchParams.get('type') || 'all';
 
           res.setHeader('Content-Type', 'application/json; charset=utf-8');
           res.setHeader('Access-Control-Allow-Origin', '*');
@@ -160,10 +157,44 @@ function innertubeApiPlugin() {
           }
 
           try {
-            const { searchMusic } = await import('./src/services/innertube.js');
-            const results = await searchMusic(query, type);
+            const { getSearchSuggestions } = await import('./src/services/innertube.js');
+            const suggestions = await getSearchSuggestions(query);
             res.statusCode = 200;
-            res.end(JSON.stringify(Array.isArray(results) ? results : []));
+            res.end(JSON.stringify(Array.isArray(suggestions) ? suggestions : []));
+            return;
+          } catch (err) {
+            console.error(`[API /api/search/suggestions] Error for "${query}":`, err);
+            res.statusCode = 200;
+            res.end(JSON.stringify([]));
+            return;
+          }
+        }
+
+        // ── 1. GET /api/search?q=:query&type=:type&continuation=:token ────
+        if (pathname === '/api/search' && req.method === 'GET') {
+          const query = (
+            parsedUrl.searchParams.get('q') ||
+            parsedUrl.searchParams.get('query') ||
+            parsedUrl.searchParams.get('search_query') ||
+            ''
+          ).trim();
+          const type = parsedUrl.searchParams.get('type') || 'all';
+          const continuation = parsedUrl.searchParams.get('continuation') || null;
+
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+
+          if (!query && !continuation) {
+            res.statusCode = 200;
+            res.end(JSON.stringify({ results: [], shelves: null, topResult: null, continuation: null }));
+            return;
+          }
+
+          try {
+            const { searchMusic } = await import('./src/services/innertube.js');
+            const payload = await searchMusic(query, type, continuation);
+            res.statusCode = 200;
+            res.end(JSON.stringify(payload));
             return;
           } catch (err) {
             console.error(`[API /api/search] Error searching for "${query}" (type: ${type}):`, err);
@@ -172,6 +203,9 @@ function innertubeApiPlugin() {
               success: false,
               error: err.message || 'Search service temporarily unavailable',
               results: [],
+              shelves: null,
+              topResult: null,
+              continuation: null,
             }));
             return;
           }

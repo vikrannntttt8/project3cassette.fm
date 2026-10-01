@@ -1,16 +1,19 @@
-# React + Vite
+## About cassette.fm 📼
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+**cassette.fm** is a high-performance, mobile-first music streaming PWA designed to deliver a seamless, zero-latency listening experience with a minimalist, ArchiveTune-inspired monochrome aesthetic.
 
-Currently, two official plugins are available:
+### 🎓 The Story Behind the Code
+I am a First-Year (FY) B.Tech Computer Engineering student, and I built this entire project from the ground up using **Antigravity** (AI) as my pair-programmer. 
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+I didn't build this just to make another music app—I built it to learn. By using AI to guide me through the development process, I was able to dive deep into complex backend mechanics and reverse engineering concepts that usually take years to encounter. 
 
-## React Compiler
+Through building cassette.fm, I learned how to:
+* **Reverse-Engineer APIs:** Understand and consume the undocumented YouTube Music / InnerTube APIs to fetch audio streams, lyrics, and metadata.
+* **Handle Complex Audio Pipelines:** Work with the Web Audio API to build N+1 aggressive prefetching and true gapless playback.
+* **Master State & Caching:** Implement offline-first architecture using `IndexedDB` and Service Workers to cache the last 70 played songs.
+* **Bridge Ecosystems:** Bypass CORS and build proxy matchers to seamlessly convert Spotify playlists into playable YouTube Music queues.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+This project is a personal sandbox for learning how real-world, enterprise-level streaming platforms actually work under the hood.
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+---
+**Made with ⚡ Antigravity**

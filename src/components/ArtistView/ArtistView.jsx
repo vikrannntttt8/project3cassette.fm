@@ -568,47 +568,83 @@ export default function ArtistView({ browseId, artistName }) {
               <div className="flex items-center justify-between">
                 <h2 className="text-headline-sm font-bold text-white flex items-center gap-2">
                   <span className="material-symbols-outlined text-white text-[22px]">disc_full</span>
-                  Singles & EPs
+                  Singles &amp; EPs
                 </h2>
                 <span className="text-body-sm text-[#888888]">{singlesList.length} releases</span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {singlesList.map((single, i) => {
-                  if (!single) return null;
-                  const singleTitle = single.title || 'Unknown Single';
-                  const singleThumb = single.thumbnail || single.cover || '';
-                  return (
-                    <div
-                      key={single.id || single.browseId || i}
-                      onClick={() => handleEntityClick(single, { target: 'album' })}
-                      className="group flex flex-col p-3 rounded-2xl bg-[#0a0a0a] border border-[#222222] hover:border-white transition-all duration-200 cursor-pointer shadow-lg"
-                    >
-                      <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-neutral-900 border border-[#262626]">
-                        <ImageWithFallback
-                          src={singleThumb}
-                          alt={singleTitle}
-                          icon="album"
-                          iconClassName="text-white/20 text-[40px]"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-black shadow-lg">
-                            <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                              play_arrow
-                            </span>
+              {compactAlbums ? (
+                <div className="flex flex-col gap-2">
+                  {singlesList.map((single, i) => {
+                    if (!single) return null;
+                    const singleTitle = single.title || 'Unknown Single';
+                    const singleThumb = single.thumbnail || single.cover || '';
+                    return (
+                      <div
+                        key={single.id || single.browseId || i}
+                        onClick={() => handleEntityClick(single, { target: 'album' })}
+                        className="flex items-center gap-3.5 p-2.5 rounded-xl bg-[#0e0e10] hover:bg-[#151518] border border-white/5 hover:border-white/20 transition-all cursor-pointer group"
+                      >
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-neutral-900 flex-shrink-0">
+                          <ImageWithFallback
+                            src={singleThumb}
+                            alt={singleTitle}
+                            icon="album"
+                            iconClassName="text-white/20 text-[20px]"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-label-md font-semibold text-white truncate group-hover:text-neutral-200">
+                            {singleTitle}
+                          </p>
+                          <p className="text-body-xs text-[#888888]">{single.year || 'Single'}</p>
+                        </div>
+                        <span className="material-symbols-outlined text-neutral-500 group-hover:text-white text-[20px] pr-2">
+                          chevron_right
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {singlesList.map((single, i) => {
+                    if (!single) return null;
+                    const singleTitle = single.title || 'Unknown Single';
+                    const singleThumb = single.thumbnail || single.cover || '';
+                    return (
+                      <div
+                        key={single.id || single.browseId || i}
+                        onClick={() => handleEntityClick(single, { target: 'album' })}
+                        className="group flex flex-col p-3 rounded-2xl bg-[#0a0a0a] border border-[#222222] hover:border-white transition-all duration-200 cursor-pointer shadow-lg"
+                      >
+                        <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-neutral-900 border border-[#262626]">
+                          <ImageWithFallback
+                            src={singleThumb}
+                            alt={singleTitle}
+                            icon="album"
+                            iconClassName="text-white/20 text-[40px]"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-black shadow-lg">
+                              <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                                play_arrow
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <p className="text-label-md font-bold text-white truncate group-hover:underline transition-colors">
-                        {singleTitle}
-                      </p>
-                      <p className="text-label-sm text-[#888888] mt-0.5">{single.year || 'Single'}</p>
-                    </div>
-                  );
-                })}
-              </div>
+                        <p className="text-label-md font-bold text-white truncate group-hover:underline transition-colors">
+                          {singleTitle}
+                        </p>
+                        <p className="text-label-sm text-[#888888] mt-0.5">{single.year || 'Single'}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </section>
           )}
 

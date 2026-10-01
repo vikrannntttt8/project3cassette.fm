@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { usePlayer } from '../../context/PlayerContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 
-export default function ImportPlaylistModal({ isOpen, onClose, defaultTab = 'youtube' }) {
+export default function ImportPlaylistModal({ isOpen, onClose, defaultTab = 'youtube', initialTab }) {
+  const startTab = initialTab || defaultTab || 'youtube';
   const { importPlaylistFromUrl, importSpotifyPlaylistFromUrl, liked, playlists, history } = usePlayer();
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState(defaultTab); // 'youtube' | 'spotify' | 'backup'
+  const [activeTab, setActiveTab] = useState(startTab); // 'youtube' | 'spotify' | 'backup'
 
   // ── YouTube state ──
   const [ytUrl, setYtUrl] = useState('');
@@ -25,13 +26,13 @@ export default function ImportPlaylistModal({ isOpen, onClose, defaultTab = 'you
 
   useEffect(() => {
     if (isOpen) {
-      setActiveTab(defaultTab);
+      setActiveTab(initialTab || defaultTab || 'youtube');
       setYtStatus(null);
       setSpotifyStatus(null);
       setSpotifyProgress(null);
       setJsonStatus(null);
     }
-  }, [isOpen, defaultTab]);
+  }, [isOpen, defaultTab, initialTab]);
 
   if (!isOpen) return null;
 

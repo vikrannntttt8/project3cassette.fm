@@ -8,9 +8,9 @@ import MarqueeText from '../shared/MarqueeText.jsx';
 
 export default function AlbumArtPanel() {
   const {
-    currentSong, isPlaying, togglePlay,
-    currentTime, duration, seek, volume, changeVolume,
-    isLiked, toggleLike, playPrev, playNext,
+    currentSong,
+    currentTime, duration, seek,
+    isLiked, toggleLike,
     routeToSongEntity, routeToArtistEntity, audioQuality, setAudioQuality, activeStreamMeta, toggleView,
     isDownloaded, toggleDownload,
   } = usePlayer();
@@ -169,78 +169,6 @@ export default function AlbumArtPanel() {
           </div>
         </div>
 
-        {/* Playback Controls (Shuffle, Prev, Play/Pause, Next, Repeat) */}
-        <div className="w-full flex items-center justify-between px-2 pt-1">
-          <button
-            type="button"
-            className="text-[#888888] hover:text-white transition-colors p-2 rounded-full hover:bg-white/5 cursor-pointer"
-            title="Shuffle"
-          >
-            <span className="material-symbols-outlined text-[20px]">shuffle</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={playPrev}
-            disabled={!currentSong}
-            className="text-[#888888] hover:text-white transition-colors disabled:opacity-30 p-2 rounded-full hover:bg-white/5 cursor-pointer"
-            title="Previous track"
-          >
-            <span className="material-symbols-outlined text-[26px]">skip_previous</span>
-          </button>
-
-          {/* Main play/pause button */}
-          <button
-            type="button"
-            onClick={togglePlay}
-            disabled={!currentSong}
-            className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-150 shadow-[0_0_20px_rgba(255,255,255,0.25)] disabled:opacity-40 cursor-pointer"
-            title={isPlaying ? 'Pause' : 'Play'}
-          >
-            <span
-              className="material-symbols-outlined text-[26px] text-black font-bold"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              {isPlaying ? 'pause' : 'play_arrow'}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={playNext}
-            disabled={!currentSong}
-            className="text-[#888888] hover:text-white transition-colors disabled:opacity-30 p-2 rounded-full hover:bg-white/5 cursor-pointer"
-            title="Next track"
-          >
-            <span className="material-symbols-outlined text-[26px]">skip_next</span>
-          </button>
-
-          <button
-            type="button"
-            className="text-[#888888] hover:text-white transition-colors p-2 rounded-full hover:bg-white/5 cursor-pointer"
-            title="Repeat"
-          >
-            <span className="material-symbols-outlined text-[20px]">repeat</span>
-          </button>
-        </div>
-
-        {/* Volume slider */}
-        <div className="w-full flex items-center gap-2.5 px-2">
-          <span className="material-symbols-outlined text-[#888888] text-[16px] flex-shrink-0">volume_down</span>
-          <div className="relative flex-1 h-1.5 flex items-center cursor-pointer group">
-            <div className="w-full h-1 bg-[#262626] rounded-full overflow-hidden">
-              <div className="bg-white h-full rounded-full transition-all" style={{ width: `${volume * 100}%` }} />
-            </div>
-            <input
-              type="range"
-              min={0} max={1} step={0.01}
-              value={volume}
-              onChange={e => changeVolume(parseFloat(e.target.value))}
-              className="absolute -top-2 -bottom-2 inset-x-0 w-full opacity-0 cursor-pointer h-5"
-            />
-          </div>
-          <span className="material-symbols-outlined text-[#888888] text-[16px] flex-shrink-0">volume_up</span>
-        </div>
       </section>
 
       {addMenuSong && (

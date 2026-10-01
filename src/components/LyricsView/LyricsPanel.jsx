@@ -9,10 +9,6 @@ export default function LyricsPanel() {
     lyricsLoading,
     currentTime,
     seek,
-    isPlaying,
-    togglePlay,
-    playNext,
-    playPrev,
     currentSong,
     fetchLyricsForSong,
   } = usePlayer();
@@ -118,38 +114,9 @@ export default function LyricsPanel() {
         })}
       </div>
 
-      {/* Subtle Floating In-View Playback & Status Bar */}
-      <div className="absolute bottom-2 inset-x-0 z-20 flex items-center justify-between px-2 text-[11px] text-neutral-500 font-mono">
-        <div className="flex items-center gap-2 bg-[#141416]/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/5 shadow-lg">
-          <button
-            onClick={playPrev}
-            className="hover:text-white transition-colors cursor-pointer"
-            title="Previous"
-          >
-            <span className="material-symbols-outlined text-[16px]">skip_previous</span>
-          </button>
-          <button
-            onClick={togglePlay}
-            className="text-accent hover:opacity-80 transition-opacity cursor-pointer flex items-center"
-            title={isPlaying ? 'Pause' : 'Play'}
-          >
-            <span
-              className="material-symbols-outlined text-[18px]"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              {isPlaying ? 'pause' : 'play_arrow'}
-            </span>
-          </button>
-          <button
-            onClick={playNext}
-            className="hover:text-white transition-colors cursor-pointer"
-            title="Next"
-          >
-            <span className="material-symbols-outlined text-[16px]">skip_next</span>
-          </button>
-        </div>
-
-        <span className="uppercase tracking-widest text-[10px] bg-[#141416]/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/5">
+      {/* Lyrics source attribution */}
+      <div className="absolute bottom-2 right-2 z-20">
+        <span className="uppercase tracking-widest text-[10px] text-neutral-600 font-mono bg-[#141416]/80 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/5">
           {lyricsSource === 'synced'
             ? '✦ Synced · lrclib'
             : lyricsSource === 'plain'

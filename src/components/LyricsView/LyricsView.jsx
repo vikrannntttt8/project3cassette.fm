@@ -9,9 +9,11 @@ export default function LyricsView() {
   const [creditsOpen, setCreditsOpen] = useState(false);
 
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden">
+    // Desktop: height = 100vh minus the 88px persistent dock = fills canvas perfectly with no void.
+    // Mobile: h-full (no dock visible in lyrics view on mobile).
+    <div className="w-full flex flex-col overflow-hidden h-full md:h-[calc(100vh-88px)]">
       {/* ── Minimal header ─────────────────────────────────────────── */}
-      <header className="flex-shrink-0 flex items-center justify-between px-4 sm:px-8 lg:px-10 py-3 sm:py-5 pt-safe min-h-[48px] sm:min-h-[56px]">
+      <header className="flex-shrink-0 flex items-center justify-between px-4 sm:px-8 lg:px-10 py-3 sm:py-4 pt-safe min-h-[48px] sm:min-h-[56px]">
         {/* Back to home */}
         <button
           onClick={toggleView}
@@ -26,14 +28,14 @@ export default function LyricsView() {
         </button>
 
         {/* Right controls */}
-        <div className="flex items-center gap-5 text-on-surface-variant">
-          <button className="hover:text-white transition-colors" title="AirPlay">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" viewBox="0 0 24 24">
-              <path d="M5 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1" />
-              <polygon points="12 15 17 21 7 21 12 15" />
-            </svg>
+        <div className="flex items-center gap-4 text-on-surface-variant">
+          <button
+            onClick={() => setCreditsOpen(true)}
+            className="text-[11px] font-mono text-neutral-500 hover:text-white transition-colors cursor-pointer tracking-widest uppercase"
+          >
+            Credits
           </button>
-          <button onClick={toggleView} className="text-accent hover:opacity-80 transition-colors" title="Lyrics Active">
+          <button onClick={toggleView} className="text-accent hover:opacity-80 transition-colors" title="Close Lyrics">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M7 8h10M7 12h6m-6 4h10M4 4h16v16H4V4z" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -42,27 +44,12 @@ export default function LyricsView() {
       </header>
 
       {/* ── 2-Column content (desktop: non-scrolling split; mobile: single scrollable) ── */}
-      <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-16
+      <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12
         overflow-y-auto lg:overflow-hidden
         py-2 px-4 sm:px-8 lg:px-16 max-w-7xl mx-auto w-full items-center">
         <AlbumArtPanel />
         <LyricsPanel />
       </main>
-
-      {/* ── Footer ────────────────────────────────────────────── */}
-      <footer className="lyrics-footer flex-shrink-0 flex items-center justify-between text-label-sm text-[#888888] px-4 sm:px-10 py-3 border-t border-[#1a1a1a]/50">
-        <span className="tracking-wide text-[12px] font-mono">
-          {currentSong?.album || 'cassette.fm'}
-        </span>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setCreditsOpen(true)}
-            className="text-[12px] text-[#888888] hover:text-white transition-colors underline-offset-4 hover:underline cursor-pointer"
-          >
-            Credits
-          </button>
-        </div>
-      </footer>
 
       {/* ── Spotify Credits Modal ── */}
       <CreditsModal

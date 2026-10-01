@@ -115,8 +115,9 @@ function AppShell() {
         </div>
       )}
 
-      {/* ── Persistent Glass Player Dock (hidden in expanded lyrics view or full-screen settings) ── */}
-      {view !== 'lyrics' && !isSettingsOpen && <PlayerDock />}
+      {/* ── Persistent Player Dock ───────────────────────────────── */}
+      {/* Desktop (md+): always shown above the lyrics canvas. Mobile: hidden during lyrics. */}
+      {!isSettingsOpen && <PlayerDock />}
 
       {/* ── Mobile Bottom Navigation Bar (< md) ── */}
       {view !== 'lyrics' && !isSettingsOpen && (

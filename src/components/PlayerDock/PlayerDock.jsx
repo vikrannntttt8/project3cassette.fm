@@ -42,10 +42,8 @@ export default function PlayerDock() {
   const [addMenuSong, setAddMenuSong] = useState(null);
   const touchStartY = useRef(0);
 
-  // Hide dock entirely in lyrics view or when settings is open
-  if (view === 'lyrics' || isSettingsOpen) {
-    return null;
-  }
+  // Settings guard (already handled by App.jsx but keep as safety)
+  if (isSettingsOpen) return null;
 
   const liked = currentSong ? isLiked(currentSong.id) : false;
   const downloaded = currentSong ? isDownloaded(currentSong.id) : false;
@@ -280,13 +278,14 @@ export default function PlayerDock() {
         </div>
       </div>
 
-      {/* ── MOBILE MINI PLAYER (< md) — Floating pill above bottom nav ── */}
-      <div
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onClick={handleMobileDockClick}
-        className="md:hidden player-dock-wrap fixed z-50 pointer-events-auto select-none"
-      >
+      {/* ── MOBILE MINI PLAYER (< md) — Hidden when in lyrics view ── */}
+      {view !== 'lyrics' && (
+        <div
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onClick={handleMobileDockClick}
+          className="md:hidden player-dock-wrap fixed z-50 pointer-events-auto select-none"
+        >
         <div className="player-dock-inner cursor-pointer flex items-center justify-between gap-2.5 mx-3">
           {/* Left: thumb + info */}
           <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
@@ -366,6 +365,7 @@ export default function PlayerDock() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Full-Height iOS / YT Music Slide-Up Sheet */}
       <MobilePlayerSheet

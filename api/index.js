@@ -270,43 +270,89 @@ export default async function handler(req, res) {
       const videoId = pathname.replace('/api/stream/', '').split('?')[0];
       const quality = url.searchParams.get('quality') || 'max';
       const codec = url.searchParams.get('codec') || 'auto';
+
+      // Set CORS headers first so browser can always read error responses
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Accept-Ranges, Content-Type');
+
+      // Step 1: Resolve the stream URL via Innertube
+      let streamInfo;
       try {
-        const streamInfo = await resolveAudioStream(videoId, quality, codec);
+        streamInfo = await resolveAudioStream(videoId, quality, codec);
+      } catch (resolveErr) {
+        console.error(`[API /api/stream] Resolution failed for ${videoId}:`, resolveErr.message);
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return res.status(503).json({
+          error: 'Stream resolution failed — audio engine could not decipher URL',
+          detail: resolveErr.message,
+          videoId,
+          code: 'STREAM_RESOLVE_ERROR',
+        });
+      }
 
-        // If JSON requested via query param or header
-        if (url.searchParams.get('format') === 'json' || req.headers.accept?.includes('application/json')) {
-          res.setHeader('Content-Type', 'application/json; charset=utf-8');
-          return res.status(200).json(streamInfo);
-        }
+      // If JSON requested, return metadata only
+      if (url.searchParams.get('format') === 'json' || req.headers.accept?.includes('application/json')) {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return res.status(200).json(streamInfo);
+      }
 
-        // Handle direct audio range proxy
-        const headers = {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
-          'Referer': 'https://music.youtube.com/',
-          'Origin': 'https://music.youtube.com',
-        };
+      // Step 2: Fetch from YouTube CDN
+      const upstreamHeaders = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+        'Referer': 'https://music.youtube.com/',
+        'Origin': 'https://music.youtube.com',
+      };
+      if (req.headers.range) upstreamHeaders['Range'] = req.headers.range;
 
-        if (req.headers.range) {
-          headers['Range'] = req.headers.range;
-        }
+      let streamRes;
+      try {
+        streamRes = await fetch(streamInfo.streamUrl, { headers: upstreamHeaders });
+      } catch (fetchErr) {
+        console.error(`[API /api/stream] CDN fetch failed for ${videoId}:`, fetchErr.message);
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return res.status(503).json({
+          error: 'YouTube CDN fetch failed',
+          detail: fetchErr.message,
+          videoId,
+          code: 'CDN_FETCH_ERROR',
+        });
+      }
 
-        const streamRes = await fetch(streamInfo.streamUrl, { headers });
-        res.statusCode = streamRes.status;
-        res.setHeader('Content-Type', streamRes.headers.get('content-type') || 'audio/webm');
-        res.setHeader('Accept-Ranges', 'bytes');
+      // Step 3: Handle non-2xx from YouTube (403 = expired URL, 404 = unavailable)
+      if (!streamRes.ok && streamRes.status !== 206) {
+        console.error(`[API /api/stream] YouTube CDN returned ${streamRes.status} for ${videoId}`);
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        return res.status(502).json({
+          error: `YouTube stream returned HTTP ${streamRes.status}`,
+          detail: streamRes.status === 403
+            ? 'Stream URL has expired (cipher signature invalidated). The next play will automatically retry.'
+            : 'YouTube returned an error. The track may be unavailable in your region.',
+          videoId,
+          httpStatus: streamRes.status,
+          code: 'UPSTREAM_HTTP_ERROR',
+        });
+      }
 
-        if (streamRes.headers.has('content-length')) {
-          res.setHeader('Content-Length', streamRes.headers.get('content-length'));
-        }
-        if (streamRes.headers.has('content-range')) {
-          res.setHeader('Content-Range', streamRes.headers.get('content-range'));
-        }
+      // Step 4: Set audio headers BEFORE writing any body bytes
+      const mimeType = streamRes.headers.get('content-type') || streamInfo.mimeType || 'audio/webm; codecs=opus';
+      res.setHeader('Content-Type', mimeType);
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'no-cache');
+      if (streamRes.headers.has('content-length')) {
+        res.setHeader('Content-Length', streamRes.headers.get('content-length'));
+      } else {
+        res.setHeader('Transfer-Encoding', 'chunked');
+      }
+      if (streamRes.headers.has('content-range')) {
+        res.setHeader('Content-Range', streamRes.headers.get('content-range'));
+      }
+      res.statusCode = streamRes.status;
 
-        if (!streamRes.body) {
-          return res.end();
-        }
+      if (!streamRes.body) return res.end();
 
-        const reader = streamRes.body.getReader();
+      // Step 5: Stream pipe with per-chunk error handling
+      const reader = streamRes.body.getReader();
+      try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -314,11 +360,10 @@ export default async function handler(req, res) {
             await new Promise((resolve) => res.once('drain', resolve));
           }
         }
-        return res.end();
-      } catch (err) {
-        console.error('[API /api/stream] Error:', err);
-        return res.status(500).json({ error: err.message });
+      } catch (pipeErr) {
+        console.error(`[API /api/stream] Pipe error for ${videoId}:`, pipeErr.message);
       }
+      return res.end();
     }
 
     // ── 7. GET /api/spotify/credits ─────────────────────────────

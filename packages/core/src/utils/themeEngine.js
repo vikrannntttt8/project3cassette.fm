@@ -101,7 +101,9 @@ export function hslToHex(h, s, l) {
  * @returns {Promise<string>} hex color
  */
 export async function extractDominantColor(imageUrl) {
-  if (!imageUrl || typeof window === 'undefined') return DEFAULT_ACCENT_HEX;
+  if (!imageUrl || typeof window === 'undefined' || typeof document === 'undefined' || typeof Image === 'undefined') {
+    return DEFAULT_ACCENT_HEX;
+  }
 
   return new Promise((resolve) => {
     const img = new Image();

@@ -14,7 +14,7 @@
     "build:desktop": "npm run build --workspace=@cassette/desktop",
     "tauri:dev": "npm run tauri:dev --workspace=@cassette/desktop",
     "tauri:build": "npm run tauri:build --workspace=@cassette/desktop",
-    "start:mobile": "npm run start --workspace=@cassette/mobile",
+    "start:mobile": "npm run start --workspace=@cassette/mobile -- --clear",
     "android:mobile": "npm run android --workspace=@cassette/mobile",
     "ios:mobile": "npm run ios --workspace=@cassette/mobile"
   },

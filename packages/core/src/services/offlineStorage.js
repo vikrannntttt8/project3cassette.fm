@@ -7,6 +7,8 @@
  *    with background audio, metadata, and lyrics caching in CacheStorage & IndexedDB.
  */
 
+import { getStoredItem, setStoredItem } from '../utils/storage.js';
+
 const DB_NAME = 'cassette_offline_db';
 const DB_VERSION = 2;
 const STORE_MANUAL_TRACKS = 'offline_tracks';
@@ -55,7 +57,7 @@ export async function getOfflineTracks() {
   } catch (err) {
     console.warn('[OfflineStorage] getOfflineTracks error:', err);
     try {
-      const raw = localStorage.getItem('cassette_offline_meta');
+      const raw = getStoredItem('cassette_offline_meta');
       return raw ? JSON.parse(raw) : [];
     } catch {
       return [];
@@ -85,7 +87,7 @@ export async function getLast70OfflineTracks() {
   } catch (err) {
     console.warn('[OfflineStorage] getLast70OfflineTracks error:', err);
     try {
-      const raw = localStorage.getItem('cassette_last70_meta');
+      const raw = getStoredItem('cassette_last70_meta');
       return raw ? JSON.parse(raw) : [];
     } catch {
       return [];
@@ -120,9 +122,9 @@ export async function isTrackOffline(trackId) {
     return await checkStore(STORE_LAST70);
   } catch {
     try {
-      const raw = localStorage.getItem('cassette_offline_meta');
+      const raw = getStoredItem('cassette_offline_meta');
       if (raw && JSON.parse(raw).some((t) => t.id === idStr || t.videoId === idStr)) return true;
-      const raw70 = localStorage.getItem('cassette_last70_meta');
+      const raw70 = getStoredItem('cassette_last70_meta');
       if (raw70 && JSON.parse(raw70).some((t) => t.id === idStr || t.videoId === idStr)) return true;
       return false;
     } catch {
@@ -213,13 +215,13 @@ export async function recordPlayedSongOffline(track, lyrics = '') {
       }
     }
 
-    // Update LocalStorage mirror
+    // Update storage mirror
     try {
       const last70List = await getLast70OfflineTracks();
-      localStorage.setItem('cassette_last70_meta', JSON.stringify(last70List.slice(0, MAX_LAST70_LIMIT)));
+      setStoredItem('cassette_last70_meta', JSON.stringify(last70List.slice(0, MAX_LAST70_LIMIT)));
     } catch {}
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent !== 'undefined') {
       window.dispatchEvent(new CustomEvent('cassette:offline-changed', { detail: { trackId, action: 'last70-updated' } }));
     }
     return true;
@@ -281,14 +283,14 @@ export async function saveTrackOffline(track) {
       req.onerror = () => reject(req.error);
     });
 
-    // Update LocalStorage fallback mirror
+    // Update storage fallback mirror
     try {
       const existing = await getOfflineTracks();
       const filtered = existing.filter((t) => t.id !== trackId);
-      localStorage.setItem('cassette_offline_meta', JSON.stringify([...filtered, cleanTrack]));
+      setStoredItem('cassette_offline_meta', JSON.stringify([...filtered, cleanTrack]));
     } catch {}
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent !== 'undefined') {
       window.dispatchEvent(new CustomEvent('cassette:offline-changed', { detail: { trackId, action: 'added' } }));
     }
     return true;
@@ -317,17 +319,17 @@ export async function removeOfflineTrack(trackId) {
       req.onerror = () => reject(req.error);
     });
 
-    // Clean up LocalStorage mirror
+    // Clean up storage mirror
     try {
-      const raw = localStorage.getItem('cassette_offline_meta');
+      const raw = getStoredItem('cassette_offline_meta');
       if (raw) {
         const list = JSON.parse(raw);
         const filtered = list.filter((t) => t.id !== idStr && t.videoId !== idStr);
-        localStorage.setItem('cassette_offline_meta', JSON.stringify(filtered));
+        setStoredItem('cassette_offline_meta', JSON.stringify(filtered));
       }
     } catch {}
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent !== 'undefined') {
       window.dispatchEvent(new CustomEvent('cassette:offline-changed', { detail: { trackId: idStr, action: 'removed' } }));
     }
     return true;

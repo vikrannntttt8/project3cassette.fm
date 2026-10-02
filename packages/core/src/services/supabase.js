@@ -1,4 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
+import {
+  getStoredItem,
+  setStoredItem,
+  removeStoredItem,
+  supabaseStorageAdapter,
+} from '../utils/storage.js';
 
 const STORAGE_URL_KEY = 'pulse_supabase_url';
 const STORAGE_KEY_KEY = 'pulse_supabase_anon_key';
@@ -14,7 +20,7 @@ export function getSupabaseCredentials() {
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) ||
     (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SUPABASE_URL) ||
     (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_URL) ||
-    localStorage.getItem(STORAGE_URL_KEY) ||
+    getStoredItem(STORAGE_URL_KEY) ||
     DEFAULT_SUPABASE_URL;
 
   const envKey =
@@ -22,7 +28,7 @@ export function getSupabaseCredentials() {
     (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) ||
     (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SUPABASE_ANON_KEY) ||
     (typeof process !== 'undefined' && process.env?.VITE_SUPABASE_ANON_KEY) ||
-    localStorage.getItem(STORAGE_KEY_KEY) ||
+    getStoredItem(STORAGE_KEY_KEY) ||
     DEFAULT_SUPABASE_ANON_KEY;
 
   return { url: (envUrl || '').trim(), anonKey: (envKey || '').trim() };
@@ -39,11 +45,13 @@ export function getSupabaseClient() {
   const { url, anonKey } = getSupabaseCredentials();
   if (url && anonKey) {
     try {
+      const isBrowser = typeof window !== 'undefined' && typeof window.location !== 'undefined';
       supabaseClient = createClient(url, anonKey, {
         auth: {
+          storage: supabaseStorageAdapter,
           persistSession: true,
           autoRefreshToken: true,
-          detectSessionInUrl: true,
+          detectSessionInUrl: isBrowser && Boolean(window.location?.search || window.location?.hash),
           flowType: 'implicit',
         },
       });
@@ -58,11 +66,11 @@ export function getSupabaseClient() {
 export const supabase = getSupabaseClient();
 
 export function saveSupabaseCredentials(url, anonKey) {
-  if (url) localStorage.setItem(STORAGE_URL_KEY, url.trim());
-  else localStorage.removeItem(STORAGE_URL_KEY);
+  if (url) setStoredItem(STORAGE_URL_KEY, url.trim());
+  else removeStoredItem(STORAGE_URL_KEY);
 
-  if (anonKey) localStorage.setItem(STORAGE_KEY_KEY, anonKey.trim());
-  else localStorage.removeItem(STORAGE_KEY_KEY);
+  if (anonKey) setStoredItem(STORAGE_KEY_KEY, anonKey.trim());
+  else removeStoredItem(STORAGE_KEY_KEY);
 
   // Reset client so it re-initializes
   supabaseClient = null;
@@ -81,7 +89,7 @@ export async function signInWithGoogle() {
   const { data, error } = await client.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: typeof window !== 'undefined' && window.location ? window.location.origin : undefined,
     },
   });
 
@@ -429,10 +437,9 @@ export async function fetchHistoryCloud(userId) {
  * Helper to safely read and parse arrays from multiple localStorage keys
  */
 function readLocalArray(keys = []) {
-  if (typeof window === 'undefined' || !window.localStorage) return [];
   for (const key of keys) {
     try {
-      const raw = localStorage.getItem(key);
+      const raw = getStoredItem(key);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -569,22 +576,20 @@ export async function performFullCloudSync(userId, { liked = [], playlists = [],
     await syncPlaylistsCloud(userId, mergedPlaylists);
   }
 
-  // ── PHASE 4: STATE PERSISTENCE TO LOCALSTORAGE ───────────────────────
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      const playlistStr = JSON.stringify(mergedPlaylists);
-      localStorage.setItem('pulse_cus', playlistStr);
-      localStorage.setItem('pulse_playlists', playlistStr);
+  // ── PHASE 4: STATE PERSISTENCE ───────────────────────
+  try {
+    const playlistStr = JSON.stringify(mergedPlaylists);
+    setStoredItem('pulse_cus', playlistStr);
+    setStoredItem('pulse_playlists', playlistStr);
 
-      const likedStr = JSON.stringify(mergedLiked);
-      localStorage.setItem('likedSongs', likedStr);
-      localStorage.setItem('pulse_like', likedStr);
-      localStorage.setItem('pulse_liked_songs', likedStr);
+    const likedStr = JSON.stringify(mergedLiked);
+    setStoredItem('likedSongs', likedStr);
+    setStoredItem('pulse_like', likedStr);
+    setStoredItem('pulse_liked_songs', likedStr);
 
-      localStorage.setItem('pulse_playback_history', JSON.stringify(mergedHistory));
-    } catch (err) {
-      console.warn('[Supabase Sync] Error persisting merged data to localStorage:', err);
-    }
+    setStoredItem('pulse_playback_history', JSON.stringify(mergedHistory));
+  } catch (err) {
+    console.warn('[Supabase Sync] Error persisting merged data:', err);
   }
 
   console.log(`[Supabase Sync] MERGE COMPLETE: Reconciled ${mergedPlaylists.length} playlists, ${mergedLiked.length} liked songs, and ${mergedHistory.length} history items.`);

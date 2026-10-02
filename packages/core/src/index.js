@@ -36,3 +36,4 @@ export * from './utils/lrcParser.js';
 export * from './utils/imageUtils.js';
 export * from './utils/timeFormat.js';
 export * from './utils/apiConfig.js';
+export * from './utils/storage.js';

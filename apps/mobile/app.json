@@ -11,7 +11,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "fm.cassette.mobile",
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -20,10 +22,14 @@
         "backgroundColor": "#0e0e0e"
       },
       "package": "fm.cassette.mobile",
-      "permissions": ["WAKE_LOCK", "FOREGROUND_SERVICE"]
+      "permissions": [
+        "WAKE_LOCK",
+        "FOREGROUND_SERVICE"
+      ]
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-splash-screen"
     ]
   }
 }

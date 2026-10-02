@@ -9,6 +9,7 @@
  */
 
 import CryptoJS from 'crypto-js';
+import { getStoredItem, setStoredItem } from '../utils/storage.js';
 
 export const AUTH_STORAGE_KEY = 'pulse_auth_config';
 
@@ -29,15 +30,14 @@ export const DEFAULT_AUTH_CONFIG = {
 };
 
 /**
- * Retrieve persisted auth configuration from localStorage
+ * Retrieve persisted auth configuration
  */
 export function getAuthConfig() {
-  if (typeof window === 'undefined') return { ...DEFAULT_AUTH_CONFIG };
   try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
-    const legacyCookie = localStorage.getItem('pulse_yt_cookie') || '';
-    const legacyVisitor = localStorage.getItem('pulse_visitor_data') || '';
-    const legacyToken = localStorage.getItem('pulse_yt_token') || '';
+    const raw = getStoredItem(AUTH_STORAGE_KEY);
+    const legacyCookie = getStoredItem('pulse_yt_cookie') || '';
+    const legacyVisitor = getStoredItem('pulse_visitor_data') || '';
+    const legacyToken = getStoredItem('pulse_yt_token') || '';
 
     if (!raw) {
       return {
@@ -63,20 +63,19 @@ export function getAuthConfig() {
 }
 
 /**
- * Persist auth configuration to localStorage
+ * Persist auth configuration
  */
 export function saveAuthConfig(config) {
-  if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(config));
+    setStoredItem(AUTH_STORAGE_KEY, JSON.stringify(config));
     if (config.ytmusicCookie) {
-      localStorage.setItem('pulse_yt_cookie', config.ytmusicCookie);
+      setStoredItem('pulse_yt_cookie', config.ytmusicCookie);
     }
     if (config.visitorData) {
-      localStorage.setItem('pulse_visitor_data', config.visitorData);
+      setStoredItem('pulse_visitor_data', config.visitorData);
     }
     if (config.sapisid) {
-      localStorage.setItem('pulse_yt_token', config.sapisid);
+      setStoredItem('pulse_yt_token', config.sapisid);
     }
   } catch (err) {
     console.error('[AuthSync] Failed to persist auth config:', err);

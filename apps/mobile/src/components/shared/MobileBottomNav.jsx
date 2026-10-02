@@ -1,7 +1,57 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Radio, Search, Library, Settings } from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+
+function NavTabItem({ tab, isActive, onPress }) {
+  const scale = useSharedValue(1);
+  const IconComponent = tab.Icon;
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.85, { damping: 12, stiffness: 350 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={styles.tabItem}
+    >
+      {/* Active Top Indicator */}
+      {isActive && <View style={styles.activeIndicator} />}
+
+      <Animated.View style={[styles.iconWrapper, animatedStyle]}>
+        <IconComponent
+          size={21}
+          color={isActive ? '#FFFFFF' : '#737373'}
+          strokeWidth={isActive ? 2.5 : 1.9}
+        />
+      </Animated.View>
+      <Text
+        style={[
+          styles.tabLabel,
+          isActive ? styles.tabLabelActive : styles.tabLabelInactive,
+        ]}
+      >
+        {tab.label}
+      </Text>
+    </Pressable>
+  );
+}
 
 export default function MobileBottomNav({ currentTab = 'home', onTabPress }) {
   const insets = useSafeAreaInsets();
@@ -18,35 +68,14 @@ export default function MobileBottomNav({ currentTab = 'home', onTabPress }) {
   return (
     <View style={[styles.navContainer, { paddingBottom: bottomPadding }]}>
       <View style={styles.tabsRow}>
-        {tabs.map((tab) => {
-          const isActive = currentTab === tab.id;
-          const IconComponent = tab.Icon;
-          return (
-            <TouchableOpacity
-              key={tab.id}
-              activeOpacity={0.7}
-              onPress={() => onTabPress?.(tab.id)}
-              style={styles.tabItem}
-            >
-              {/* Active Top Indicator Pill */}
-              {isActive && <View style={styles.activeIndicator} />}
-
-              <IconComponent
-                size={21}
-                color={isActive ? '#FFFFFF' : '#737373'}
-                strokeWidth={isActive ? 2.5 : 1.9}
-              />
-              <Text
-                style={[
-                  styles.tabLabel,
-                  isActive ? styles.tabLabelActive : styles.tabLabelInactive,
-                ]}
-              >
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        {tabs.map((tab) => (
+          <NavTabItem
+            key={tab.id}
+            tab={tab}
+            isActive={currentTab === tab.id}
+            onPress={() => onTabPress?.(tab.id)}
+          />
+        ))}
       </View>
     </View>
   );
@@ -85,6 +114,15 @@ const styles = StyleSheet.create({
     height: 2.5,
     borderRadius: 2,
     backgroundColor: '#ffffff',
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  iconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabLabel: {
     fontSize: 10,

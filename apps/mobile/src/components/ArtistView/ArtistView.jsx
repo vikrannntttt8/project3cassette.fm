@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { ArrowLeft, Play, Radio, Heart, Check, Disc } from 'lucide-react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
+import { Image } from 'expo-image';
+import { ArrowLeft, Play, Check } from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  FadeIn,
+} from 'react-native-reanimated';
 import SongRow from '../HomeView/SongRow.jsx';
 import AlbumCard from '../HomeView/AlbumCard.jsx';
 
@@ -14,6 +21,7 @@ export default function ArtistView({
   isPlaying,
 }) {
   const [isFollowing, setIsFollowing] = useState(false);
+  const playScale = useSharedValue(1);
 
   if (!artist) return null;
 
@@ -32,70 +40,83 @@ export default function ArtistView({
     { id: `${artist.id || 'art'}-alb-2`, title: 'The Classics', artist: artistName, year: '2021', thumbnail: avatarUrl },
   ];
 
+  const animatedPlay = useAnimatedStyle(() => ({
+    transform: [{ scale: playScale.value }],
+  }));
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#0e0e0e' }} className="flex-1 bg-[#0e0e0e]">
+    <Animated.View entering={FadeIn.duration(200)} style={styles.container}>
       {/* Top Bar */}
-      <View className="flex-row items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0e0e0e]/90">
+      <View style={styles.topBar}>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onBack}
-          className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
+          style={styles.backButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <ArrowLeft size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text numberOfLines={1} className="text-sm font-bold text-neutral-300 max-w-[200px]">
+        <Text numberOfLines={1} style={styles.headerTitle}>
           {artistName}
         </Text>
-        <View className="w-10" />
+        <View style={styles.spacer} />
       </View>
 
       <ScrollView
-        className="flex-1"
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={styles.scrollContent}
       >
         {/* Artist Hero Header */}
-        <View className="items-center px-6 pt-6 pb-4">
-          <View className="w-36 h-36 rounded-full overflow-hidden shadow-2xl border-2 border-white/10 mb-4 bg-[#161616]">
+        <View style={styles.headerInfo}>
+          <View style={styles.avatarWrapper}>
             <Image
               source={{ uri: avatarUrl }}
-              className="w-full h-full"
-              resizeMode="cover"
+              style={styles.avatarImage}
+              contentFit="cover"
+              transition={200}
             />
           </View>
 
-          <View className="flex-row items-center gap-2 mb-1">
-            <Text className="text-2xl font-black text-white text-center tracking-tight">
-              {artistName}
-            </Text>
-            <View className="w-4 h-4 rounded-full bg-blue-500 items-center justify-center">
+          <View style={styles.titleRow}>
+            <Text style={styles.artistTitle}>{artistName}</Text>
+            <View style={styles.verifiedBadge}>
               <Check size={10} color="#FFFFFF" strokeWidth={3} />
             </View>
           </View>
 
-          <Text className="text-xs font-mono uppercase tracking-wider text-neutral-500 mb-5">
+          <Text style={styles.artistMeta}>
             Verified Artist • 18.4M Monthly Listeners
           </Text>
 
           {/* Action Row */}
-          <View className="flex-row items-center gap-3">
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => onPlaySong?.(topTracks[0])}
-              className="h-11 px-6 bg-white rounded-full flex-row items-center justify-center gap-2 shadow-lg"
-            >
-              <Play size={16} color="#000000" fill="#000000" />
-              <Text className="text-black font-bold text-sm">Play Top Track</Text>
-            </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <Animated.View style={animatedPlay}>
+              <Pressable
+                onPress={() => onPlaySong?.(topTracks[0])}
+                onPressIn={() => (playScale.value = withSpring(0.92, { damping: 14, stiffness: 300 }))}
+                onPressOut={() => (playScale.value = withSpring(1, { damping: 15, stiffness: 250 }))}
+                style={styles.playButton}
+              >
+                <Play size={16} color="#000000" fill="#000000" />
+                <Text style={styles.playText}>Play Top Track</Text>
+              </Pressable>
+            </Animated.View>
 
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => setIsFollowing(!isFollowing)}
-              className={`h-11 px-5 rounded-full border items-center justify-center ${
-                isFollowing ? 'bg-white/10 border-white/30' : 'bg-transparent border-white/20'
-              }`}
+              style={[
+                styles.followButton,
+                isFollowing ? styles.followButtonActive : styles.followButtonInactive,
+              ]}
             >
-              <Text className={`text-xs font-bold uppercase tracking-wider ${isFollowing ? 'text-white' : 'text-neutral-300'}`}>
+              <Text
+                style={[
+                  styles.followText,
+                  isFollowing ? styles.followTextActive : styles.followTextInactive,
+                ]}
+              >
                 {isFollowing ? 'Following' : 'Follow'}
               </Text>
             </TouchableOpacity>
@@ -103,10 +124,8 @@ export default function ArtistView({
         </View>
 
         {/* Top Tracks Shelf */}
-        <View className="px-4 pt-4 mb-6">
-          <Text className="text-base font-bold text-white tracking-tight mb-3">
-            Popular Releases
-          </Text>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Popular Releases</Text>
           {topTracks.map((song, idx) => (
             <SongRow
               key={song.id || idx}
@@ -121,10 +140,8 @@ export default function ArtistView({
         </View>
 
         {/* Discography Shelf */}
-        <View className="px-4 mb-6">
-          <Text className="text-base font-bold text-white tracking-tight mb-3">
-            Discography
-          </Text>
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Discography</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {discography.map((album, idx) => (
               <AlbumCard
@@ -136,6 +153,163 @@ export default function ArtistView({
           </ScrollView>
         </View>
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0e0e0e',
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#d4d4d8',
+    maxWidth: 200,
+  },
+  spacer: {
+    width: 38,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 130,
+  },
+  headerInfo: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  avatarWrapper: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    overflow: 'hidden',
+    backgroundColor: '#1f1f22',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    marginBottom: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 16,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  artistTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: -0.4,
+  },
+  verifiedBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#3b82f6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  artistMeta: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: '#71717a',
+    marginBottom: 18,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  playButton: {
+    height: 44,
+    paddingHorizontal: 22,
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  playText: {
+    color: '#000000',
+    fontWeight: '700',
+    fontSize: 13.5,
+  },
+  followButton: {
+    height: 44,
+    paddingHorizontal: 20,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  followButtonInactive: {
+    backgroundColor: 'transparent',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  followButtonActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+  },
+  followText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+  },
+  followTextInactive: {
+    color: '#d4d4d8',
+  },
+  followTextActive: {
+    color: '#ffffff',
+  },
+  sectionContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: -0.3,
+    marginBottom: 12,
+  },
+});

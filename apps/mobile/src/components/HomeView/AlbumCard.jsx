@@ -1,55 +1,130 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import { Disc, Play } from 'lucide-react-native';
+import { Disc } from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
 
 export default function AlbumCard({ item, onPress }) {
   if (!item) return null;
 
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.94, { damping: 14, stiffness: 280 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 250 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={() => onPress?.(item)}
-      className="p-3 rounded-2xl bg-[#161616] border border-white/5 w-[150px] mr-3"
-    >
-      {/* Artwork */}
-      <View className="w-full aspect-square rounded-xl overflow-hidden bg-neutral-900 border border-white/5 relative items-center justify-center mb-2.5">
-        {item.thumbnail || item.cover ? (
-          <Image
-            source={{ uri: item.thumbnail || item.cover }}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
-            transition={200}
-          />
-        ) : (
-          <Disc size={32} color="#525252" />
-        )}
+    <Animated.View style={[styles.wrapper, animatedStyle]}>
+      <Pressable
+        onPress={() => onPress?.(item)}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={styles.card}
+      >
+        {/* Artwork */}
+        <View style={styles.imageWrapper}>
+          {item.thumbnail || item.cover ? (
+            <Image
+              source={{ uri: item.thumbnail || item.cover }}
+              style={styles.image}
+              contentFit="cover"
+              transition={200}
+            />
+          ) : (
+            <Disc size={32} color="#525252" />
+          )}
 
-        {/* Track count badge */}
-        {item.songCount > 0 ? (
-          <View className="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded-full border border-white/10">
-            <Text className="text-[9px] font-mono text-neutral-300">
-              {item.songCount} tracks
-            </Text>
-          </View>
-        ) : null}
-      </View>
+          {/* Track count badge */}
+          {item.songCount > 0 ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{item.songCount} tracks</Text>
+            </View>
+          ) : null}
+        </View>
 
-      {/* Info */}
-      <View className="w-full">
-        <Text
-          numberOfLines={1}
-          className="text-xs font-bold text-white tracking-tight"
-        >
-          {item.title || 'Untitled'}
-        </Text>
-        <Text
-          numberOfLines={1}
-          className="text-[11px] text-neutral-400 mt-0.5"
-        >
-          {item.artist || item.year || item.subtitle || 'Album'}
-        </Text>
-      </View>
-    </TouchableOpacity>
+        {/* Info */}
+        <View style={styles.infoContainer}>
+          <Text numberOfLines={1} style={styles.title}>
+            {item.title || 'Untitled'}
+          </Text>
+          <Text numberOfLines={1} style={styles.subtitle}>
+            {item.artist || item.year || item.subtitle || 'Album'}
+          </Text>
+        </View>
+      </Pressable>
+    </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrapper: {
+    marginRight: 12,
+  },
+  card: {
+    width: 148,
+    padding: 10,
+    borderRadius: 20,
+    backgroundColor: '#161618',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  imageWrapper: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: '#1f1f22',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  badge: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  badgeText: {
+    fontSize: 9,
+    fontFamily: 'monospace',
+    color: '#d4d4d8',
+  },
+  infoContainer: {
+    width: '100%',
+  },
+  title: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: -0.2,
+  },
+  subtitle: {
+    fontSize: 11,
+    color: '#a1a1aa',
+    marginTop: 2,
+  },
+});

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   ChevronDown,
@@ -10,9 +10,13 @@ import {
   Shuffle,
   Repeat,
   Heart,
-  Music2,
-  ListMusic,
 } from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+} from 'react-native-reanimated';
 import { formatTime } from '@cassette/core';
 import AlbumArtPanel from './AlbumArtPanel.jsx';
 import LyricsPanel from './LyricsPanel.jsx';
@@ -36,41 +40,67 @@ export default function LyricsView({
   onToggleRepeat,
 }) {
   const [tab, setTab] = useState('art'); // 'art' | 'lyrics'
-  const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+  const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
+
+  const playScale = useSharedValue(1);
+  const heartScale = useSharedValue(1);
+
+  const animatedPlay = useAnimatedStyle(() => ({
+    transform: [{ scale: playScale.value }],
+  }));
+
+  const animatedHeart = useAnimatedStyle(() => ({
+    transform: [{ scale: heartScale.value }],
+  }));
+
+  const handleLikePress = () => {
+    heartScale.value = withSequence(
+      withSpring(1.4, { damping: 10, stiffness: 300 }),
+      withSpring(1, { damping: 12, stiffness: 200 })
+    );
+    onToggleLike?.(currentSong);
+  };
+
+  const handleScrubberPress = (e) => {
+    const { locationX } = e.nativeEvent;
+    // Estimate width or use layout width
+    const totalWidth = 320; // fallback standard width
+    if (duration > 0 && totalWidth > 0) {
+      const seekRatio = Math.max(0, Math.min(1, locationX / totalWidth));
+      onSeek?.(seekRatio * duration);
+    }
+  };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: '#0e0e0e', justifyContent: 'space-between' }}
-      className="flex-1 bg-[#0e0e0e] justify-between"
-      edges={['top', 'bottom']}
-    >
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       {/* ── Top Bar ── */}
-      <View className="flex-row items-center justify-between px-5 py-3 border-b border-white/5">
+      <View style={styles.topBar}>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onClose}
-          className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/5"
+          style={styles.iconCircle}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <ChevronDown size={22} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* Tab switch between Art & Lyrics */}
-        <View className="flex-row bg-[#161616] rounded-full p-1 border border-white/5">
+        {/* Tab switcher: Cover vs Lyrics */}
+        <View style={styles.tabSwitcher}>
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => setTab('art')}
-            className={`px-3 py-1 rounded-full ${tab === 'art' ? 'bg-white' : ''}`}
+            style={[styles.switchChip, tab === 'art' && styles.switchChipActive]}
           >
-            <Text className={`text-xs font-semibold ${tab === 'art' ? 'text-black' : 'text-neutral-400'}`}>
+            <Text style={[styles.switchText, tab === 'art' ? styles.switchTextActive : styles.switchTextInactive]}>
               Cover
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => setTab('lyrics')}
-            className={`px-3 py-1 rounded-full ${tab === 'lyrics' ? 'bg-white' : ''}`}
+            style={[styles.switchChip, tab === 'lyrics' && styles.switchChipActive]}
           >
-            <Text className={`text-xs font-semibold ${tab === 'lyrics' ? 'text-black' : 'text-neutral-400'}`}>
+            <Text style={[styles.switchText, tab === 'lyrics' ? styles.switchTextActive : styles.switchTextInactive]}>
               Lyrics
             </Text>
           </TouchableOpacity>
@@ -78,17 +108,20 @@ export default function LyricsView({
 
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => onToggleLike?.(currentSong)}
-          className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/5"
+          onPress={handleLikePress}
+          style={styles.iconCircle}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Heart size={18} color={isLiked ? '#FFFFFF' : '#737373'} fill={isLiked ? '#FFFFFF' : 'none'} />
+          <Animated.View style={animatedHeart}>
+            <Heart size={18} color={isLiked ? '#FFFFFF' : '#737373'} fill={isLiked ? '#FFFFFF' : 'none'} />
+          </Animated.View>
         </TouchableOpacity>
       </View>
 
       {/* ── Main Canvas (Cover or Lyrics) ── */}
-      <View className="flex-1 justify-center px-4">
+      <View style={styles.mainCanvas}>
         {tab === 'art' ? (
-          <AlbumArtPanel song={currentSong} />
+          <AlbumArtPanel song={currentSong} isPlaying={isPlaying} />
         ) : (
           <LyricsPanel
             lyrics={lyrics}
@@ -100,32 +133,29 @@ export default function LyricsView({
       </View>
 
       {/* ── Scrubber & Bottom Controls ── */}
-      <View className="px-6 pb-6 pt-2">
-        {/* Scrubber bar */}
-        <View className="w-full mb-4">
-          <View className="h-1.5 bg-neutral-800 rounded-full overflow-hidden w-full mb-2">
-            <View
-              className="h-full bg-white rounded-full"
-              style={{ width: `${progressPercent}%` }}
-            />
+      <View style={styles.bottomControls}>
+        {/* Interactive Scrubber Bar */}
+        <Pressable
+          onPress={handleScrubberPress}
+          style={styles.scrubberContainer}
+        >
+          <View style={styles.scrubberTrack}>
+            <View style={[styles.scrubberFill, { width: `${progressPercent}%` }]} />
+            <View style={[styles.scrubberThumb, { left: `${progressPercent}%` }]} />
           </View>
-          <View className="flex-row justify-between">
-            <Text className="text-[11px] font-mono text-neutral-400">
-              {formatTime(currentTime)}
-            </Text>
-            <Text className="text-[11px] font-mono text-neutral-400">
-              {formatTime(duration)}
-            </Text>
+          <View style={styles.timeLabelsRow}>
+            <Text style={styles.timeText}>{formatTime(currentTime)}</Text>
+            <Text style={styles.timeText}>{formatTime(duration)}</Text>
           </View>
-        </View>
+        </Pressable>
 
         {/* Transport controls */}
-        <View className="flex-row items-center justify-between px-2">
+        <View style={styles.transportRow}>
           {/* Shuffle */}
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={onToggleShuffle}
-            className="p-2"
+            style={styles.transportIconBtn}
           >
             <Shuffle size={20} color={isShuffled ? '#FFFFFF' : '#525252'} />
           </TouchableOpacity>
@@ -134,29 +164,31 @@ export default function LyricsView({
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={onSkipPrev}
-            className="p-2"
+            style={styles.transportIconBtn}
           >
             <SkipBack size={26} color="#FFFFFF" />
           </TouchableOpacity>
 
           {/* Play/Pause */}
-          <TouchableOpacity
-            activeOpacity={0.7}
+          <Pressable
             onPress={onTogglePlay}
-            className="w-16 h-16 rounded-full bg-white items-center justify-center shadow-2xl"
+            onPressIn={() => (playScale.value = withSpring(0.9, { damping: 15, stiffness: 300 }))}
+            onPressOut={() => (playScale.value = withSpring(1, { damping: 15, stiffness: 250 }))}
           >
-            {isPlaying ? (
-              <Pause size={26} color="#000000" fill="#000000" />
-            ) : (
-              <Play size={26} color="#000000" fill="#000000" />
-            )}
-          </TouchableOpacity>
+            <Animated.View style={[styles.mainPlayBtn, animatedPlay]}>
+              {isPlaying ? (
+                <Pause size={26} color="#000000" fill="#000000" />
+              ) : (
+                <Play size={26} color="#000000" fill="#000000" style={{ marginLeft: 3 }} />
+              )}
+            </Animated.View>
+          </Pressable>
 
           {/* Next */}
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={onSkipNext}
-            className="p-2"
+            style={styles.transportIconBtn}
           >
             <SkipForward size={26} color="#FFFFFF" />
           </TouchableOpacity>
@@ -165,7 +197,7 @@ export default function LyricsView({
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={onToggleRepeat}
-            className="p-2"
+            style={styles.transportIconBtn}
           >
             <Repeat size={20} color={isRepeat ? '#FFFFFF' : '#525252'} />
           </TouchableOpacity>
@@ -174,3 +206,131 @@ export default function LyricsView({
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#0e0e0e',
+    justifyContent: 'space-between',
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  tabSwitcher: {
+    flexDirection: 'row',
+    backgroundColor: '#161618',
+    borderRadius: 20,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  switchChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  switchChipActive: {
+    backgroundColor: '#ffffff',
+  },
+  switchText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  switchTextActive: {
+    color: '#000000',
+  },
+  switchTextInactive: {
+    color: '#a1a1aa',
+  },
+  mainCanvas: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  bottomControls: {
+    paddingHorizontal: 24,
+    paddingBottom: 28,
+    paddingTop: 8,
+  },
+  scrubberContainer: {
+    width: '100%',
+    marginBottom: 16,
+    paddingVertical: 8,
+  },
+  scrubberTrack: {
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 2,
+    overflow: 'visible',
+    position: 'relative',
+    marginBottom: 8,
+  },
+  scrubberFill: {
+    height: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 2,
+  },
+  scrubberThumb: {
+    position: 'absolute',
+    top: -4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    marginLeft: -6,
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.5,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  timeLabelsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  timeText: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    color: '#71717a',
+  },
+  transportRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+  },
+  transportIconBtn: {
+    padding: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mainPlayBtn: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+});

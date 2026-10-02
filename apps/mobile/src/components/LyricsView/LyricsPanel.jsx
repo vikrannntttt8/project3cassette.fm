@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 
 export default function LyricsPanel({
   lyrics = [],
@@ -22,13 +22,13 @@ export default function LyricsPanel({
   }
 
   return (
-    <View className="flex-1 w-full justify-center">
+    <View style={styles.container}>
       {hasLyrics && lyrics.length > 0 ? (
         <ScrollView
           ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
-          className="flex-1 px-4 py-2"
-          contentContainerStyle={{ paddingVertical: 40 }}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
         >
           {lyrics.map((line, idx) => {
             const isActive = idx === activeIndex;
@@ -37,14 +37,13 @@ export default function LyricsPanel({
                 key={idx}
                 activeOpacity={0.7}
                 onPress={() => onSeek?.(line.time)}
-                className="py-2.5 my-0.5"
+                style={styles.lineButton}
               >
                 <Text
-                  className={`text-lg sm:text-xl font-bold tracking-tight ${
-                    isActive
-                      ? 'text-white scale-105'
-                      : 'text-neutral-600'
-                  }`}
+                  style={[
+                    styles.lineText,
+                    isActive ? styles.lineTextActive : styles.lineTextInactive,
+                  ]}
                 >
                   {line.text}
                 </Text>
@@ -53,8 +52,8 @@ export default function LyricsPanel({
           })}
         </ScrollView>
       ) : (
-        <View className="items-center justify-center py-12 px-6">
-          <Text className="text-sm font-semibold text-neutral-500 text-center">
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
             {hasLyrics ? 'Loading lyrics...' : 'No synchronized lyrics available for this track'}
           </Text>
         </View>
@@ -62,3 +61,47 @@ export default function LyricsPanel({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  scrollContent: {
+    paddingVertical: 50,
+  },
+  lineButton: {
+    paddingVertical: 10,
+    marginVertical: 2,
+  },
+  lineText: {
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  lineTextActive: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 22,
+  },
+  lineTextInactive: {
+    color: '#52525b',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#71717a',
+    textAlign: 'center',
+  },
+});

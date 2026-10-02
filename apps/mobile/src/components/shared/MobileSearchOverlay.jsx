@@ -1,7 +1,16 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Modal,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, X, Clock, Play, ArrowUpLeft, Music } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import { Search, X, Clock, Play, ArrowUpLeft, Music, Trash2 } from 'lucide-react-native';
 import SongRow from '../HomeView/SongRow.jsx';
 import AlbumCard from '../HomeView/AlbumCard.jsx';
 import ArtistCard from '../HomeView/ArtistCard.jsx';
@@ -62,8 +71,6 @@ export default function MobileSearchOverlay({
     };
   }, [trimmed, catalogSongs, catalogAlbums, catalogArtists]);
 
-  if (!isOpen) return null;
-
   const handleSelectQuery = (text) => {
     setQuery(text);
     if (!recentSearches.includes(text)) {
@@ -71,223 +78,230 @@ export default function MobileSearchOverlay({
     }
   };
 
+  const handleClearHistory = () => {
+    setRecentSearches([]);
+  };
+
   const hasResults =
     searchResults.songs.length > 0 ||
     searchResults.albums.length > 0 ||
     searchResults.artists.length > 0;
 
+  if (!isOpen) return null;
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      {/* Search Bar Header */}
-      <View style={styles.searchHeader}>
-        <View style={styles.inputWrapper}>
-          <Search size={18} color="#737373" />
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search songs, artists, albums..."
-            placeholderTextColor="#737373"
-            returnKeyType="search"
-            autoFocus
-            style={styles.textInput}
-          />
-          {query.length > 0 && (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => setQuery('')}
-              style={styles.clearButton}
-            >
-              <X size={16} color="#737373" />
-            </TouchableOpacity>
-          )}
+    <Modal
+      visible={isOpen}
+      animationType="fade"
+      presentationStyle="fullScreen"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+        {/* Search Bar Header */}
+        <View style={styles.searchHeader}>
+          <View style={styles.inputWrapper}>
+            <Search size={18} color="#737373" />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search songs, artists, albums..."
+              placeholderTextColor="#737373"
+              returnKeyType="search"
+              autoFocus
+              style={styles.textInput}
+            />
+            {query.length > 0 && (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setQuery('')}
+                style={styles.clearButton}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <X size={16} color="#737373" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onClose}
+            style={styles.cancelButton}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={onClose}
-          style={styles.cancelButton}
-        >
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Filter Tabs when query is active */}
-      {trimmed.length > 0 && (
-        <View style={styles.tabsRow}>
-          {SEARCH_TABS.map((tab) => {
-            const isTabActive = activeTab === tab.id;
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                activeOpacity={0.7}
-                onPress={() => setActiveTab(tab.id)}
-                style={[
-                  styles.tabChip,
-                  isTabActive ? styles.tabChipActive : styles.tabChipInactive,
-                ]}
-              >
-                <Text
+        {/* Filter Tabs when query is active */}
+        {trimmed.length > 0 && (
+          <View style={styles.tabsRow}>
+            {SEARCH_TABS.map((tab) => {
+              const isTabActive = activeTab === tab.id;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  activeOpacity={0.7}
+                  onPress={() => setActiveTab(tab.id)}
                   style={[
-                    styles.tabChipText,
-                    isTabActive ? styles.tabChipTextActive : styles.tabChipTextInactive,
+                    styles.tabChip,
+                    isTabActive ? styles.tabChipActive : styles.tabChipInactive,
                   ]}
                 >
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      )}
-
-      {/* Main Content Area */}
-      <ScrollView style={styles.scrollArea} keyboardShouldPersistTaps="handled">
-        {/* Results */}
-        {trimmed.length > 0 && hasResults && (
-          <View style={styles.resultsContainer}>
-            {/* Top Match Hero */}
-            {searchResults.songs.length > 0 && (activeTab === 'all' || activeTab === 'songs') && (
-              <View style={styles.shelf}>
-                <Text style={styles.sectionLabel}>Top Result</Text>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => onPlaySong?.(searchResults.songs[0])}
-                  style={styles.topResultCard}
-                >
-                  <Image
-                    source={{ uri: searchResults.songs[0].thumbnail || searchResults.songs[0].cover }}
-                    style={styles.topResultThumb}
-                  />
-                  <View style={styles.topResultDetails}>
-                    <Text numberOfLines={1} style={styles.topResultTitle}>
-                      {searchResults.songs[0].title}
-                    </Text>
-                    <Text numberOfLines={1} style={styles.topResultSubtitle}>
-                      Song • {searchResults.songs[0].artist}
-                    </Text>
-                    <View style={styles.hitBadge}>
-                      <Text style={styles.hitBadgeText}>HIT TRACK</Text>
-                    </View>
-                  </View>
-                  <View style={styles.playIconCircle}>
-                    <Play size={18} color="#000000" fill="#000000" style={{ marginLeft: 2 }} />
-                  </View>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Songs Results */}
-            {(activeTab === 'all' || activeTab === 'songs') && searchResults.songs.length > 0 && (
-              <View style={styles.shelf}>
-                <Text style={styles.shelfTitle}>Songs</Text>
-                {searchResults.songs.map((song, idx) => (
-                  <SongRow
-                    key={song.id || idx}
-                    song={song}
-                    index={idx}
-                    isActive={activeSongId === (song.id || song.videoId)}
-                    isPlaying={isPlaying}
-                    onPlay={() => onPlaySong?.(song)}
-                    onToggleLike={() => onToggleLike?.(song)}
-                  />
-                ))}
-              </View>
-            )}
-
-            {/* Albums Results */}
-            {(activeTab === 'all' || activeTab === 'albums') && searchResults.albums.length > 0 && (
-              <View style={styles.shelf}>
-                <Text style={styles.shelfTitle}>Albums</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {searchResults.albums.map((album, idx) => (
-                    <AlbumCard
-                      key={album.id || idx}
-                      item={album}
-                      onPress={() => onSelectAlbum?.(album)}
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* Artists Results */}
-            {(activeTab === 'all' || activeTab === 'artists') && searchResults.artists.length > 0 && (
-              <View style={styles.shelf}>
-                <Text style={styles.shelfTitle}>Artists</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {searchResults.artists.map((artist, idx) => (
-                    <ArtistCard
-                      key={artist.id || idx}
-                      item={artist}
-                      onPress={() => onSelectArtist?.(artist)}
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* No results */}
-        {trimmed.length > 0 && !hasResults && (
-          <View style={styles.emptyState}>
-            <Music size={40} color="#525252" style={{ marginBottom: 12 }} />
-            <Text style={styles.emptyTitle}>No results for "{query}"</Text>
-            <Text style={styles.emptySubtitle}>
-              Check spelling or search for popular artists like The Weeknd, Queen, or Ed Sheeran.
-            </Text>
-          </View>
-        )}
-
-        {/* Suggestions & Recent Searches */}
-        {trimmed.length === 0 && (
-          <View style={styles.defaultSearchContainer}>
-            {recentSearches.length > 0 && (
-              <View style={styles.shelf}>
-                <Text style={styles.sectionLabel}>Recent Searches</Text>
-                {recentSearches.map((item, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    activeOpacity={0.7}
-                    onPress={() => handleSelectQuery(item)}
-                    style={styles.suggestionRow}
+                  <Text
+                    style={[
+                      styles.tabChipText,
+                      isTabActive ? styles.tabChipTextActive : styles.tabChipTextInactive,
+                    ]}
                   >
-                    <View style={styles.suggestionLeft}>
-                      <Clock size={16} color="#737373" />
-                      <Text numberOfLines={1} style={styles.suggestionText}>
-                        {item}
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Main Scroll Content */}
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Results Shelf */}
+          {trimmed.length > 0 && hasResults && (
+            <View style={styles.resultsContainer}>
+              {/* Top Match Hero */}
+              {searchResults.songs.length > 0 && (activeTab === 'all' || activeTab === 'songs') && (
+                <View style={styles.shelf}>
+                  <Text style={styles.sectionLabel}>Top Result</Text>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => onPlaySong?.(searchResults.songs[0])}
+                    style={styles.topResultCard}
+                  >
+                    <Image
+                      source={{ uri: searchResults.songs[0].thumbnail || searchResults.songs[0].cover }}
+                      style={styles.topResultThumb}
+                      contentFit="cover"
+                      transition={200}
+                    />
+                    <View style={styles.topResultDetails}>
+                      <Text numberOfLines={1} style={styles.topResultTitle}>
+                        {searchResults.songs[0].title}
                       </Text>
+                      <Text numberOfLines={1} style={styles.topResultSubtitle}>
+                        Song • {searchResults.songs[0].artist}
+                      </Text>
+                      <View style={styles.hitBadge}>
+                        <Text style={styles.hitBadgeText}>HIT TRACK</Text>
+                      </View>
+                    </View>
+                    <View style={styles.playIconCircle}>
+                      <Play size={18} color="#000000" fill="#000000" style={{ marginLeft: 2 }} />
                     </View>
                   </TouchableOpacity>
-                ))}
-              </View>
-            )}
+                </View>
+              )}
 
-            <View style={styles.shelf}>
-              <Text style={styles.sectionLabel}>Trending Searches</Text>
-              {['Blinding Lights', 'Bohemian Rhapsody', 'Demon Days', 'Feel Good Inc', 'Shape of You'].map(
-                (item, index) => (
+              {/* Songs Results */}
+              {(activeTab === 'all' || activeTab === 'songs') && searchResults.songs.length > 0 && (
+                <View style={styles.shelf}>
+                  <Text style={styles.shelfTitle}>Songs</Text>
+                  {searchResults.songs.map((song, idx) => (
+                    <SongRow
+                      key={song.id || idx}
+                      song={song}
+                      index={idx}
+                      isActive={activeSongId === (song.id || song.videoId)}
+                      isPlaying={isPlaying}
+                      onPlay={() => onPlaySong?.(song)}
+                      onToggleLike={() => onToggleLike?.(song)}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {/* Albums Results */}
+              {(activeTab === 'all' || activeTab === 'albums') && searchResults.albums.length > 0 && (
+                <View style={styles.shelf}>
+                  <Text style={styles.shelfTitle}>Albums</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {searchResults.albums.map((album, idx) => (
+                      <AlbumCard
+                        key={album.id || idx}
+                        item={album}
+                        onPress={() => onSelectAlbum?.(album)}
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Artists Results */}
+              {(activeTab === 'all' || activeTab === 'artists') && searchResults.artists.length > 0 && (
+                <View style={styles.shelf}>
+                  <Text style={styles.shelfTitle}>Artists</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {searchResults.artists.map((artist, idx) => (
+                      <ArtistCard
+                        key={artist.id || idx}
+                        item={artist}
+                        onPress={() => onSelectArtist?.(artist)}
+                      />
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* No Results Message */}
+          {trimmed.length > 0 && !hasResults && (
+            <View style={styles.noResultsContainer}>
+              <Music size={40} color="#525252" style={{ marginBottom: 12 }} />
+              <Text style={styles.noResultsTitle}>No results for "{query}"</Text>
+              <Text style={styles.noResultsSubtitle}>
+                Check spelling or try searching for another artist, track, or album.
+              </Text>
+            </View>
+          )}
+
+          {/* Recent Searches */}
+          {!trimmed && recentSearches.length > 0 && (
+            <View style={styles.recentSection}>
+              <View style={styles.recentHeader}>
+                <Text style={styles.recentTitle}>Recent Searches</Text>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={handleClearHistory}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.clearAllText}>Clear All</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.recentList}>
+                {recentSearches.map((term, index) => (
                   <TouchableOpacity
                     key={index}
                     activeOpacity={0.7}
-                    onPress={() => handleSelectQuery(item)}
-                    style={styles.suggestionRow}
+                    onPress={() => handleSelectQuery(term)}
+                    style={styles.recentItem}
                   >
-                    <View style={styles.suggestionLeft}>
-                      <Search size={16} color="#737373" />
-                      <Text numberOfLines={1} style={styles.suggestionTextTrending}>
-                        {item}
-                      </Text>
+                    <View style={styles.recentLeft}>
+                      <Clock size={16} color="#737373" />
+                      <Text style={styles.recentTermText}>{term}</Text>
                     </View>
                     <ArrowUpLeft size={16} color="#525252" />
                   </TouchableOpacity>
-                )
-              )}
+                ))}
+              </View>
             </View>
-          </View>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
   );
 }
 
@@ -370,11 +384,14 @@ const styles = StyleSheet.create({
   },
   scrollArea: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 100,
   },
   resultsContainer: {
-    paddingTop: 12,
-    paddingBottom: 80,
+    paddingTop: 4,
   },
   shelf: {
     marginBottom: 24,
@@ -407,6 +424,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
     shadowRadius: 16,
+    elevation: 8,
   },
   topResultThumb: {
     width: 64,
@@ -449,52 +467,66 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyState: {
+  noResultsContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 64,
-    paddingHorizontal: 32,
+    paddingVertical: 60,
+    paddingHorizontal: 24,
   },
-  emptyTitle: {
+  noResultsTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
     marginBottom: 6,
+    textAlign: 'center',
   },
-  emptySubtitle: {
-    fontSize: 12,
-    color: '#a3a3a3',
+  noResultsSubtitle: {
+    fontSize: 13,
+    color: '#737373',
     textAlign: 'center',
     lineHeight: 18,
   },
-  defaultSearchContainer: {
-    paddingVertical: 12,
+  recentSection: {
+    paddingTop: 8,
   },
-  suggestionRow: {
+  recentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  recentTitle: {
+    fontSize: 12,
+    fontFamily: 'monospace',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: '#737373',
+  },
+  clearAllText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#a3a3a3',
+  },
+  recentList: {
+    gap: 4,
+  },
+  recentItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
   },
-  suggestionLeft: {
+  recentLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    flex: 1,
-    minWidth: 0,
   },
-  suggestionText: {
+  recentTermText: {
     fontSize: 14,
+    color: '#d4d4d8',
     fontWeight: '500',
-    color: '#d4d4d4',
-    flex: 1,
-  },
-  suggestionTextTrending: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#ffffff',
-    flex: 1,
   },
 });

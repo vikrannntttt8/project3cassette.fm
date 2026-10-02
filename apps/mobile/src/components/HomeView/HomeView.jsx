@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl, Pressable } from 'react-native';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import TopResultHero from './TopResultHero.jsx';
 import SongRow from './SongRow.jsx';
 import AlbumCard from './AlbumCard.jsx';
@@ -21,6 +22,45 @@ const CATEGORIES = [
   { id: 'artists', label: 'Artists' },
 ];
 
+function CategoryChip({ cat, isSelected, onPress }) {
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.92, { damping: 14, stiffness: 300 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 250 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={animatedStyle}>
+      <Pressable
+        onPress={() => onPress(cat.id)}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        style={[
+          styles.chipButton,
+          isSelected ? styles.chipButtonActive : styles.chipButtonInactive,
+        ]}
+      >
+        <Text
+          style={[
+            styles.chipText,
+            isSelected ? styles.chipTextActive : styles.chipTextInactive,
+          ]}
+        >
+          {cat.label}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 export default function HomeView({
   topResult,
   songs = [],
@@ -39,12 +79,20 @@ export default function HomeView({
   onSelectCategory,
 }) {
   const [selectedCategory, setSelectedCategory] = useState(activeCategory || 'all');
+  const [refreshing, setRefreshing] = useState(false);
 
   React.useEffect(() => {
     if (activeCategory) {
       setSelectedCategory(activeCategory);
     }
   }, [activeCategory]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 800);
+  }, []);
 
   const handleCategoryPress = (catId) => {
     setSelectedCategory(catId);
@@ -60,6 +108,15 @@ export default function HomeView({
       style={styles.container}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.contentContainer}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#FFFFFF"
+          colors={['#FFFFFF']}
+          progressBackgroundColor="#18181a"
+        />
+      }
     >
       {/* ── Greeting ── */}
       <View style={styles.greetingContainer}>
@@ -72,29 +129,14 @@ export default function HomeView({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.chipsContainer}
       >
-        {CATEGORIES.map((cat) => {
-          const isSelected = selectedCategory === cat.id;
-          return (
-            <TouchableOpacity
-              key={cat.id}
-              activeOpacity={0.7}
-              onPress={() => handleCategoryPress(cat.id)}
-              style={[
-                styles.chipButton,
-                isSelected ? styles.chipButtonActive : styles.chipButtonInactive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  isSelected ? styles.chipTextActive : styles.chipTextInactive,
-                ]}
-              >
-                {cat.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        {CATEGORIES.map((cat) => (
+          <CategoryChip
+            key={cat.id}
+            cat={cat}
+            isSelected={selectedCategory === cat.id}
+            onPress={handleCategoryPress}
+          />
+        ))}
       </ScrollView>
 
       <View style={styles.mainFeed}>
@@ -122,6 +164,7 @@ export default function HomeView({
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => onPlaySong?.(filteredSongs[0])}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={styles.shelfAction}>Play All</Text>
               </TouchableOpacity>
@@ -251,12 +294,12 @@ const styles = StyleSheet.create({
   },
   chipsContainer: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     gap: 8,
   },
   chipButton: {
     paddingHorizontal: 16,
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
   },
@@ -265,22 +308,22 @@ const styles = StyleSheet.create({
     borderColor: '#ffffff',
   },
   chipButtonInactive: {
-    backgroundColor: '#161616',
+    backgroundColor: '#18181a',
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   chipText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   chipTextActive: {
     color: '#000000',
   },
   chipTextInactive: {
-    color: '#a3a3a3',
+    color: '#a1a1aa',
   },
   mainFeed: {
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 6,
   },
   shelf: {
     marginBottom: 26,
@@ -289,7 +332,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   shelfTitleRow: {
     flexDirection: 'row',
@@ -297,16 +340,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   shelfTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#ffffff',
     letterSpacing: -0.3,
   },
   shelfAction: {
-    fontSize: 11,
-    fontFamily: 'monospace',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    color: '#a3a3a3',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#a1a1aa',
   },
 });

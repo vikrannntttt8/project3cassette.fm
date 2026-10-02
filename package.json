@@ -26,5 +26,8 @@
   },
   "overrides": {
     "tailwindcss": "3.3.2"
+  },
+  "dependencies": {
+    "react-native-worklets": "^0.10.4"
   }
 }

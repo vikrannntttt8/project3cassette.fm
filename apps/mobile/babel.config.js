@@ -6,6 +6,7 @@ module.exports = function (api) {
     presets: ["babel-preset-expo"],
     plugins: [
       ["nativewind/babel", { tailwindConfig: path.resolve(__dirname, 'tailwind.config.js') }],
+      "react-native-reanimated/plugin",
     ],
   };
 };

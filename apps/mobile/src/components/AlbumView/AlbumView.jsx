@@ -1,6 +1,14 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
+import { Image } from 'expo-image';
 import { ArrowLeft, Play, Shuffle, Heart, Music, Clock } from 'lucide-react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  FadeIn,
+} from 'react-native-reanimated';
+import AnimatedEqualizer from '../shared/AnimatedEqualizer.jsx';
 
 function formatDuration(sec) {
   if (!sec) return '3:30';
@@ -20,6 +28,9 @@ export default function AlbumView({
 }) {
   if (!album) return null;
 
+  const playAllScale = useSharedValue(1);
+  const shuffleScale = useSharedValue(1);
+
   const tracks = album.tracks || [
     { id: `${album.id || 'alb'}-1`, title: 'Track 1', artist: album.artist, duration: 215 },
     { id: `${album.id || 'alb'}-2`, title: 'Track 2', artist: album.artist, duration: 198 },
@@ -30,74 +41,90 @@ export default function AlbumView({
 
   const coverUrl = album.cover || album.thumbnail || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=500';
 
+  const animatedPlayAll = useAnimatedStyle(() => ({
+    transform: [{ scale: playAllScale.value }],
+  }));
+
+  const animatedShuffle = useAnimatedStyle(() => ({
+    transform: [{ scale: shuffleScale.value }],
+  }));
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#0e0e0e' }} className="flex-1 bg-[#0e0e0e]">
+    <Animated.View entering={FadeIn.duration(200)} style={styles.container}>
       {/* Top Bar */}
-      <View className="flex-row items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0e0e0e]/90">
+      <View style={styles.topBar}>
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onBack}
-          className="w-10 h-10 rounded-full bg-white/5 items-center justify-center border border-white/10"
+          style={styles.backButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <ArrowLeft size={20} color="#FFFFFF" />
         </TouchableOpacity>
-        <Text numberOfLines={1} className="text-sm font-bold text-neutral-300 max-w-[200px]">
+        <Text numberOfLines={1} style={styles.headerTitle}>
           {album.title}
         </Text>
-        <View className="w-10" />
+        <View style={styles.spacer} />
       </View>
 
       <ScrollView
-        className="flex-1"
+        style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={styles.scrollContent}
       >
         {/* Album Header Info */}
-        <View className="items-center px-6 pt-6 pb-4">
-          <View className="w-48 h-48 rounded-2xl overflow-hidden shadow-2xl border border-white/10 mb-5 bg-[#161616]">
+        <View style={styles.headerInfo}>
+          <View style={styles.coverWrapper}>
             <Image
               source={{ uri: coverUrl }}
-              className="w-full h-full"
-              resizeMode="cover"
+              style={styles.coverImage}
+              contentFit="cover"
+              transition={200}
             />
           </View>
 
-          <Text className="text-2xl font-black text-white text-center tracking-tight mb-1">
-            {album.title}
-          </Text>
-          <Text className="text-base font-semibold text-neutral-400 text-center mb-2">
-            {album.artist}
-          </Text>
-          <Text className="text-xs font-mono uppercase tracking-wider text-neutral-500 mb-6">
+          <Text style={styles.albumTitle}>{album.title}</Text>
+          <Text style={styles.albumArtist}>{album.artist}</Text>
+          <Text style={styles.albumMeta}>
             Album • {album.year || '2024'} • {tracks.length} Songs
           </Text>
 
           {/* Action Row */}
-          <View className="flex-row items-center gap-4 w-full justify-center">
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => onPlayAll?.(tracks)}
-              className="flex-1 max-w-[160px] h-12 bg-white rounded-full flex-row items-center justify-center gap-2 shadow-lg"
-            >
-              <Play size={18} color="#000000" fill="#000000" />
-              <Text className="text-black font-bold text-sm tracking-tight">Play All</Text>
-            </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <Animated.View style={[styles.playAllWrapper, animatedPlayAll]}>
+              <Pressable
+                onPress={() => onPlayAll?.(tracks.map((t) => ({ ...t, thumbnail: coverUrl, cover: coverUrl })))}
+                onPressIn={() => (playAllScale.value = withSpring(0.92, { damping: 14, stiffness: 300 }))}
+                onPressOut={() => (playAllScale.value = withSpring(1, { damping: 15, stiffness: 250 }))}
+                style={styles.playAllButton}
+              >
+                <Play size={18} color="#000000" fill="#000000" />
+                <Text style={styles.playAllText}>Play All</Text>
+              </Pressable>
+            </Animated.View>
 
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => onPlayAll?.([...tracks].sort(() => Math.random() - 0.5))}
-              className="w-12 h-12 rounded-full bg-[#1c1c1e] border border-white/10 items-center justify-center"
-            >
-              <Shuffle size={18} color="#FFFFFF" />
-            </TouchableOpacity>
+            <Animated.View style={animatedShuffle}>
+              <Pressable
+                onPress={() =>
+                  onPlayAll?.(
+                    [...tracks]
+                      .sort(() => Math.random() - 0.5)
+                      .map((t) => ({ ...t, thumbnail: coverUrl, cover: coverUrl }))
+                  )
+                }
+                onPressIn={() => (shuffleScale.value = withSpring(0.88, { damping: 14, stiffness: 300 }))}
+                onPressOut={() => (shuffleScale.value = withSpring(1, { damping: 15, stiffness: 250 }))}
+                style={styles.shuffleButton}
+              >
+                <Shuffle size={18} color="#FFFFFF" />
+              </Pressable>
+            </Animated.View>
           </View>
         </View>
 
         {/* Track List */}
-        <View className="px-4 pt-4">
-          <Text className="text-xs font-mono uppercase tracking-wider text-neutral-500 mb-3 px-2">
-            Tracks
-          </Text>
+        <View style={styles.trackListContainer}>
+          <Text style={styles.tracksSectionLabel}>Tracks</Text>
 
           {tracks.map((track, idx) => {
             const isCurrent = activeSongId === (track.id || track.videoId);
@@ -106,26 +133,33 @@ export default function AlbumView({
                 key={track.id || idx}
                 activeOpacity={0.7}
                 onPress={() => onPlaySong?.({ ...track, thumbnail: coverUrl, cover: coverUrl })}
-                className={`flex-row items-center justify-between py-3 px-3 rounded-xl mb-1 ${
-                  isCurrent ? 'bg-white/10 border border-white/10' : 'active:bg-white/5'
-                }`}
+                style={[
+                  styles.trackRow,
+                  isCurrent && styles.trackRowActive,
+                ]}
               >
-                <View className="flex-row items-center gap-3.5 flex-1 min-w-0">
-                  <Text className={`w-5 text-center text-xs font-mono ${isCurrent ? 'text-white font-bold' : 'text-neutral-500'}`}>
-                    {idx + 1}
-                  </Text>
-                  <View className="flex-1 min-w-0">
-                    <Text numberOfLines={1} className={`text-sm font-semibold ${isCurrent ? 'text-white font-bold' : 'text-neutral-200'}`}>
+                <View style={styles.trackLeft}>
+                  <View style={styles.trackIndexWrapper}>
+                    {isCurrent && isPlaying ? (
+                      <AnimatedEqualizer isPlaying={isPlaying} color="#FFFFFF" maxHeight={12} barWidth={2} />
+                    ) : (
+                      <Text style={[styles.trackIndex, isCurrent && styles.trackIndexActive]}>
+                        {idx + 1}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.trackTextContainer}>
+                    <Text numberOfLines={1} style={[styles.trackTitle, isCurrent && styles.trackTitleActive]}>
                       {track.title}
                     </Text>
-                    <Text numberOfLines={1} className="text-xs text-neutral-400">
+                    <Text numberOfLines={1} style={styles.trackArtist}>
                       {track.artist || album.artist}
                     </Text>
                   </View>
                 </View>
 
-                <View className="flex-row items-center gap-3">
-                  <Text className="text-xs font-mono text-neutral-500">
+                <View style={styles.trackRight}>
+                  <Text style={styles.trackDuration}>
                     {formatDuration(track.duration)}
                   </Text>
                 </View>
@@ -134,6 +168,209 @@ export default function AlbumView({
           })}
         </View>
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0e0e0e',
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#d4d4d8',
+    maxWidth: 200,
+  },
+  spacer: {
+    width: 38,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 130,
+  },
+  headerInfo: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  coverWrapper: {
+    width: 190,
+    height: 190,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#1f1f22',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 20,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 16,
+  },
+  coverImage: {
+    width: '100%',
+    height: '100%',
+  },
+  albumTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#ffffff',
+    textAlign: 'center',
+    letterSpacing: -0.4,
+    marginBottom: 4,
+  },
+  albumArtist: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#a1a1aa',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  albumMeta: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: '#71717a',
+    marginBottom: 20,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  playAllWrapper: {
+    flex: 1,
+    maxWidth: 160,
+  },
+  playAllButton: {
+    height: 46,
+    backgroundColor: '#ffffff',
+    borderRadius: 23,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  playAllText: {
+    color: '#000000',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  shuffleButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#1c1c1f',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trackListContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  tracksSectionLabel: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: '#71717a',
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  trackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    marginBottom: 4,
+  },
+  trackRowActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  trackLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    minWidth: 0,
+  },
+  trackIndexWrapper: {
+    width: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trackIndex: {
+    fontSize: 12,
+    fontFamily: 'monospace',
+    color: '#71717a',
+  },
+  trackIndexActive: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  trackTextContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
+  trackTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#e4e4e7',
+  },
+  trackTitleActive: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  trackArtist: {
+    fontSize: 12,
+    color: '#71717a',
+    marginTop: 2,
+  },
+  trackRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  trackDuration: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    color: '#71717a',
+  },
+});

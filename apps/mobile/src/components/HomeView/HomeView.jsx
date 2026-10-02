@@ -1,10 +1,17 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import TopResultHero from './TopResultHero.jsx';
 import SongRow from './SongRow.jsx';
 import AlbumCard from './AlbumCard.jsx';
 import ArtistCard from './ArtistCard.jsx';
 import { Sparkles, Radio, Disc, Mic2, Flame } from 'lucide-react-native';
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 const CATEGORIES = [
   { id: 'all', label: 'All' },
@@ -28,25 +35,42 @@ export default function HomeView({
   onSelectArtist,
   onSelectMix,
   onToggleLike,
+  activeCategory,
+  onSelectCategory,
 }) {
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(activeCategory || 'all');
+
+  React.useEffect(() => {
+    if (activeCategory) {
+      setSelectedCategory(activeCategory);
+    }
+  }, [activeCategory]);
+
+  const handleCategoryPress = (catId) => {
+    setSelectedCategory(catId);
+    onSelectCategory?.(catId);
+  };
 
   const filteredSongs = useMemo(() => {
-    if (selectedCategory === 'all' || selectedCategory === 'picks') return songs;
     return songs;
-  }, [songs, selectedCategory]);
+  }, [songs]);
 
   return (
     <ScrollView
-      className="flex-1 bg-[#0e0e0e]"
+      style={styles.container}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 120 }}
+      contentContainerStyle={styles.contentContainer}
     >
-      {/* ── Category Chips ── */}
+      {/* ── Greeting ── */}
+      <View style={styles.greetingContainer}>
+        <Text style={styles.greetingText}>{getGreeting()}</Text>
+      </View>
+
+      {/* ── Category Filter Chips ── */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        className="px-4 py-3 border-b border-white/5"
+        contentContainerStyle={styles.chipsContainer}
       >
         {CATEGORIES.map((cat) => {
           const isSelected = selectedCategory === cat.id;
@@ -54,17 +78,17 @@ export default function HomeView({
             <TouchableOpacity
               key={cat.id}
               activeOpacity={0.7}
-              onPress={() => setSelectedCategory(cat.id)}
-              className={`px-4 py-2 rounded-full mr-2 border ${
-                isSelected
-                  ? 'bg-white border-white'
-                  : 'bg-[#161616] border-white/10'
-              }`}
+              onPress={() => handleCategoryPress(cat.id)}
+              style={[
+                styles.chipButton,
+                isSelected ? styles.chipButtonActive : styles.chipButtonInactive,
+              ]}
             >
               <Text
-                className={`text-xs font-semibold ${
-                  isSelected ? 'text-black' : 'text-neutral-400'
-                }`}
+                style={[
+                  styles.chipText,
+                  isSelected ? styles.chipTextActive : styles.chipTextInactive,
+                ]}
               >
                 {cat.label}
               </Text>
@@ -73,7 +97,7 @@ export default function HomeView({
         })}
       </ScrollView>
 
-      <View className="px-4 pt-4">
+      <View style={styles.mainFeed}>
         {/* ── Top Result Hero ── */}
         {(selectedCategory === 'all' || selectedCategory === 'picks') && topResult ? (
           <TopResultHero
@@ -89,21 +113,17 @@ export default function HomeView({
 
         {/* ── Quick Picks & Top Songs Shelf ── */}
         {(selectedCategory === 'all' || selectedCategory === 'picks') && filteredSongs.length > 0 && (
-          <View className="mb-6">
-            <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-row items-center gap-2">
+          <View style={styles.shelf}>
+            <View style={styles.shelfHeader}>
+              <View style={styles.shelfTitleRow}>
                 <Sparkles size={16} color="#FFFFFF" />
-                <Text className="text-base font-bold text-white tracking-tight">
-                  Quick Picks & Top Songs
-                </Text>
+                <Text style={styles.shelfTitle}>Quick Picks & Top Songs</Text>
               </View>
               <TouchableOpacity
                 activeOpacity={0.7}
                 onPress={() => onPlaySong?.(filteredSongs[0])}
               >
-                <Text className="text-xs font-mono uppercase tracking-wider text-neutral-400">
-                  Play All
-                </Text>
+                <Text style={styles.shelfAction}>Play All</Text>
               </TouchableOpacity>
             </View>
 
@@ -123,12 +143,12 @@ export default function HomeView({
 
         {/* ── Daily Mixes Shelf ── */}
         {(selectedCategory === 'all' || selectedCategory === 'mixes') && dailyMixes.length > 0 && (
-          <View className="mb-6">
-            <View className="flex-row items-center gap-2 mb-3">
-              <Radio size={16} color="#FFFFFF" />
-              <Text className="text-base font-bold text-white tracking-tight">
-                Daily Mixes & Radio
-              </Text>
+          <View style={styles.shelf}>
+            <View style={styles.shelfHeader}>
+              <View style={styles.shelfTitleRow}>
+                <Radio size={16} color="#FFFFFF" />
+                <Text style={styles.shelfTitle}>Daily Mixes & Radio</Text>
+              </View>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {dailyMixes.map((mix, idx) => (
@@ -144,12 +164,12 @@ export default function HomeView({
 
         {/* ── Albums Shelf ── */}
         {(selectedCategory === 'all' || selectedCategory === 'albums') && albums.length > 0 && (
-          <View className="mb-6">
-            <View className="flex-row items-center gap-2 mb-3">
-              <Disc size={16} color="#FFFFFF" />
-              <Text className="text-base font-bold text-white tracking-tight">
-                Albums & Singles
-              </Text>
+          <View style={styles.shelf}>
+            <View style={styles.shelfHeader}>
+              <View style={styles.shelfTitleRow}>
+                <Disc size={16} color="#FFFFFF" />
+                <Text style={styles.shelfTitle}>Albums & Singles</Text>
+              </View>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {albums.map((album, idx) => (
@@ -163,35 +183,36 @@ export default function HomeView({
           </View>
         )}
 
-        {/* ── Dynamic Curated Sections (Feel Good, Classics) ── */}
-        {(selectedCategory === 'all') && dynamicSections.map((sec) => (
-          <View key={sec.id} className="mb-6">
-            <View className="flex-row items-center gap-2 mb-3">
-              <Flame size={16} color="#FFFFFF" />
-              <Text className="text-base font-bold text-white tracking-tight">
-                {sec.title}
-              </Text>
+        {/* ── Dynamic Curated Sections ── */}
+        {selectedCategory === 'all' &&
+          dynamicSections.map((sec) => (
+            <View key={sec.id} style={styles.shelf}>
+              <View style={styles.shelfHeader}>
+                <View style={styles.shelfTitleRow}>
+                  <Flame size={16} color="#FFFFFF" />
+                  <Text style={styles.shelfTitle}>{sec.title}</Text>
+                </View>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {sec.items.map((item, idx) => (
+                  <AlbumCard
+                    key={item.id || idx}
+                    item={item}
+                    onPress={() => onPlaySong?.(item)}
+                  />
+                ))}
+              </ScrollView>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {sec.items.map((item, idx) => (
-                <AlbumCard
-                  key={item.id || idx}
-                  item={item}
-                  onPress={() => onPlaySong?.(item)}
-                />
-              ))}
-            </ScrollView>
-          </View>
-        ))}
+          ))}
 
-        {/* ── Artists Shelf ── */}
+        {/* ── Featured Artists Shelf ── */}
         {(selectedCategory === 'all' || selectedCategory === 'artists') && artists.length > 0 && (
-          <View className="mb-6">
-            <View className="flex-row items-center gap-2 mb-3">
-              <Mic2 size={16} color="#FFFFFF" />
-              <Text className="text-base font-bold text-white tracking-tight">
-                Featured Artists
-              </Text>
+          <View style={styles.shelf}>
+            <View style={styles.shelfHeader}>
+              <View style={styles.shelfTitleRow}>
+                <Mic2 size={16} color="#FFFFFF" />
+                <Text style={styles.shelfTitle}>Featured Artists</Text>
+              </View>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {artists.map((artist, idx) => (
@@ -208,3 +229,84 @@ export default function HomeView({
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0e0e0e',
+  },
+  contentContainer: {
+    paddingBottom: 130,
+  },
+  greetingContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 6,
+  },
+  greetingText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#ffffff',
+    letterSpacing: -0.5,
+  },
+  chipsContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  chipButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  chipButtonActive: {
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
+  },
+  chipButtonInactive: {
+    backgroundColor: '#161616',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  chipTextActive: {
+    color: '#000000',
+  },
+  chipTextInactive: {
+    color: '#a3a3a3',
+  },
+  mainFeed: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  shelf: {
+    marginBottom: 26,
+  },
+  shelfHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  shelfTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  shelfTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: -0.3,
+  },
+  shelfAction: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    color: '#a3a3a3',
+  },
+});

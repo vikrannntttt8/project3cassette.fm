@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View } from 'react-native';
+import { View, Platform, UIManager, LayoutAnimation } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import MobileHeader from '../src/components/shared/MobileHeader.jsx';
@@ -14,6 +14,18 @@ import PlayerDock from '../src/components/PlayerDock/PlayerDock.jsx';
 import { FALLBACK_HOME_FEED } from '../src/data/fallbackFeed.js';
 import { usePlayerStore, playerActions, resolveDirectAudioStream } from '@cassette/core';
 import { playTrack, pauseTrack, resumeTrack } from '../src/services/trackPlayerService.js';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const animateLayout = () => {
+  try {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  } catch {
+    // Ignore any animation errors on non-supported platforms
+  }
+};
 
 const FEATURED_ARTISTS = [
   {
@@ -56,6 +68,7 @@ const FEATURED_ARTISTS = [
 export default function MobileApp() {
   const router = useRouter();
   const [currentTab, setCurrentTab] = useState('home');
+  const [activeCategory, setActiveCategory] = useState('all');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedAlbum, setSelectedAlbum] = useState(null);
@@ -66,12 +79,20 @@ export default function MobileApp() {
 
   // Subscribe to reactive Zustand player store
   useEffect(() => {
-    const unsubscribe = usePlayerStore.subscribe(setPlayerState);
+    const unsubscribe = usePlayerStore.subscribe((state) => {
+      setPlayerState((prev) => {
+        if (!prev.currentSong && state.currentSong) {
+          animateLayout();
+        }
+        return state;
+      });
+    });
     return () => unsubscribe();
   }, []);
 
   const handlePlaySong = useCallback(async (song) => {
     if (!song) return;
+    animateLayout();
     playerActions.setCurrentSong(song);
     playerActions.setIsPlaying(true);
 
@@ -107,11 +128,13 @@ export default function MobileApp() {
   }, []);
 
   const handleSelectAlbum = (album) => {
+    animateLayout();
     setSelectedArtist(null);
     setSelectedAlbum(album);
   };
 
   const handleSelectArtist = (artist) => {
+    animateLayout();
     setSelectedAlbum(null);
     const matched = FEATURED_ARTISTS.find(
       (a) => a.name.toLowerCase() === (artist.name || artist.title || '').toLowerCase()
@@ -139,20 +162,33 @@ export default function MobileApp() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0e0e0e]" edges={['top', 'left', 'right']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#0e0e0e' }} className="flex-1 bg-[#0e0e0e]" edges={['top', 'left', 'right']}>
       {/* ── Branded Header ── */}
       <MobileHeader
-        onSearchPress={() => setIsSearchOpen(true)}
-        onProfilePress={() => setIsSettingsOpen(true)}
+        onSearchPress={() => {
+          animateLayout();
+          setIsSearchOpen(true);
+        }}
+        onProfilePress={() => {
+          animateLayout();
+          setIsSettingsOpen(true);
+        }}
+        onSettingsPress={() => {
+          animateLayout();
+          setIsSettingsOpen(true);
+        }}
       />
 
       {/* ── Main Tab & Detail Views ── */}
-      <View className="flex-1">
+      <View style={{ flex: 1, backgroundColor: '#0e0e0e' }} className="flex-1">
         {/* Detail View: Album */}
         {selectedAlbum ? (
           <AlbumView
             album={selectedAlbum}
-            onBack={() => setSelectedAlbum(null)}
+            onBack={() => {
+              animateLayout();
+              setSelectedAlbum(null);
+            }}
             onPlaySong={handlePlaySong}
             onPlayAll={(tracks) => tracks.length && handlePlaySong(tracks[0])}
             onToggleLike={handleToggleLike}
@@ -163,7 +199,10 @@ export default function MobileApp() {
           /* Detail View: Artist */
           <ArtistView
             artist={selectedArtist}
-            onBack={() => setSelectedArtist(null)}
+            onBack={() => {
+              animateLayout();
+              setSelectedArtist(null);
+            }}
             onPlaySong={handlePlaySong}
             onSelectAlbum={handleSelectAlbum}
             onToggleLike={handleToggleLike}
@@ -188,6 +227,8 @@ export default function MobileApp() {
                 onSelectArtist={handleSelectArtist}
                 onSelectMix={handleSelectMix}
                 onToggleLike={handleToggleLike}
+                activeCategory={activeCategory}
+                onSelectCategory={setActiveCategory}
               />
             )}
 
@@ -232,12 +273,21 @@ export default function MobileApp() {
       <MobileBottomNav
         currentTab={currentTab}
         onTabPress={(tabId) => {
+          animateLayout();
           setSelectedAlbum(null);
           setSelectedArtist(null);
           if (tabId === 'search') {
             setIsSearchOpen(true);
           } else if (tabId === 'settings') {
             setIsSettingsOpen(true);
+          } else if (tabId === 'radio') {
+            if (playerState.currentSong) {
+              handlePlaySong(playerState.currentSong);
+            } else if (FALLBACK_HOME_FEED.quickPicks.length > 0) {
+              handlePlaySong(FALLBACK_HOME_FEED.quickPicks[0]);
+            }
+            setCurrentTab('home');
+            setActiveCategory('mixes');
           } else {
             setCurrentTab(tabId);
           }

@@ -23,9 +23,10 @@ export default function LibraryView({
 
   return (
     <ScrollView
+      style={{ flex: 1, backgroundColor: '#0e0e0e' }}
       className="flex-1 bg-[#0e0e0e]"
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 100 }}
+      contentContainerStyle={{ paddingBottom: 130 }}
     >
       {/* ── Sub-navigation ── */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-white/5">

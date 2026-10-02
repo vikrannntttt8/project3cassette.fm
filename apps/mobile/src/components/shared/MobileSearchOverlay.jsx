@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Search, X, Clock, Play, ArrowUpLeft, Music, Disc, User } from 'lucide-react-native';
+import { Search, X, Clock, Play, ArrowUpLeft, Music } from 'lucide-react-native';
 import SongRow from '../HomeView/SongRow.jsx';
 import AlbumCard from '../HomeView/AlbumCard.jsx';
 import ArtistCard from '../HomeView/ArtistCard.jsx';
@@ -32,7 +32,6 @@ export default function MobileSearchOverlay({
 
   const trimmed = query.trim().toLowerCase();
 
-  // Filter items matching query
   const searchResults = useMemo(() => {
     if (!trimmed) {
       return { songs: [], albums: [], artists: [] };
@@ -63,20 +62,6 @@ export default function MobileSearchOverlay({
     };
   }, [trimmed, catalogSongs, catalogAlbums, catalogArtists]);
 
-  // Suggestions for autocomplete
-  const suggestions = useMemo(() => {
-    if (!trimmed || trimmed.length < 2) return [];
-    const pool = [
-      ...catalogSongs.map((s) => s.title),
-      ...catalogSongs.map((s) => s.artist),
-      ...catalogAlbums.map((a) => a.title),
-      ...catalogArtists.map((ar) => ar.name || ar.title),
-    ].filter(Boolean);
-
-    const unique = [...new Set(pool)];
-    return unique.filter((item) => item.toLowerCase().includes(trimmed)).slice(0, 5);
-  }, [trimmed, catalogSongs, catalogAlbums, catalogArtists]);
-
   if (!isOpen) return null;
 
   const handleSelectQuery = (text) => {
@@ -92,10 +77,10 @@ export default function MobileSearchOverlay({
     searchResults.artists.length > 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0e0e0e]" edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       {/* Search Bar Header */}
-      <View className="flex-row items-center gap-3 px-4 py-3 border-b border-white/5">
-        <View className="flex-1 flex-row items-center bg-[#161616] rounded-2xl px-3.5 py-2 border border-white/10">
+      <View style={styles.searchHeader}>
+        <View style={styles.inputWrapper}>
           <Search size={18} color="#737373" />
           <TextInput
             value={query}
@@ -104,13 +89,13 @@ export default function MobileSearchOverlay({
             placeholderTextColor="#737373"
             returnKeyType="search"
             autoFocus
-            className="flex-1 text-sm text-white font-medium ml-2 p-0"
+            style={styles.textInput}
           />
           {query.length > 0 && (
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={() => setQuery('')}
-              className="p-1"
+              style={styles.clearButton}
             >
               <X size={16} color="#737373" />
             </TouchableOpacity>
@@ -120,15 +105,15 @@ export default function MobileSearchOverlay({
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onClose}
-          className="py-2 px-1"
+          style={styles.cancelButton}
         >
-          <Text className="text-sm font-semibold text-neutral-400">Cancel</Text>
+          <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Filter Tabs when query exists */}
+      {/* Filter Tabs when query is active */}
       {trimmed.length > 0 && (
-        <View className="flex-row px-4 py-2 border-b border-white/5 gap-2">
+        <View style={styles.tabsRow}>
           {SEARCH_TABS.map((tab) => {
             const isTabActive = activeTab === tab.id;
             return (
@@ -136,16 +121,16 @@ export default function MobileSearchOverlay({
                 key={tab.id}
                 activeOpacity={0.7}
                 onPress={() => setActiveTab(tab.id)}
-                className={`px-3 py-1.5 rounded-full border ${
-                  isTabActive
-                    ? 'bg-white border-white'
-                    : 'bg-[#161616] border-white/10'
-                }`}
+                style={[
+                  styles.tabChip,
+                  isTabActive ? styles.tabChipActive : styles.tabChipInactive,
+                ]}
               >
                 <Text
-                  className={`text-xs font-semibold ${
-                    isTabActive ? 'text-black' : 'text-neutral-400'
-                  }`}
+                  style={[
+                    styles.tabChipText,
+                    isTabActive ? styles.tabChipTextActive : styles.tabChipTextInactive,
+                  ]}
                 >
                   {tab.label}
                 </Text>
@@ -156,47 +141,45 @@ export default function MobileSearchOverlay({
       )}
 
       {/* Main Content Area */}
-      <ScrollView className="flex-1 px-4 py-2" keyboardShouldPersistTaps="handled">
-        {/* State 1: Active query with results */}
+      <ScrollView style={styles.scrollArea} keyboardShouldPersistTaps="handled">
+        {/* Results */}
         {trimmed.length > 0 && hasResults && (
-          <View className="pt-2 pb-24">
+          <View style={styles.resultsContainer}>
             {/* Top Match Hero */}
             {searchResults.songs.length > 0 && (activeTab === 'all' || activeTab === 'songs') && (
-              <View className="mb-6">
-                <Text className="text-xs font-mono uppercase tracking-widest text-neutral-500 mb-2">
-                  Top Result
-                </Text>
+              <View style={styles.shelf}>
+                <Text style={styles.sectionLabel}>Top Result</Text>
                 <TouchableOpacity
                   activeOpacity={0.8}
                   onPress={() => onPlaySong?.(searchResults.songs[0])}
-                  className="bg-[#18181a] p-4 rounded-2xl border border-white/10 flex-row items-center gap-4 shadow-xl"
+                  style={styles.topResultCard}
                 >
                   <Image
                     source={{ uri: searchResults.songs[0].thumbnail || searchResults.songs[0].cover }}
-                    className="w-16 h-16 rounded-xl bg-[#262626]"
+                    style={styles.topResultThumb}
                   />
-                  <View className="flex-1 min-w-0">
-                    <Text numberOfLines={1} className="text-base font-bold text-white mb-0.5">
+                  <View style={styles.topResultDetails}>
+                    <Text numberOfLines={1} style={styles.topResultTitle}>
                       {searchResults.songs[0].title}
                     </Text>
-                    <Text numberOfLines={1} className="text-xs text-neutral-400 mb-2">
+                    <Text numberOfLines={1} style={styles.topResultSubtitle}>
                       Song • {searchResults.songs[0].artist}
                     </Text>
-                    <View className="self-start px-2 py-0.5 rounded-md bg-white/10">
-                      <Text className="text-[10px] font-mono text-neutral-300 uppercase">Hit Track</Text>
+                    <View style={styles.hitBadge}>
+                      <Text style={styles.hitBadgeText}>HIT TRACK</Text>
                     </View>
                   </View>
-                  <View className="w-10 h-10 rounded-full bg-white items-center justify-center">
-                    <Play size={18} color="#000000" fill="#000000" />
+                  <View style={styles.playIconCircle}>
+                    <Play size={18} color="#000000" fill="#000000" style={{ marginLeft: 2 }} />
                   </View>
                 </TouchableOpacity>
               </View>
             )}
 
-            {/* Songs Result Shelf */}
+            {/* Songs Results */}
             {(activeTab === 'all' || activeTab === 'songs') && searchResults.songs.length > 0 && (
-              <View className="mb-6">
-                <Text className="text-base font-bold text-white tracking-tight mb-3">Songs</Text>
+              <View style={styles.shelf}>
+                <Text style={styles.shelfTitle}>Songs</Text>
                 {searchResults.songs.map((song, idx) => (
                   <SongRow
                     key={song.id || idx}
@@ -211,10 +194,10 @@ export default function MobileSearchOverlay({
               </View>
             )}
 
-            {/* Albums Result Shelf */}
+            {/* Albums Results */}
             {(activeTab === 'all' || activeTab === 'albums') && searchResults.albums.length > 0 && (
-              <View className="mb-6">
-                <Text className="text-base font-bold text-white tracking-tight mb-3">Albums</Text>
+              <View style={styles.shelf}>
+                <Text style={styles.shelfTitle}>Albums</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   {searchResults.albums.map((album, idx) => (
                     <AlbumCard
@@ -227,10 +210,10 @@ export default function MobileSearchOverlay({
               </View>
             )}
 
-            {/* Artists Result Shelf */}
+            {/* Artists Results */}
             {(activeTab === 'all' || activeTab === 'artists') && searchResults.artists.length > 0 && (
-              <View className="mb-6">
-                <Text className="text-base font-bold text-white tracking-tight mb-3">Artists</Text>
+              <View style={styles.shelf}>
+                <Text style={styles.shelfTitle}>Artists</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   {searchResults.artists.map((artist, idx) => (
                     <ArtistCard
@@ -245,35 +228,33 @@ export default function MobileSearchOverlay({
           </View>
         )}
 
-        {/* State 2: Active query but no results found */}
+        {/* No results */}
         {trimmed.length > 0 && !hasResults && (
-          <View className="items-center justify-center py-16">
-            <Music size={40} color="#525252" className="mb-3" />
-            <Text className="text-base font-bold text-white mb-1">No results for "{query}"</Text>
-            <Text className="text-xs text-neutral-400 text-center px-8">
+          <View style={styles.emptyState}>
+            <Music size={40} color="#525252" style={{ marginBottom: 12 }} />
+            <Text style={styles.emptyTitle}>No results for "{query}"</Text>
+            <Text style={styles.emptySubtitle}>
               Check spelling or search for popular artists like The Weeknd, Queen, or Ed Sheeran.
             </Text>
           </View>
         )}
 
-        {/* State 3: Empty query - Suggestions & Recent Searches */}
+        {/* Suggestions & Recent Searches */}
         {trimmed.length === 0 && (
-          <View className="py-2">
+          <View style={styles.defaultSearchContainer}>
             {recentSearches.length > 0 && (
-              <View className="mb-6">
-                <Text className="text-xs font-mono uppercase tracking-widest text-neutral-500 py-2">
-                  Recent Searches
-                </Text>
+              <View style={styles.shelf}>
+                <Text style={styles.sectionLabel}>Recent Searches</Text>
                 {recentSearches.map((item, index) => (
                   <TouchableOpacity
                     key={index}
                     activeOpacity={0.7}
                     onPress={() => handleSelectQuery(item)}
-                    className="flex-row items-center justify-between py-3 border-b border-white/5"
+                    style={styles.suggestionRow}
                   >
-                    <View className="flex-row items-center gap-3 flex-1 min-w-0">
+                    <View style={styles.suggestionLeft}>
                       <Clock size={16} color="#737373" />
-                      <Text numberOfLines={1} className="text-sm font-medium text-neutral-300 flex-1">
+                      <Text numberOfLines={1} style={styles.suggestionText}>
                         {item}
                       </Text>
                     </View>
@@ -282,21 +263,19 @@ export default function MobileSearchOverlay({
               </View>
             )}
 
-            <View className="mb-6">
-              <Text className="text-xs font-mono uppercase tracking-widest text-neutral-500 py-2">
-                Trending Searches
-              </Text>
+            <View style={styles.shelf}>
+              <Text style={styles.sectionLabel}>Trending Searches</Text>
               {['Blinding Lights', 'Bohemian Rhapsody', 'Demon Days', 'Feel Good Inc', 'Shape of You'].map(
                 (item, index) => (
                   <TouchableOpacity
                     key={index}
                     activeOpacity={0.7}
                     onPress={() => handleSelectQuery(item)}
-                    className="flex-row items-center justify-between py-3 border-b border-white/5"
+                    style={styles.suggestionRow}
                   >
-                    <View className="flex-row items-center gap-3 flex-1 min-w-0">
+                    <View style={styles.suggestionLeft}>
                       <Search size={16} color="#737373" />
-                      <Text numberOfLines={1} className="text-sm font-medium text-white flex-1">
+                      <Text numberOfLines={1} style={styles.suggestionTextTrending}>
                         {item}
                       </Text>
                     </View>
@@ -311,3 +290,211 @@ export default function MobileSearchOverlay({
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#0e0e0e',
+  },
+  searchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  inputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#18181a',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    height: 44,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#ffffff',
+    fontWeight: '500',
+    marginLeft: 8,
+    paddingVertical: 0,
+  },
+  clearButton: {
+    padding: 4,
+  },
+  cancelButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  cancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#a3a3a3',
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+    gap: 8,
+  },
+  tabChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  tabChipActive: {
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
+  },
+  tabChipInactive: {
+    backgroundColor: '#18181a',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  tabChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  tabChipTextActive: {
+    color: '#000000',
+  },
+  tabChipTextInactive: {
+    color: '#a3a3a3',
+  },
+  scrollArea: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  resultsContainer: {
+    paddingTop: 12,
+    paddingBottom: 80,
+  },
+  shelf: {
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    color: '#737373',
+    marginBottom: 8,
+  },
+  shelfTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 12,
+    letterSpacing: -0.3,
+  },
+  topResultCard: {
+    backgroundColor: '#18181a',
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+  },
+  topResultThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
+    backgroundColor: '#262626',
+  },
+  topResultDetails: {
+    flex: 1,
+    minWidth: 0,
+  },
+  topResultTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 2,
+  },
+  topResultSubtitle: {
+    fontSize: 12,
+    color: '#a3a3a3',
+    marginBottom: 8,
+  },
+  hitBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  hitBadgeText: {
+    fontSize: 9,
+    fontFamily: 'monospace',
+    color: '#d4d4d4',
+  },
+  playIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 64,
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 6,
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    color: '#a3a3a3',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  defaultSearchContainer: {
+    paddingVertical: 12,
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  suggestionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    minWidth: 0,
+  },
+  suggestionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#d4d4d4',
+    flex: 1,
+  },
+  suggestionTextTrending: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#ffffff',
+    flex: 1,
+  },
+});

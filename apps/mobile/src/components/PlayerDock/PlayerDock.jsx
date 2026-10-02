@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
-import { Play, Pause, SkipForward, Heart, Music } from 'lucide-react-native';
+import { Play, Pause, SkipForward, SkipBack, Heart, Music } from 'lucide-react-native';
 
 export default function PlayerDock({
   currentSong,
@@ -11,54 +11,56 @@ export default function PlayerDock({
   onPress,
   onTogglePlay,
   onSkipNext,
+  onSkipPrev,
   onToggleLike,
 }) {
   if (!currentSong) return null;
 
   return (
     <TouchableOpacity
-      activeOpacity={0.9}
+      activeOpacity={0.92}
       onPress={onPress}
-      className="mx-3 mb-2 p-2.5 rounded-2xl bg-[#161616] border border-white/10 flex-row items-center justify-between shadow-2xl"
+      style={styles.dockContainer}
     >
-      {/* Thumbnail + Metadata */}
-      <View className="flex-row items-center gap-3 flex-1 min-w-0 pr-2">
-        <View className="w-11 h-11 rounded-xl overflow-hidden bg-neutral-900 border border-white/10 items-center justify-center">
+      {/* Thumbnail + Track Metadata */}
+      <View style={styles.trackInfo}>
+        <View style={styles.thumbnailWrapper}>
           {currentSong.thumbnail || currentSong.cover ? (
             <Image
               source={{ uri: currentSong.thumbnail || currentSong.cover }}
-              style={{ width: '100%', height: '100%' }}
+              style={styles.thumbnail}
               contentFit="cover"
               transition={200}
             />
           ) : (
             <Music size={18} color="#737373" />
           )}
+
+          {isLoading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="small" color="#ffffff" />
+            </View>
+          )}
         </View>
 
-        <View className="flex-1 min-w-0 justify-center">
-          <Text
-            numberOfLines={1}
-            className="text-[13px] font-semibold text-white tracking-tight"
-          >
+        <View style={styles.textContainer}>
+          <Text numberOfLines={1} style={styles.trackTitle}>
             {currentSong.title || 'Nothing playing'}
           </Text>
-          <Text
-            numberOfLines={1}
-            className="text-[11px] text-neutral-400 mt-0.5"
-          >
+          <Text numberOfLines={1} style={styles.trackArtist}>
             {currentSong.artist || currentSong.artists?.[0]?.name || 'Unknown Artist'}
           </Text>
         </View>
       </View>
 
-      {/* Action Buttons */}
-      <View className="flex-row items-center gap-2">
+      {/* Action Controls */}
+      <View style={styles.controlsRow}>
         {/* Like Button */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => onToggleLike?.(currentSong)}
-          className="p-2"
+          style={styles.iconButton}
+          accessibilityLabel="Like"
         >
           <Heart
             size={18}
@@ -67,24 +69,40 @@ export default function PlayerDock({
           />
         </TouchableOpacity>
 
-        {/* Play/Pause Button */}
+        {/* Skip Previous (Optional) */}
+        {onSkipPrev && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onSkipPrev}
+            style={styles.iconButton}
+            accessibilityLabel="Previous"
+          >
+            <SkipBack size={18} color="#A3A3A3" />
+          </TouchableOpacity>
+        )}
+
+        {/* Circular Play/Pause */}
         <TouchableOpacity
-          activeOpacity={0.7}
+          activeOpacity={0.8}
           onPress={onTogglePlay}
-          className="w-10 h-10 rounded-full bg-white items-center justify-center shadow-md"
+          style={styles.playButton}
+          accessibilityLabel={isPlaying ? 'Pause' : 'Play'}
         >
-          {isPlaying ? (
-            <Pause size={18} color="#000000" fill="#000000" />
+          {isLoading ? (
+            <ActivityIndicator size="small" color="#000000" />
+          ) : isPlaying ? (
+            <Pause size={17} color="#000000" fill="#000000" />
           ) : (
-            <Play size={18} color="#000000" fill="#000000" />
+            <Play size={17} color="#000000" fill="#000000" style={{ marginLeft: 2 }} />
           )}
         </TouchableOpacity>
 
-        {/* Next Button */}
+        {/* Skip Next */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onSkipNext}
-          className="p-2"
+          style={styles.iconButton}
+          accessibilityLabel="Next"
         >
           <SkipForward size={18} color="#A3A3A3" />
         </TouchableOpacity>
@@ -92,3 +110,94 @@ export default function PlayerDock({
     </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  dockContainer: {
+    marginHorizontal: 10,
+    marginBottom: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    backgroundColor: '#18181a',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.10)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 16,
+  },
+  trackInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
+    gap: 10,
+  },
+  thumbnailWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 11,
+    overflow: 'hidden',
+    backgroundColor: '#262626',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  thumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textContainer: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
+  },
+  trackTitle: {
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#ffffff',
+    letterSpacing: -0.2,
+  },
+  trackArtist: {
+    fontSize: 11.5,
+    color: '#a1a1aa',
+    marginTop: 2,
+    letterSpacing: -0.1,
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  iconButton: {
+    padding: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+});

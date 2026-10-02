@@ -31,7 +31,7 @@ export default function AlbumView({
   const coverUrl = album.cover || album.thumbnail || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=500';
 
   return (
-    <View className="flex-1 bg-[#0e0e0e]">
+    <View style={{ flex: 1, backgroundColor: '#0e0e0e' }} className="flex-1 bg-[#0e0e0e]">
       {/* Top Bar */}
       <View className="flex-row items-center justify-between px-4 py-3 border-b border-white/5 bg-[#0e0e0e]/90">
         <TouchableOpacity

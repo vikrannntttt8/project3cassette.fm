@@ -39,7 +39,11 @@ export default function LyricsView({
   const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0e0e0e] justify-between" edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: '#0e0e0e', justifyContent: 'space-between' }}
+      className="flex-1 bg-[#0e0e0e] justify-between"
+      edges={['top', 'bottom']}
+    >
       {/* ── Top Bar ── */}
       <View className="flex-row items-center justify-between px-5 py-3 border-b border-white/5">
         <TouchableOpacity

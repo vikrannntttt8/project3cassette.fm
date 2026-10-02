@@ -1,19 +1,5 @@
 {
   "expo": {
-    "newArchEnabled": false,
-    "plugins": [
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "newArchEnabled": false
-          },
-          "ios": {
-            "newArchEnabled": false
-          }
-        }
-      ]
-    ],
     "extra": {
       "eas": {
         "projectId": "2b3a4ca6-d5f6-40b7-b97f-490d836e9e63"

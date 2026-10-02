@@ -13,7 +13,6 @@
     "@cassette/core": "*",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.26",
-    "expo-build-properties": "~57.0.22",
     "expo-constants": "~57.0.20",
     "expo-dev-client": "~57.0.19",
     "expo-image": "~57.0.5",
@@ -28,7 +27,7 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
-    "react-native-track-player": "^4.1.2",
+    "react-native-track-player": "github:doublesymmetry/react-native-track-player#feat/media3-newarch",
     "tailwindcss": "3.3.2"
   },
   "devDependencies": {

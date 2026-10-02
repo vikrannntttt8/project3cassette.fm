@@ -24,12 +24,14 @@
       "package": "fm.cassette.mobile",
       "permissions": [
         "WAKE_LOCK",
-        "FOREGROUND_SERVICE"
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
     "plugins": [
       "expo-router",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "react-native-track-player"
     ],
     "extra": {
       "router": {},

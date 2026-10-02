@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import LyricsView from '../src/components/LyricsView/LyricsView.jsx';
-import { usePlayerStore, playerActions } from '@cassette/core';
+import { usePlayerStore, playerActions, resolveDirectAudioStream } from '@cassette/core';
+import { playTrack, pauseTrack, resumeTrack, seekTrack } from '../src/services/trackPlayerService.js';
+import { FALLBACK_HOME_FEED } from '../src/data/fallbackFeed.js';
 
 export default function MobileNowPlayingRoute() {
   const router = useRouter();
@@ -12,17 +14,56 @@ export default function MobileNowPlayingRoute() {
     return () => unsubscribe();
   }, []);
 
+  const currentSong = playerState.currentSong || FALLBACK_HOME_FEED.quickPicks[0];
+
   const handleTogglePlay = () => {
-    playerActions.setIsPlaying(!playerState.isPlaying);
+    const nextPlayState = !playerState.isPlaying;
+    playerActions.setIsPlaying(nextPlayState);
+    if (nextPlayState) {
+      resumeTrack();
+    } else {
+      pauseTrack();
+    }
   };
 
   const handleSeek = (time) => {
     playerActions.setProgress(time, playerState.duration || 210);
+    seekTrack(time);
+  };
+
+  const handleSkipNext = async () => {
+    const currentList = FALLBACK_HOME_FEED.quickPicks;
+    const currentId = currentSong.id || currentSong.videoId;
+    const idx = currentList.findIndex((s) => (s.id || s.videoId) === currentId);
+    const nextSong = currentList[(idx + 1) % currentList.length];
+    playerActions.setCurrentSong(nextSong);
+    playerActions.setIsPlaying(true);
+    try {
+      const res = await resolveDirectAudioStream(nextSong.videoId || nextSong.id);
+      await playTrack(nextSong, res?.streamUrl);
+    } catch {
+      await playTrack(nextSong);
+    }
+  };
+
+  const handleSkipPrev = async () => {
+    const currentList = FALLBACK_HOME_FEED.quickPicks;
+    const currentId = currentSong.id || currentSong.videoId;
+    const idx = currentList.findIndex((s) => (s.id || s.videoId) === currentId);
+    const prevSong = currentList[(idx - 1 + currentList.length) % currentList.length];
+    playerActions.setCurrentSong(prevSong);
+    playerActions.setIsPlaying(true);
+    try {
+      const res = await resolveDirectAudioStream(prevSong.videoId || prevSong.id);
+      await playTrack(prevSong, res?.streamUrl);
+    } catch {
+      await playTrack(prevSong);
+    }
   };
 
   return (
     <LyricsView
-      currentSong={playerState.currentSong}
+      currentSong={currentSong}
       isPlaying={playerState.isPlaying}
       currentTime={playerState.currentTime || 35}
       duration={playerState.duration || 215}
@@ -43,12 +84,12 @@ export default function MobileNowPlayingRoute() {
       isRepeat={playerState.isRepeat}
       onClose={() => router.back()}
       onTogglePlay={handleTogglePlay}
-      onSkipNext={() => console.log('Skip next')}
-      onSkipPrev={() => console.log('Skip prev')}
+      onSkipNext={handleSkipNext}
+      onSkipPrev={handleSkipPrev}
       onSeek={handleSeek}
-      onToggleLike={() => console.log('Toggle like')}
-      onToggleShuffle={() => console.log('Toggle shuffle')}
-      onToggleRepeat={() => console.log('Toggle repeat')}
+      onToggleLike={() => playerActions.toggleLike(currentSong)}
+      onToggleShuffle={() => playerActions.toggleShuffle()}
+      onToggleRepeat={() => playerActions.toggleRepeat()}
     />
   );
 }

@@ -27,7 +27,7 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
-    "react-native-track-player": "github:doublesymmetry/react-native-track-player#feat/media3-newarch",
+    "react-native-track-player": "^5.0.0-alpha0-nightly-359af5a12d712d3b685530aed9b9625865a25d74",
     "tailwindcss": "3.3.2"
   },
   "devDependencies": {

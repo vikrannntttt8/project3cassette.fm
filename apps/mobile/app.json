@@ -32,7 +32,6 @@
     "plugins": [
       "expo-router",
       "expo-splash-screen",
-      "react-native-track-player",
       [
         "expo-build-properties",
         {

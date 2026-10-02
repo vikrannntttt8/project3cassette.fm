@@ -30,6 +30,12 @@
     "plugins": [
       "expo-router",
       "expo-splash-screen"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5a79b417-4467-432a-94ea-3ba14c7f9b92"
+      }
+    }
   }
 }

@@ -15,8 +15,12 @@ import { FALLBACK_HOME_FEED } from '../src/data/fallbackFeed.js';
 import { usePlayerStore, playerActions, resolveDirectAudioStream } from '@cassette/core';
 import { playTrack, pauseTrack, resumeTrack } from '../src/services/trackPlayerService.js';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
+try {
+  if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+} catch {
+  // Ignored in New Architecture Fabric
 }
 
 const animateLayout = () => {

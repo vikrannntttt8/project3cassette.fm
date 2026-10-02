@@ -7,6 +7,7 @@
     "icon": "./assets/icon.png",
     "scheme": "cassette",
     "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "fm.cassette.mobile",
@@ -31,7 +32,18 @@
     "plugins": [
       "expo-router",
       "expo-splash-screen",
-      "react-native-track-player"
+      "react-native-track-player",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "newArchEnabled": false
+          },
+          "ios": {
+            "newArchEnabled": false
+          }
+        }
+      ]
     ],
     "extra": {
       "router": {},

@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * CSS Custom Properties used by native-web hybrid class names.
+ * These mirror the values set by the PWA's index.css so mobile
+ * components that reference var(--safe-top) etc. resolve cleanly.
+ */
+:root {
+  --safe-top:      0px;
+  --safe-bottom:   0px;
+  --mobile-header-h: 54px;
+  --mobile-nav-h:    56px;
+}

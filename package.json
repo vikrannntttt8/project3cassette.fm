@@ -17,6 +17,7 @@
     "start:mobile": "npm run start --workspace=@cassette/mobile -- --clear",
     "android:mobile": "npm run android --workspace=@cassette/mobile",
     "ios:mobile": "npm run ios --workspace=@cassette/mobile",
+    "eas-build-pre-install": "node ./scripts/eas-build-pre-install.cjs",
     "postinstall": "patch-package"
   },
   "devDependencies": {

@@ -30,10 +30,11 @@ if (!monorepoRoot) {
   console.log(`[EAS Build Hook] Detected monorepo root at: ${monorepoRoot}`);
 }
 
-// 1. Configure npm globally and at root for the build process to ignore peer dependency conflicts
+// 1. Configure npm globally and at root for the build process to ignore peer dependency conflicts and platform mismatch
 try {
-  console.log('[EAS Build Hook] Setting npm config legacy-peer-deps true at root...');
+  console.log('[EAS Build Hook] Setting npm config legacy-peer-deps and force at root...');
   execSync('npm config set legacy-peer-deps true', { cwd: monorepoRoot, stdio: 'inherit' });
+  execSync('npm config set force true', { cwd: monorepoRoot, stdio: 'inherit' });
 } catch (err) {
   console.warn('[EAS Build Hook] Notice: npm config set warning:', err.message);
 }
@@ -58,7 +59,8 @@ try {
     stdio: 'inherit',
     env: {
       ...process.env,
-      NPM_CONFIG_LEGACY_PEER_DEPS: 'true'
+      NPM_CONFIG_LEGACY_PEER_DEPS: 'true',
+      NPM_CONFIG_FORCE: 'true'
     }
   });
   console.log('[EAS Build Hook] Workspace dependencies successfully resolved and installed.');

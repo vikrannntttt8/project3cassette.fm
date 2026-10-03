@@ -11,6 +11,7 @@ import Animated, {
   SlideOutDown,
 } from 'react-native-reanimated';
 import { usePlayerStore } from '@cassette/core';
+import { useSettings, useTheme } from '../../context/NativeContextProviders.jsx';
 
 export default function PlayerDock({
   currentSong,
@@ -27,6 +28,8 @@ export default function PlayerDock({
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(210);
+  const { settings } = useSettings();
+  const { accentColor } = useTheme();
 
   // Subscribe to playback progress
   useEffect(() => {
@@ -66,15 +69,23 @@ export default function PlayerDock({
     onToggleLike?.(currentSong);
   };
 
+  const glowStyle = settings.ambientGlow
+    ? {
+        shadowColor: accentColor || '#ffffff',
+        shadowOpacity: 0.35,
+        shadowRadius: 16,
+      }
+    : null;
+
   return (
     <Animated.View
       entering={SlideInDown.springify().damping(18).stiffness(160)}
       exiting={SlideOutDown.duration(220)}
-      style={styles.dockWrapper}
+      style={[styles.dockWrapper, glowStyle]}
     >
       {/* Realtime audio progress line at top border */}
       <View style={styles.progressBarBackground}>
-        <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+        <View style={[styles.progressBarFill, { width: `${progressPercent}%`, backgroundColor: accentColor || '#FFFFFF' }]} />
       </View>
 
       <TouchableOpacity
@@ -88,7 +99,10 @@ export default function PlayerDock({
             {currentSong.thumbnail || currentSong.cover ? (
               <Image
                 source={{ uri: currentSong.thumbnail || currentSong.cover }}
-                style={styles.thumbnail}
+                style={[
+                  styles.thumbnail,
+                  settings.monochromeMode && { tintColor: undefined },
+                ]}
                 contentFit="cover"
                 transition={200}
               />
@@ -125,8 +139,8 @@ export default function PlayerDock({
             <Animated.View style={animatedLikeStyle}>
               <Heart
                 size={18}
-                color={isLiked ? '#FFFFFF' : '#737373'}
-                fill={isLiked ? '#FFFFFF' : 'none'}
+                color={isLiked ? (accentColor || '#FFFFFF') : '#737373'}
+                fill={isLiked ? (accentColor || '#FFFFFF') : 'none'}
               />
             </Animated.View>
           </TouchableOpacity>
@@ -150,7 +164,7 @@ export default function PlayerDock({
             onPressOut={handlePlayPressOut}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
-            <Animated.View style={[styles.playButton, animatedPlayStyle]}>
+            <Animated.View style={[styles.playButton, animatedPlayStyle, { backgroundColor: accentColor || '#ffffff' }]}>
               {isLoading ? (
                 <ActivityIndicator size="small" color="#000000" />
               ) : isPlaying ? (
@@ -198,7 +212,6 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#FFFFFF',
     borderRadius: 1,
   },
   dockContent: {
@@ -248,12 +261,14 @@ const styles = StyleSheet.create({
   },
   trackTitle: {
     fontSize: 13.5,
+    fontFamily: 'Inter',
     fontWeight: '600',
     color: '#ffffff',
     letterSpacing: -0.2,
   },
   trackArtist: {
     fontSize: 11.5,
+    fontFamily: 'Inter',
     color: '#a1a1aa',
     marginTop: 2,
     letterSpacing: -0.1,
@@ -272,7 +287,6 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#ffffff',

@@ -1,6 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, Component } from 'react';
+import React, { createContext, useContext, useState, useEffect, Component, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { usePlayerStore, playerActions } from '@cassette/core';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { usePlayerStore, playerActions, resolveDirectAudioStream } from '@cassette/core';
+import { googleAuthSyncService } from '../services/googleAuthSyncService.js';
+import { playTrack, pauseTrack, resumeTrack } from '../services/trackPlayerService.js';
 
 // ── 1. Error Boundary (eliminates white-screen crashes on boot) ───────────────
 export class SafeErrorBoundary extends Component {
@@ -41,39 +44,92 @@ export class SafeErrorBoundary extends Component {
   }
 }
 
-// ── 2. Theme Context Fallback ────────────────────────────────────────────────
+// ── 2. Settings Context with Local Storage Persistence ─────────────────────────
+export const SETTINGS_STORAGE_KEY = 'pulse_app_settings_v2';
+
+export const DEFAULT_SETTINGS = {
+  // Themes & Aesthetics
+  monochromeMode: false,
+  dynamicGlow: true,
+  ambientGlow: true,
+  customAccentColor: '#ffffff',
+  romanizedLyrics: false,
+  lyricFontSize: 'normal', // 'small' | 'normal' | 'large'
+
+  // Interface & Layout Preferences
+  compactArtists: false,
+  compactAlbums: false,
+  artistBanners: true,
+  showQuickPicks: true,
+  showListenAgain: true,
+  nowPlayingViewMode: 'Fullscreen',
+  coverClickAction: 'Show Track Info',
+
+  // Navigation Destinations
+  navVisibility: {
+    home: true,
+    radio: true,
+    explore: true,
+    library: true,
+    settings: true,
+  },
+
+  // Audio Quality & Playback
+  audioQuality: 'max', // 'max' (256k) | 'balanced' (160k) | 'datasaver' (128k)
+  audioCodec: 'auto',
+  playbackSpeed: 1.0,
+  preservesPitch: true,
+  gaplessPlayback: true,
+  removeSilence: true,
+  normalizeAudio: true,
+  crossfadeDuration: 0,
+  smartRecs: true,
+  dataSaver: false,
+  rememberLastSong: true,
+
+  // Content & Language
+  regionalCharts: 'Global (All Regions)',
+  explicitFilter: false,
+  selectedLanguage: 'all',
+};
+
+const SettingsContext = createContext({
+  settings: DEFAULT_SETTINGS,
+  updateSetting: () => {},
+  resetSettings: () => {},
+});
+
+export const useSettings = () => useContext(SettingsContext);
+
+// ── 3. Theme Context ──────────────────────────────────────────────────────────
 const ThemeContext = createContext({
   themeMode: 'default',
   accentColor: '#ffffff',
+  monochromeMode: false,
+  dynamicGlow: true,
+  ambientGlow: true,
   setThemeMode: () => {},
   setAccentColor: () => {},
 });
 
 export const useTheme = () => useContext(ThemeContext);
 
-// ── 3. Auth Context Fallback ─────────────────────────────────────────────────
+// ── 4. Auth Context ───────────────────────────────────────────────────────────
 const AuthContext = createContext({
   user: null,
   session: null,
   isAuthenticated: false,
+  isSyncing: false,
   signInWithGoogle: async () => {},
   signInWithEmail: async () => {},
+  signUpWithEmail: async () => {},
   signOut: async () => {},
+  syncLibrary: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-// ── 4. Settings Context Fallback ─────────────────────────────────────────────
-const SettingsContext = createContext({
-  audioQuality: 'max',
-  gaplessPlayback: true,
-  offlineCacheEnabled: true,
-  updateSetting: () => {},
-});
-
-export const useSettings = () => useContext(SettingsContext);
-
-// ── 5. Player Context Fallback (bridged to core Zustand store) ───────────────
+// ── 5. Player Context ─────────────────────────────────────────────────────────
 const PlayerContext = createContext({
   currentSong: null,
   isPlaying: false,
@@ -95,6 +151,53 @@ export const usePlayer = () => useContext(PlayerContext);
 
 // ── 6. Master Native Providers Wrapper ───────────────────────────────────────
 export function NativeAppProviders({ children }) {
+  // Settings State
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS);
+
+  useEffect(() => {
+    AsyncStorage.getItem(SETTINGS_STORAGE_KEY).then((raw) => {
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          setSettings((prev) => ({
+            ...prev,
+            ...parsed,
+            navVisibility: { ...prev.navVisibility, ...(parsed.navVisibility || {}) },
+          }));
+        } catch {}
+      }
+    });
+  }, []);
+
+  const updateSetting = useCallback((key, value) => {
+    setSettings((prev) => {
+      const next = {
+        ...prev,
+        [key]: typeof value === 'function' ? value(prev[key]) : value,
+      };
+      AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  const resetSettings = useCallback(() => {
+    setSettings(DEFAULT_SETTINGS);
+    AsyncStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(DEFAULT_SETTINGS)).catch(() => {});
+  }, []);
+
+  // Auth State
+  const [authUser, setAuthUser] = useState(googleAuthSyncService.getUser());
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    const unsub = googleAuthSyncService.subscribe((u, syncing) => {
+      setAuthUser(u);
+      setIsSyncing(syncing);
+    });
+    return () => unsub();
+  }, []);
+
+  // Player State
   const [playerState, setPlayerState] = useState(() => usePlayerStore?.getState?.() || {});
 
   useEffect(() => {
@@ -102,6 +205,34 @@ export function NativeAppProviders({ children }) {
     const unsub = usePlayerStore.subscribe(setPlayerState);
     return () => unsub();
   }, []);
+
+  const authValue = {
+    user: authUser,
+    session: googleAuthSyncService.session,
+    isAuthenticated: Boolean(authUser && authUser.isConnected),
+    isSyncing,
+    signInWithGoogle: () => googleAuthSyncService.signInWithGoogle(),
+    signInWithEmail: (email, pass) => googleAuthSyncService.signInWithEmail(email, pass),
+    signUpWithEmail: (email, pass, name) => googleAuthSyncService.signUpWithEmail(email, pass, name),
+    signOut: () => googleAuthSyncService.signOut(),
+    syncLibrary: () => googleAuthSyncService.syncYouTubeMusicLibrary(),
+  };
+
+  const themeValue = {
+    themeMode: settings.monochromeMode ? 'monochrome' : settings.dynamicGlow ? 'dynamic' : 'custom',
+    accentColor: settings.customAccentColor || '#ffffff',
+    monochromeMode: settings.monochromeMode,
+    dynamicGlow: settings.dynamicGlow,
+    ambientGlow: settings.ambientGlow,
+    setThemeMode: (mode) => updateSetting('monochromeMode', mode === 'monochrome'),
+    setAccentColor: (col) => updateSetting('customAccentColor', col),
+  };
+
+  const settingsValue = {
+    settings,
+    updateSetting,
+    resetSettings,
+  };
 
   const playerValue = {
     currentSong: playerState.currentSong || null,
@@ -118,29 +249,6 @@ export function NativeAppProviders({ children }) {
     skipNext: () => {},
     skipPrev: () => {},
     seek: (t) => playerActions?.setProgress?.(t, playerState.duration || 210),
-  };
-
-  const themeValue = {
-    themeMode: 'default',
-    accentColor: '#ffffff',
-    setThemeMode: () => {},
-    setAccentColor: () => {},
-  };
-
-  const authValue = {
-    user: null,
-    session: null,
-    isAuthenticated: false,
-    signInWithGoogle: async () => {},
-    signInWithEmail: async () => {},
-    signOut: async () => {},
-  };
-
-  const settingsValue = {
-    audioQuality: 'max',
-    gaplessPlayback: true,
-    offlineCacheEnabled: true,
-    updateSetting: () => {},
   };
 
   return (
@@ -168,13 +276,14 @@ const styles = StyleSheet.create({
   },
   brandTitle: {
     fontSize: 26,
-    fontWeight: '800',
+    fontFamily: 'Shrikhand',
     color: '#ffffff',
     letterSpacing: -0.6,
     marginBottom: 16,
   },
   errorHeading: {
     fontSize: 16,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#ffffff',
     marginBottom: 8,
@@ -182,6 +291,7 @@ const styles = StyleSheet.create({
   },
   errorMessage: {
     fontSize: 13,
+    fontFamily: 'Inter',
     color: '#a1a1aa',
     textAlign: 'center',
     lineHeight: 18,
@@ -192,14 +302,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 20,
     backgroundColor: '#ffffff',
-    shadowColor: '#ffffff',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
   },
   retryButtonText: {
     fontSize: 14,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#000000',
   },

@@ -30,126 +30,182 @@ import {
   Download,
   Upload,
   Settings as SettingsIcon,
-  Sparkles,
+  User,
+  LogOut,
+  Palette,
 } from 'lucide-react-native';
 import { googleAuthSyncService } from '../../services/googleAuthSyncService.js';
+import { useSettings } from '../../context/NativeContextProviders.jsx';
+import { apiUrl } from '@cassette/core';
 
-const SETTINGS_KEY = 'pulse_app_settings';
+const PRESET_PALETTES = [
+  { id: 'white', label: 'Default Monochrome', hex: '#ffffff' },
+  { id: 'amber', label: 'Warm Amber', hex: '#f59e0b' },
+  { id: 'cyan', label: 'Electric Cyan', hex: '#38bdf8' },
+  { id: 'emerald', label: 'Emerald Green', hex: '#10b981' },
+  { id: 'pink', label: 'Neon Pink', hex: '#ec4899' },
+  { id: 'purple', label: 'Electric Purple', hex: '#8b5cf6' },
+];
 
-export default function SettingsModal({ isOpen, onClose }) {
+export default function SettingsModal({ isOpen, onClose, onOpenAuth }) {
   const [currentSubpage, setCurrentSubpage] = useState('menu'); // 'menu' | 'account' | 'interface' | 'quality' | 'content' | 'backup' | 'about'
   const [user, setUser] = useState(googleAuthSyncService.getUser());
   const [isSyncing, setIsSyncing] = useState(false);
-
-  // Settings State with Persistence
-  const [settings, setSettings] = useState({
-    // Interface & Behavior
-    monochromeMode: false,
-    dynamicGlow: true,
-    ambientGlow: true,
-    romanizedLyrics: false,
-    lyricsFontSize: 'Standard',
-    interceptBackModal: true,
-    closeDrawers: true,
-    nowPlayingMode: 'Fullscreen Sheet',
-    coverArtTap: 'Exit Fullscreen Sheet',
-    compactLists: false,
-    heroBanners: true,
-    quickPicksFeed: true,
-    listenAgainFeed: true,
-    tabHome: true,
-    tabRadio: true,
-    tabExplore: true,
-    tabLibrary: true,
-    tabSettings: true,
-
-    // Quality & Playback
-    audioQuality: 'max', // 'max' (256k) | 'balanced' (160k) | 'datasaver' (128k)
-    audioCodec: 'Auto (Best Quality OPUS / AAC)',
-    gaplessPlayback: true,
-    removeSilence: true,
-    playbackSpeed: '1.0x',
-    preservePitch: true,
-    normalizeVolume: true,
-    smartRadioAutoplay: true,
-    crossfadeDuration: 0,
-
-    // Content & Language
-    regionalCharts: 'Global (All Regions)',
-    filterExplicit: false,
-    rememberLastTrack: true,
-    mobileDataSaver: false,
-
-    // Storage
-    cachedTracksCount: 14,
-    cacheSizeMB: '142.8 MB',
-  });
+  const { settings, updateSetting, resetSettings } = useSettings();
 
   const [ytPlaylistUrl, setYtPlaylistUrl] = useState('');
   const [spotifyPlaylistUrl, setSpotifyPlaylistUrl] = useState('');
+  const [importing, setImporting] = useState(false);
 
-  // Load persisted settings & auth
+  // Storage counts
+  const [storageCounts, setStorageCounts] = useState({ liked: 0, playlists: 0, history: 0 });
+
+  const loadStorageCounts = async () => {
+    try {
+      const [likedRaw, plRaw, histRaw] = await Promise.all([
+        AsyncStorage.getItem('likedSongs'),
+        AsyncStorage.getItem('pulse_playlists'),
+        AsyncStorage.getItem('pulse_playback_history'),
+      ]);
+      setStorageCounts({
+        liked: likedRaw ? JSON.parse(likedRaw).length : 0,
+        playlists: plRaw ? JSON.parse(plRaw).length : 0,
+        history: histRaw ? JSON.parse(histRaw).length : 0,
+      });
+    } catch {}
+  };
+
   useEffect(() => {
-    const loadSavedSettings = async () => {
-      try {
-        const raw = await AsyncStorage.getItem(SETTINGS_KEY);
-        if (raw) {
-          setSettings((prev) => ({ ...prev, ...JSON.parse(raw) }));
-        }
-      } catch (e) {
-        console.warn('Failed to load settings:', e);
-      }
-    };
-    loadSavedSettings();
-
     const unsub = googleAuthSyncService.subscribe((u, syncing) => {
       setUser(u);
       setIsSyncing(syncing);
     });
+    loadStorageCounts();
     return () => unsub();
   }, []);
 
-  const updateSetting = async (key, val) => {
-    const next = { ...settings, [key]: val };
-    setSettings(next);
-    try {
-      await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
-    } catch {}
-  };
-
   const handleSyncCloud = async () => {
+    if (!user?.isConnected) {
+      Alert.alert(
+        'Sign In Required',
+        'Sign in to synchronize your playlists and liked songs with YouTube Music.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => onOpenAuth?.() },
+        ]
+      );
+      return;
+    }
+
     setIsSyncing(true);
     const res = await googleAuthSyncService.syncYouTubeMusicLibrary();
     setIsSyncing(false);
+    loadStorageCounts();
+
     if (res?.success) {
-      Alert.alert('Cloud Sync Complete', 'YouTube Music playlists, liked songs, and history synced.');
+      Alert.alert(
+        'Cloud Sync Complete',
+        `Successfully synced ${res.data?.likedCount || 0} liked tracks and ${res.data?.playlistCount || 0} playlists.`
+      );
     } else {
-      Alert.alert('Sync Result', 'Local cloud cache synced with Supabase.');
+      Alert.alert('Sync Result', res?.error || 'Synced cached library items.');
     }
   };
 
   const handleAuthAction = async () => {
-    if (user.isConnected) {
-      Alert.alert('Sign Out', 'Are you sure you want to disconnect your Google Account?', [
+    if (user?.isConnected) {
+      Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
             await googleAuthSyncService.signOut();
+            setCurrentSubpage('menu');
           },
         },
       ]);
     } else {
-      await googleAuthSyncService.signInWithGoogle();
+      onOpenAuth?.();
+    }
+  };
+
+  const handleImportYouTubePlaylist = async () => {
+    if (!ytPlaylistUrl.trim()) return;
+    setImporting(true);
+    try {
+      const res = await fetch(apiUrl('/api/playlist/import'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: ytPlaylistUrl.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data?.songs) {
+        // Save playlist to pulse_playlists
+        const currentPlRaw = await AsyncStorage.getItem('pulse_playlists');
+        const currentPl = currentPlRaw ? JSON.parse(currentPlRaw) : [];
+        const newPl = {
+          id: `pl-${Date.now()}`,
+          title: data.title || 'Imported YouTube Playlist',
+          itemCount: data.songs.length,
+          songs: data.songs,
+          collageImages: data.songs.slice(0, 4).map((s) => s.thumbnail || s.cover),
+        };
+        await AsyncStorage.setItem('pulse_playlists', JSON.stringify([newPl, ...currentPl]));
+        setYtPlaylistUrl('');
+        loadStorageCounts();
+        Alert.alert('Import Complete', `Imported "${newPl.title}" with ${data.songs.length} tracks.`);
+      } else {
+        Alert.alert('Import Failed', data?.error || 'Could not parse YouTube playlist URL.');
+      }
+    } catch (e) {
+      Alert.alert('Import Error', e.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleImportSpotifyPlaylist = async () => {
+    if (!spotifyPlaylistUrl.trim()) return;
+    setImporting(true);
+    try {
+      const res = await fetch(apiUrl('/api/spotify/playlist'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: spotifyPlaylistUrl.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data?.playlist?.tracks) {
+        const currentPlRaw = await AsyncStorage.getItem('pulse_playlists');
+        const currentPl = currentPlRaw ? JSON.parse(currentPlRaw) : [];
+        const newPl = {
+          id: `pl-spot-${Date.now()}`,
+          title: data.playlist.name || 'Imported Spotify Playlist',
+          itemCount: data.playlist.tracks.length,
+          songs: data.playlist.tracks,
+          collageImages: data.playlist.tracks.slice(0, 4).map((s) => s.thumbnail || s.cover),
+        };
+        await AsyncStorage.setItem('pulse_playlists', JSON.stringify([newPl, ...currentPl]));
+        setSpotifyPlaylistUrl('');
+        loadStorageCounts();
+        Alert.alert('Import Complete', `Imported "${newPl.title}" with ${data.playlist.tracks.length} tracks.`);
+      } else {
+        Alert.alert('Import Failed', data?.error || 'Could not parse Spotify playlist URL.');
+      }
+    } catch (e) {
+      Alert.alert('Import Error', e.message);
+    } finally {
+      setImporting(false);
     }
   };
 
   const handleExportBackup = async () => {
     try {
-      const history = await AsyncStorage.getItem('pulse_playback_history');
-      const liked = await AsyncStorage.getItem('likedSongs');
-      const playlists = await AsyncStorage.getItem('pulse_playlists');
+      const [history, liked, playlists] = await Promise.all([
+        AsyncStorage.getItem('pulse_playback_history'),
+        AsyncStorage.getItem('likedSongs'),
+        AsyncStorage.getItem('pulse_playlists'),
+      ]);
       const backupData = JSON.stringify(
         {
           version: '2.4.0',
@@ -179,6 +235,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         style: 'destructive',
         onPress: async () => {
           await AsyncStorage.removeItem('pulse_playback_history');
+          loadStorageCounts();
           Alert.alert('History Cleared', 'Your recent track playback history has been reset.');
         },
       },
@@ -192,11 +249,18 @@ export default function SettingsModal({ isOpen, onClose }) {
         text: 'Clear Cache',
         style: 'destructive',
         onPress: async () => {
-          updateSetting('cacheSizeMB', '0.0 MB');
           Alert.alert('Cache Cleared', 'All temporary buffers have been purged.');
         },
       },
     ]);
+  };
+
+  const toggleNavTab = (tabKey) => {
+    const current = settings.navVisibility || {};
+    const next = { ...current, [tabKey]: !current[tabKey] };
+    // Ensure at least one tab stays active
+    if (Object.values(next).filter(Boolean).length === 0) return;
+    updateSetting('navVisibility', next);
   };
 
   if (!isOpen) return null;
@@ -240,6 +304,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         <ScrollView
           style={styles.scrollArea}
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
           {/* ============================================================== */}
@@ -250,16 +315,34 @@ export default function SettingsModal({ isOpen, onClose }) {
               {/* Account Card (Page 7) */}
               <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={() => setCurrentSubpage('account')}
+                onPress={() => {
+                  if (user?.isConnected) {
+                    setCurrentSubpage('account');
+                  } else {
+                    onOpenAuth?.();
+                  }
+                }}
                 style={styles.accountCard}
               >
-                <View style={[styles.avatarCircle, { backgroundColor: user.avatarBg || '#ea580c' }]}>
-                  <Text style={styles.avatarLetter}>{user.avatarLetter || 'V'}</Text>
-                </View>
+                {user?.isConnected ? (
+                  <View style={[styles.avatarCircle, { backgroundColor: user.avatarBg || '#ea580c' }]}>
+                    <Text style={styles.avatarLetter}>{user.avatarLetter || 'V'}</Text>
+                  </View>
+                ) : (
+                  <View style={[styles.avatarCircle, { backgroundColor: '#27272a' }]}>
+                    <User size={20} color="#a1a1aa" />
+                  </View>
+                )}
                 <View style={styles.accountDetails}>
-                  <Text style={styles.accountName}>{user.name || 'Vikrant GP'}</Text>
+                  <Text style={styles.accountName}>
+                    {user?.isConnected ? user.name : 'Sign in to cassette.fm'}
+                  </Text>
                   <Text style={styles.accountSubtitle}>
-                    {isSyncing ? 'Syncing YouTube Music...' : user.statusText || 'Google Connected · Library Synced'}
+                    {user?.isConnected
+                      ? isSyncing
+                        ? 'Syncing YouTube Music...'
+                        : user.statusText || 'Google Connected · Library Synced'
+                      : 'Connect Google or email to sync your cloud library'}
                   </Text>
                 </View>
                 <ChevronRight size={18} color="#71717a" />
@@ -383,50 +466,59 @@ export default function SettingsModal({ isOpen, onClose }) {
 
               {/* User Profile Card */}
               <View style={styles.sectionCard}>
-                <View style={styles.profileRow}>
-                  <View style={[styles.avatarCircleLarge, { backgroundColor: user.avatarBg || '#ea580c' }]}>
-                    <Text style={styles.avatarLetterLarge}>{user.avatarLetter || 'V'}</Text>
-                  </View>
-                  <View style={styles.profileDetails}>
-                    <Text style={styles.profileName}>{user.name || 'Vikrant GP'}</Text>
-                    <Text style={styles.profileEmail}>{user.email || 'gpvikrantt2008@gmail.com'}</Text>
-                    <View style={styles.activePillBadge}>
-                      <View style={styles.greenDot} />
-                      <Text style={styles.activePillText}>{user.statusText || 'Google Connected · Library Synced'}</Text>
+                {user?.isConnected ? (
+                  <>
+                    <View style={styles.profileRow}>
+                      <View style={[styles.avatarCircleLarge, { backgroundColor: user.avatarBg || '#ea580c' }]}>
+                        <Text style={styles.avatarLetterLarge}>{user.avatarLetter || 'V'}</Text>
+                      </View>
+                      <View style={styles.profileDetails}>
+                        <Text style={styles.profileName}>{user.name}</Text>
+                        <Text style={styles.profileEmail}>{user.email}</Text>
+                        <View style={styles.activePillBadge}>
+                          <View style={styles.greenDot} />
+                          <Text style={styles.activePillText}>{user.statusText || 'Connected · Synced'}</Text>
+                        </View>
+                      </View>
                     </View>
-                  </View>
-                </View>
 
-                <View style={styles.profileButtonsRow}>
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => Alert.alert('Profile Info', `Connected Google Account:\n${user.email}`)}
-                    style={styles.profileSecondaryBtn}
-                  >
-                    <Text style={styles.profileSecondaryText}>Profile</Text>
-                  </TouchableOpacity>
+                    <View style={styles.profileButtonsRow}>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => onOpenAuth?.()}
+                        style={styles.profileSecondaryBtn}
+                      >
+                        <Text style={styles.profileSecondaryText}>Account Details</Text>
+                      </TouchableOpacity>
 
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={handleAuthAction}
-                    style={[styles.profileSecondaryBtn, user.isConnected && styles.signOutBtn]}
-                  >
-                    <Text style={[styles.profileSecondaryText, user.isConnected && styles.signOutText]}>
-                      {user.isConnected ? 'Sign Out' : 'Sign In with Google'}
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={handleAuthAction}
+                        style={[styles.profileSecondaryBtn, styles.signOutBtn]}
+                      >
+                        <Text style={[styles.profileSecondaryText, styles.signOutText]}>
+                          Sign Out
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : (
+                  <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+                    <Text style={styles.profileName}>Not Signed In</Text>
+                    <Text style={[styles.cardDescription, { textAlign: 'center', marginTop: 4, marginBottom: 14 }]}>
+                      Sign in to synchronize your playlists, liked tracks, and listening history with the cloud.
                     </Text>
-                  </TouchableOpacity>
-                </View>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => onOpenAuth?.()}
+                      style={styles.importPrimaryBtn}
+                    >
+                      <User size={15} color="#000000" />
+                      <Text style={styles.importPrimaryText}>Sign In / Register</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
-
-              {/* Supabase Custom Config */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => Alert.alert('Supabase Status', 'Active Cloud Instance: cassette-pulse-db (Connected)')}
-                style={styles.linkRow}
-              >
-                <SettingsIcon size={16} color="#a1a1aa" />
-                <Text style={styles.linkText}>Configure Custom Supabase Project</Text>
-              </TouchableOpacity>
             </View>
           )}
 
@@ -480,12 +572,42 @@ export default function SettingsModal({ isOpen, onClose }) {
                   />
                 </View>
 
+                {/* Custom Accent Color Palette */}
+                <View style={styles.divider} />
+                <Text style={styles.toggleTitle}>Custom Accent Color</Text>
+                <Text style={styles.toggleDesc}>Custom color palette applied when dynamic glow is off</Text>
+                <View style={styles.paletteRow}>
+                  {PRESET_PALETTES.map((pal) => {
+                    const isSelected = settings.customAccentColor === pal.hex;
+                    return (
+                      <TouchableOpacity
+                        key={pal.id}
+                        activeOpacity={0.8}
+                        onPress={() => updateSetting('customAccentColor', pal.hex)}
+                        style={[
+                          styles.colorCircle,
+                          { backgroundColor: pal.hex },
+                          isSelected && styles.colorCircleSelected,
+                        ]}
+                      >
+                        {isSelected && (
+                          <Check
+                            size={14}
+                            color={pal.hex === '#ffffff' ? '#000000' : '#ffffff'}
+                            strokeWidth={3}
+                          />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
                 <View style={styles.divider} />
 
                 <View style={styles.toggleRow}>
                   <View style={styles.toggleMeta}>
                     <Text style={styles.toggleTitle}>Romanized Phonetic Lyrics</Text>
-                    <Text style={styles.toggleDesc}>Transliterate Japanese, Korean, and regional scripts</Text>
+                    <Text style={styles.toggleDesc}>Transliterate Japanese, Korean, and non-latin scripts</Text>
                   </View>
                   <Switch
                     value={settings.romanizedLyrics}
@@ -493,6 +615,26 @@ export default function SettingsModal({ isOpen, onClose }) {
                     trackColor={{ false: '#27272a', true: '#ffffff' }}
                     thumbColor={settings.romanizedLyrics ? '#000000' : '#71717a'}
                   />
+                </View>
+
+                <View style={styles.divider} />
+                <Text style={styles.toggleTitle}>Synced Lyrics Font Size</Text>
+                <View style={styles.chipSelectorRow}>
+                  {['small', 'normal', 'large'].map((size) => {
+                    const isSelected = settings.lyricFontSize === size;
+                    return (
+                      <TouchableOpacity
+                        key={size}
+                        activeOpacity={0.7}
+                        onPress={() => updateSetting('lyricFontSize', size)}
+                        style={[styles.regionChip, isSelected && styles.regionChipActive]}
+                      >
+                        <Text style={[styles.regionChipText, isSelected && styles.regionChipTextActive]}>
+                          {size.charAt(0).toUpperCase() + size.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
 
@@ -504,10 +646,10 @@ export default function SettingsModal({ isOpen, onClose }) {
                     <Text style={styles.toggleDesc}>Show dynamic instant radio recommendations</Text>
                   </View>
                   <Switch
-                    value={settings.quickPicksFeed}
-                    onValueChange={(v) => updateSetting('quickPicksFeed', v)}
+                    value={settings.showQuickPicks !== false}
+                    onValueChange={(v) => updateSetting('showQuickPicks', v)}
                     trackColor={{ false: '#27272a', true: '#ffffff' }}
-                    thumbColor={settings.quickPicksFeed ? '#000000' : '#71717a'}
+                    thumbColor={settings.showQuickPicks !== false ? '#000000' : '#71717a'}
                   />
                 </View>
 
@@ -519,12 +661,36 @@ export default function SettingsModal({ isOpen, onClose }) {
                     <Text style={styles.toggleDesc}>Show your recent playback history on home</Text>
                   </View>
                   <Switch
-                    value={settings.listenAgainFeed}
-                    onValueChange={(v) => updateSetting('listenAgainFeed', v)}
+                    value={settings.showListenAgain !== false}
+                    onValueChange={(v) => updateSetting('showListenAgain', v)}
                     trackColor={{ false: '#27272a', true: '#ffffff' }}
-                    thumbColor={settings.listenAgainFeed ? '#000000' : '#71717a'}
+                    thumbColor={settings.showListenAgain !== false ? '#000000' : '#71717a'}
                   />
                 </View>
+              </View>
+
+              <Text style={styles.subpageSectionTitle}>NAVIGATION DESTINATIONS</Text>
+              <View style={styles.sectionCard}>
+                {[
+                  { key: 'home', label: 'Home Tab' },
+                  { key: 'radio', label: 'Radio Tab' },
+                  { key: 'explore', label: 'Explore Tab' },
+                  { key: 'library', label: 'Library Tab' },
+                  { key: 'settings', label: 'Settings Tab' },
+                ].map((navItem, idx) => (
+                  <React.Fragment key={navItem.key}>
+                    {idx > 0 && <View style={styles.divider} />}
+                    <View style={styles.toggleRow}>
+                      <Text style={styles.toggleTitle}>{navItem.label}</Text>
+                      <Switch
+                        value={settings.navVisibility?.[navItem.key] !== false}
+                        onValueChange={() => toggleNavTab(navItem.key)}
+                        trackColor={{ false: '#27272a', true: '#ffffff' }}
+                        thumbColor={settings.navVisibility?.[navItem.key] !== false ? '#000000' : '#71717a'}
+                      />
+                    </View>
+                  </React.Fragment>
+                ))}
               </View>
             </View>
           )}
@@ -662,10 +828,10 @@ export default function SettingsModal({ isOpen, onClose }) {
                     <Text style={styles.toggleDesc}>Standardize gain (ReplayGain -14 LUFS)</Text>
                   </View>
                   <Switch
-                    value={settings.normalizeVolume}
-                    onValueChange={(v) => updateSetting('normalizeVolume', v)}
+                    value={settings.normalizeAudio}
+                    onValueChange={(v) => updateSetting('normalizeAudio', v)}
                     trackColor={{ false: '#27272a', true: '#ffffff' }}
-                    thumbColor={settings.normalizeVolume ? '#000000' : '#71717a'}
+                    thumbColor={settings.normalizeAudio ? '#000000' : '#71717a'}
                   />
                 </View>
 
@@ -683,6 +849,27 @@ export default function SettingsModal({ isOpen, onClose }) {
                     thumbColor={settings.removeSilence ? '#000000' : '#71717a'}
                   />
                 </View>
+
+                {/* Crossfade Duration */}
+                <View style={styles.divider} />
+                <Text style={styles.toggleTitle}>Crossfade Duration</Text>
+                <View style={styles.chipSelectorRow}>
+                  {[0, 2, 5, 8, 12].map((dur) => {
+                    const isSelected = settings.crossfadeDuration === dur;
+                    return (
+                      <TouchableOpacity
+                        key={dur}
+                        activeOpacity={0.7}
+                        onPress={() => updateSetting('crossfadeDuration', dur)}
+                        style={[styles.regionChip, isSelected && styles.regionChipActive]}
+                      >
+                        <Text style={[styles.regionChipText, isSelected && styles.regionChipTextActive]}>
+                          {dur === 0 ? 'Off (0s)' : `${dur}s`}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
             </View>
           )}
@@ -697,17 +884,14 @@ export default function SettingsModal({ isOpen, onClose }) {
                 <Text style={styles.toggleTitle}>Explore & Trending Region</Text>
                 <Text style={styles.toggleDesc}>Determines top charts and regional new releases</Text>
                 <View style={styles.chipSelectorRow}>
-                  {['Global (All)', 'United States', 'India', 'UK', 'Japan'].map((region) => {
-                    const isSelected = settings.regionalCharts.includes(region.split(' ')[0]);
+                  {['Global', 'United States', 'India', 'UK', 'Japan'].map((region) => {
+                    const isSelected = settings.regionalCharts?.includes(region);
                     return (
                       <TouchableOpacity
                         key={region}
                         activeOpacity={0.7}
                         onPress={() => updateSetting('regionalCharts', region)}
-                        style={[
-                          styles.regionChip,
-                          isSelected && styles.regionChipActive,
-                        ]}
+                        style={[styles.regionChip, isSelected && styles.regionChipActive]}
                       >
                         <Text style={[styles.regionChipText, isSelected && styles.regionChipTextActive]}>
                           {region}
@@ -726,10 +910,10 @@ export default function SettingsModal({ isOpen, onClose }) {
                     <Text style={styles.toggleDesc}>Hide songs tagged with parental advisory</Text>
                   </View>
                   <Switch
-                    value={settings.filterExplicit}
-                    onValueChange={(v) => updateSetting('filterExplicit', v)}
+                    value={settings.explicitFilter}
+                    onValueChange={(v) => updateSetting('explicitFilter', v)}
                     trackColor={{ false: '#27272a', true: '#ffffff' }}
-                    thumbColor={settings.filterExplicit ? '#000000' : '#71717a'}
+                    thumbColor={settings.explicitFilter ? '#000000' : '#71717a'}
                   />
                 </View>
 
@@ -741,10 +925,10 @@ export default function SettingsModal({ isOpen, onClose }) {
                     <Text style={styles.toggleDesc}>Auto-resume playback position on app launch</Text>
                   </View>
                   <Switch
-                    value={settings.rememberLastTrack}
-                    onValueChange={(v) => updateSetting('rememberLastTrack', v)}
+                    value={settings.rememberLastSong}
+                    onValueChange={(v) => updateSetting('rememberLastSong', v)}
                     trackColor={{ false: '#27272a', true: '#ffffff' }}
-                    thumbColor={settings.rememberLastTrack ? '#000000' : '#71717a'}
+                    thumbColor={settings.rememberLastSong ? '#000000' : '#71717a'}
                   />
                 </View>
 
@@ -756,10 +940,10 @@ export default function SettingsModal({ isOpen, onClose }) {
                     <Text style={styles.toggleDesc}>Downgrade bitrate when not connected to WiFi</Text>
                   </View>
                   <Switch
-                    value={settings.mobileDataSaver}
-                    onValueChange={(v) => updateSetting('mobileDataSaver', v)}
+                    value={settings.dataSaver}
+                    onValueChange={(v) => updateSetting('dataSaver', v)}
                     trackColor={{ false: '#27272a', true: '#ffffff' }}
-                    thumbColor={settings.mobileDataSaver ? '#000000' : '#71717a'}
+                    thumbColor={settings.dataSaver ? '#000000' : '#71717a'}
                   />
                 </View>
               </View>
@@ -780,32 +964,19 @@ export default function SettingsModal({ isOpen, onClose }) {
                   placeholderTextColor="#71717a"
                   style={styles.urlInput}
                 />
-                <View style={styles.importButtonsRow}>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      if (!ytPlaylistUrl.trim()) return;
-                      Alert.alert('Import Started', 'Importing YouTube playlist tracks into your library...');
-                      setYtPlaylistUrl('');
-                    }}
-                    style={styles.importPrimaryBtn}
-                  >
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handleImportYouTubePlaylist}
+                  disabled={importing}
+                  style={styles.importPrimaryBtn}
+                >
+                  {importing ? (
+                    <ActivityIndicator size="small" color="#000000" />
+                  ) : (
                     <Download size={14} color="#000000" />
-                    <Text style={styles.importPrimaryText}>Import as Playlist</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      if (!ytPlaylistUrl.trim()) return;
-                      Alert.alert('Liked Merge', 'Merging playlist tracks into your Liked collection...');
-                      setYtPlaylistUrl('');
-                    }}
-                    style={styles.importSecondaryBtn}
-                  >
-                    <Text style={styles.importSecondaryText}>Merge to Liked</Text>
-                  </TouchableOpacity>
-                </View>
+                  )}
+                  <Text style={styles.importPrimaryText}>Import as Playlist</Text>
+                </TouchableOpacity>
               </View>
 
               <Text style={styles.subpageSectionTitle}>SPOTIFY PLAYLIST IMPORTER</Text>
@@ -819,14 +990,15 @@ export default function SettingsModal({ isOpen, onClose }) {
                 />
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  onPress={() => {
-                    if (!spotifyPlaylistUrl.trim()) return;
-                    Alert.alert('Spotify Sync', 'Querying YouTube Music catalog to match Spotify metadata...');
-                    setSpotifyPlaylistUrl('');
-                  }}
+                  onPress={handleImportSpotifyPlaylist}
+                  disabled={importing}
                   style={styles.importPrimaryBtn}
                 >
-                  <RotateCw size={14} color="#000000" />
+                  {importing ? (
+                    <ActivityIndicator size="small" color="#000000" />
+                  ) : (
+                    <RotateCw size={14} color="#000000" />
+                  )}
                   <Text style={styles.importPrimaryText}>Sync Spotify Playlist</Text>
                 </TouchableOpacity>
               </View>
@@ -844,15 +1016,6 @@ export default function SettingsModal({ isOpen, onClose }) {
                   >
                     <Download size={14} color="#000000" />
                     <Text style={styles.importPrimaryText}>Export Backup JSON</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => Alert.alert('Restore Backup', 'Paste or select your cassette.fm backup JSON file.')}
-                    style={styles.importSecondaryBtn}
-                  >
-                    <Upload size={14} color="#ffffff" />
-                    <Text style={styles.importSecondaryText}>Restore from JSON</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -883,7 +1046,13 @@ export default function SettingsModal({ isOpen, onClose }) {
                 <View style={styles.divider} />
                 <View style={styles.diagRow}>
                   <Text style={styles.diagKey}>Stream Format</Text>
-                  <Text style={styles.diagVal}>#251 (High Bitrate 256k)</Text>
+                  <Text style={styles.diagVal}>
+                    {settings.audioQuality === 'max'
+                      ? '#251 (High Bitrate 256k)'
+                      : settings.audioQuality === 'balanced'
+                      ? '#250 (Medium Bitrate 160k)'
+                      : '#249 (Data Saver 128k)'}
+                  </Text>
                 </View>
                 <View style={styles.divider} />
                 <View style={styles.diagRow}>
@@ -903,8 +1072,10 @@ export default function SettingsModal({ isOpen, onClose }) {
               <Text style={styles.subpageSectionTitle}>STORAGE & CACHE</Text>
               <View style={styles.sectionCard}>
                 <View style={styles.diagRow}>
-                  <Text style={styles.diagKey}>Local Storage Occupied</Text>
-                  <Text style={styles.diagVal}>{settings.cacheSizeMB}</Text>
+                  <Text style={styles.diagKey}>Library Storage</Text>
+                  <Text style={styles.diagVal}>
+                    {`${storageCounts.liked} Liked · ${storageCounts.playlists} Playlists · ${storageCounts.history} History`}
+                  </Text>
                 </View>
                 <View style={styles.divider} />
                 <View style={styles.importButtonsRow}>
@@ -951,12 +1122,14 @@ const styles = StyleSheet.create({
   },
   topBarTitle: {
     fontSize: 20,
+    fontFamily: 'Inter',
     fontWeight: '800',
     color: '#ffffff',
     letterSpacing: -0.4,
   },
   topBarSubtitle: {
     fontSize: 12,
+    fontFamily: 'Inter',
     color: '#a1a1aa',
     marginTop: 1,
   },
@@ -967,6 +1140,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#ffffff',
   },
@@ -1006,6 +1180,7 @@ const styles = StyleSheet.create({
   },
   avatarLetter: {
     fontSize: 18,
+    fontFamily: 'Inter',
     fontWeight: '800',
     color: '#ffffff',
   },
@@ -1014,11 +1189,13 @@ const styles = StyleSheet.create({
   },
   accountName: {
     fontSize: 16,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#ffffff',
   },
   accountSubtitle: {
     fontSize: 12,
+    fontFamily: 'Inter',
     color: '#a1a1aa',
     marginTop: 2,
   },
@@ -1047,11 +1224,13 @@ const styles = StyleSheet.create({
   },
   menuCardTitle: {
     fontSize: 15,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#ffffff',
   },
   menuCardSubtitle: {
     fontSize: 12,
+    fontFamily: 'Inter',
     color: '#71717a',
     marginTop: 2,
   },
@@ -1086,6 +1265,7 @@ const styles = StyleSheet.create({
   },
   cardHeaderTitle: {
     fontSize: 15,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#ffffff',
   },
@@ -1100,11 +1280,13 @@ const styles = StyleSheet.create({
   },
   syncPillText: {
     fontSize: 12,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#000000',
   },
   cardDescription: {
     fontSize: 12.5,
+    fontFamily: 'Inter',
     color: '#a1a1aa',
     lineHeight: 18,
   },
@@ -1123,6 +1305,7 @@ const styles = StyleSheet.create({
   },
   avatarLetterLarge: {
     fontSize: 22,
+    fontFamily: 'Inter',
     fontWeight: '800',
     color: '#ffffff',
   },
@@ -1131,11 +1314,13 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontSize: 17,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#ffffff',
   },
   profileEmail: {
     fontSize: 12.5,
+    fontFamily: 'Inter',
     color: '#a1a1aa',
     marginTop: 2,
   },
@@ -1153,6 +1338,7 @@ const styles = StyleSheet.create({
   },
   activePillText: {
     fontSize: 11,
+    fontFamily: 'Inter',
     color: '#10b981',
     fontWeight: '600',
   },
@@ -1172,6 +1358,7 @@ const styles = StyleSheet.create({
   },
   profileSecondaryText: {
     fontSize: 13,
+    fontFamily: 'Inter',
     fontWeight: '600',
     color: '#ffffff',
   },
@@ -1181,18 +1368,6 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     color: '#ef4444',
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-  },
-  linkText: {
-    fontSize: 13,
-    color: '#a1a1aa',
-    fontWeight: '500',
   },
   toggleRow: {
     flexDirection: 'row',
@@ -1206,11 +1381,13 @@ const styles = StyleSheet.create({
   },
   toggleTitle: {
     fontSize: 14,
+    fontFamily: 'Inter',
     fontWeight: '600',
     color: '#ffffff',
   },
   toggleDesc: {
     fontSize: 11.5,
+    fontFamily: 'Inter',
     color: '#71717a',
     marginTop: 2,
     lineHeight: 16,
@@ -1219,6 +1396,24 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     marginVertical: 12,
+  },
+  paletteRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+  },
+  colorCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  colorCircleSelected: {
+    borderColor: '#ffffff',
+    transform: [{ scale: 1.15 }],
   },
   qualityCardsGroup: {
     gap: 8,
@@ -1242,6 +1437,7 @@ const styles = StyleSheet.create({
   },
   qualityCardTitle: {
     fontSize: 14.5,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#ffffff',
   },
@@ -1250,6 +1446,7 @@ const styles = StyleSheet.create({
   },
   qualityCardSubtitle: {
     fontSize: 11.5,
+    fontFamily: 'Inter',
     color: '#71717a',
     marginTop: 2,
   },
@@ -1284,6 +1481,7 @@ const styles = StyleSheet.create({
   },
   regionChipText: {
     fontSize: 12,
+    fontFamily: 'Inter',
     color: '#a1a1aa',
     fontWeight: '600',
   },
@@ -1299,6 +1497,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: 14,
     fontSize: 13,
+    fontFamily: 'Inter',
     color: '#ffffff',
     marginBottom: 12,
   },
@@ -1318,6 +1517,7 @@ const styles = StyleSheet.create({
   },
   importPrimaryText: {
     fontSize: 13,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#000000',
   },
@@ -1335,6 +1535,7 @@ const styles = StyleSheet.create({
   },
   importSecondaryText: {
     fontSize: 13,
+    fontFamily: 'Inter',
     fontWeight: '600',
     color: '#ffffff',
   },
@@ -1346,6 +1547,7 @@ const styles = StyleSheet.create({
   },
   diagKey: {
     fontSize: 13,
+    fontFamily: 'Inter',
     color: '#a1a1aa',
   },
   diagVal: {

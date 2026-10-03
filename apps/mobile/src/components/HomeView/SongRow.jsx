@@ -199,6 +199,7 @@ const styles = StyleSheet.create({
   },
   trackTitle: {
     fontSize: 13.5,
+    fontFamily: 'Inter',
     fontWeight: '600',
     color: '#f3f3f5',
     letterSpacing: -0.2,
@@ -209,6 +210,7 @@ const styles = StyleSheet.create({
   },
   trackArtist: {
     fontSize: 11.5,
+    fontFamily: 'Inter',
     color: '#a1a1aa',
     marginTop: 2,
     letterSpacing: -0.1,

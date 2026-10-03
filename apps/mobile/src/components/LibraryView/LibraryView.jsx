@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,6 @@ import {
   RotateCw,
   Check,
   FolderPlus,
-  Radio,
   Download,
   HardDrive,
   Disc3,
@@ -37,6 +36,7 @@ export default function LibraryView({
   onPlaySong,
   onSelectPlaylist,
   onToggleLike,
+  onOpenAuth,
 }) {
   const [activeTab, setActiveTab] = useState('playlists'); // 'offline' | 'playlists' | 'liked' | 'downloads' | 'custom_albums'
   const [userPlaylists, setUserPlaylists] = useState(playlists);
@@ -44,56 +44,59 @@ export default function LibraryView({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
 
-  // Subscribe to GoogleAuthSync state
+  // Load real playlists from AsyncStorage
+  const loadPlaylists = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('pulse_playlists');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setUserPlaylists(parsed);
+          return;
+        }
+      }
+      setUserPlaylists([]);
+    } catch {
+      setUserPlaylists([]);
+    }
+  };
+
   useEffect(() => {
+    loadPlaylists();
+
     const unsub = googleAuthSyncService.subscribe((user, syncing) => {
       setIsSyncing(syncing);
+      loadPlaylists();
     });
     return () => unsub();
   }, []);
 
-  // Sync playlists from storage or init default blueprint playlist ("yo" - 31 tracks)
-  useEffect(() => {
-    const loadPlaylists = async () => {
-      try {
-        const stored = await AsyncStorage.getItem('pulse_playlists');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setUserPlaylists(parsed);
-            return;
-          }
-        }
-      } catch {}
-
-      // Default playlist matching visual blueprint (Pages 5 & 6)
-      const defaultYoPlaylist = {
-        id: 'pl-yo-31',
-        title: 'yo',
-        itemCount: 31,
-        collageImages: [
-          'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
-          'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
-          'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg',
-          'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg',
-        ],
-        songs: likedSongs.length > 0 ? likedSongs : [],
-      };
-      setUserPlaylists([defaultYoPlaylist]);
-      AsyncStorage.setItem('pulse_playlists', JSON.stringify([defaultYoPlaylist])).catch(() => {});
-    };
-
-    loadPlaylists();
-  }, [likedSongs]);
-
   const handleSyncYouTube = async () => {
+    const user = googleAuthSyncService.getUser();
+    if (!user?.isConnected) {
+      Alert.alert(
+        'Sign In Required',
+        'Sign in with your Google account to sync your YouTube Music playlists and liked songs.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => onOpenAuth?.() },
+        ]
+      );
+      return;
+    }
+
     setIsSyncing(true);
     const res = await googleAuthSyncService.syncYouTubeMusicLibrary();
     setIsSyncing(false);
+
     if (res?.success) {
-      Alert.alert('YouTube Music Synced', 'Live library playlists and tracks updated successfully.');
+      await loadPlaylists();
+      Alert.alert(
+        'YouTube Music Synced',
+        `Successfully synced ${res.data?.likedCount || 0} liked tracks and ${res.data?.playlistCount || 0} playlists.`
+      );
     } else {
-      Alert.alert('Sync Status', 'Synchronized local cached cache with YouTube Music account.');
+      Alert.alert('Sync Notice', res?.error || 'Could not reach YouTube Music sync endpoint.');
     }
   };
 
@@ -123,12 +126,7 @@ export default function LibraryView({
       id: `pl-${Date.now()}`,
       title: newPlaylistTitle.trim(),
       itemCount: 0,
-      collageImages: [
-        'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
-        'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
-        'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg',
-        'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg',
-      ],
+      collageImages: [],
       songs: [],
     };
     const updated = [newPl, ...userPlaylists];
@@ -217,7 +215,9 @@ export default function LibraryView({
                 <Play size={10} color="#ffffff" fill="#ffffff" />
               </View>
             )}
-            <Text style={styles.actionPillText}>Sync YouTube</Text>
+            <Text style={styles.actionPillText}>
+              {isSyncing ? 'Syncing...' : 'Sync YouTube'}
+            </Text>
           </TouchableOpacity>
 
           {/* Import Spotify Button */}
@@ -235,63 +235,87 @@ export default function LibraryView({
           </TouchableOpacity>
         </View>
 
-        {/* Main Content Area */}
+        {/* Playlists Tab Content */}
         {activeTab === 'playlists' && (
           <View style={styles.contentGrid}>
-            <View style={styles.gridRow}>
-              {userPlaylists.map((pl) => (
-                <TouchableOpacity
-                  key={pl.id}
-                  activeOpacity={0.85}
-                  onPress={() => {
-                    if (onSelectPlaylist) {
-                      onSelectPlaylist(pl);
-                    } else if (pl.songs && pl.songs.length > 0 && onPlaySong) {
-                      onPlaySong(pl.songs[0]);
-                    }
-                  }}
-                  style={styles.playlistCard}
-                >
-                  {/* 4-Image Artwork Collage */}
-                  <View style={styles.collageContainer}>
-                    <View style={styles.collageRow}>
-                      <Image
-                        source={{ uri: pl.collageImages?.[0] || 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg' }}
-                        style={styles.collageTile}
-                        contentFit="cover"
-                      />
-                      <Image
-                        source={{ uri: pl.collageImages?.[1] || 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg' }}
-                        style={styles.collageTile}
-                        contentFit="cover"
-                      />
+            {userPlaylists.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <ListMusic size={38} color="#52525b" />
+                <Text style={styles.emptyTitle}>No Playlists Yet</Text>
+                <Text style={styles.emptySubtitle}>
+                  Create a custom playlist or tap "Sync YouTube" to import your existing YouTube Music playlists.
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.gridRow}>
+                {userPlaylists.map((pl) => (
+                  <TouchableOpacity
+                    key={pl.id}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      if (onSelectPlaylist) {
+                        onSelectPlaylist(pl);
+                      } else if (pl.songs && pl.songs.length > 0 && onPlaySong) {
+                        onPlaySong(pl.songs[0]);
+                      }
+                    }}
+                    style={styles.playlistCard}
+                  >
+                    {/* Artwork / 4-Image Collage */}
+                    <View style={styles.collageContainer}>
+                      {pl.collageImages && pl.collageImages.length >= 4 ? (
+                        <>
+                          <View style={styles.collageRow}>
+                            <Image
+                              source={{ uri: pl.collageImages[0] }}
+                              style={styles.collageTile}
+                              contentFit="cover"
+                            />
+                            <Image
+                              source={{ uri: pl.collageImages[1] }}
+                              style={styles.collageTile}
+                              contentFit="cover"
+                            />
+                          </View>
+                          <View style={styles.collageRow}>
+                            <Image
+                              source={{ uri: pl.collageImages[2] }}
+                              style={styles.collageTile}
+                              contentFit="cover"
+                            />
+                            <Image
+                              source={{ uri: pl.collageImages[3] }}
+                              style={styles.collageTile}
+                              contentFit="cover"
+                            />
+                          </View>
+                        </>
+                      ) : pl.thumbnail || pl.cover ? (
+                        <Image
+                          source={{ uri: pl.thumbnail || pl.cover }}
+                          style={{ width: '100%', height: '100%' }}
+                          contentFit="cover"
+                        />
+                      ) : (
+                        <View style={styles.collagePlaceholder}>
+                          <ListMusic size={32} color="#71717a" />
+                        </View>
+                      )}
                     </View>
-                    <View style={styles.collageRow}>
-                      <Image
-                        source={{ uri: pl.collageImages?.[2] || 'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg' }}
-                        style={styles.collageTile}
-                        contentFit="cover"
-                      />
-                      <Image
-                        source={{ uri: pl.collageImages?.[3] || 'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg' }}
-                        style={styles.collageTile}
-                        contentFit="cover"
-                      />
-                    </View>
-                  </View>
 
-                  {/* Title & Metadata */}
-                  <View style={styles.playlistMeta}>
-                    <Text numberOfLines={1} style={styles.playlistCardTitle}>
-                      {pl.title}
-                    </Text>
-                    <Text style={styles.playlistCardSubtitle}>
-                      {pl.itemCount || pl.songs?.length || 31} tracks
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
+                    {/* Title & Metadata */}
+                    <View style={styles.playlistMeta}>
+                      <Text numberOfLines={1} style={styles.playlistCardTitle}>
+                        {pl.title || 'Untitled Playlist'}
+                      </Text>
+                      <Text style={styles.playlistCardSubtitle}>
+                        {pl.itemCount || pl.songs?.length || 0} tracks
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -427,6 +451,7 @@ const styles = StyleSheet.create({
   },
   libraryHeading: {
     fontSize: 32,
+    fontFamily: 'Inter',
     fontWeight: '800',
     color: '#ffffff',
     letterSpacing: -0.6,
@@ -454,6 +479,7 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     fontSize: 12.5,
+    fontFamily: 'Inter',
     fontWeight: '600',
   },
   filterChipTextActive: {
@@ -482,6 +508,7 @@ const styles = StyleSheet.create({
   },
   actionPillText: {
     fontSize: 12,
+    fontFamily: 'Inter',
     fontWeight: '600',
     color: '#ffffff',
   },
@@ -553,17 +580,26 @@ const styles = StyleSheet.create({
     flex: 1,
     height: '100%',
   },
+  collagePlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#202023',
+  },
   playlistMeta: {
     paddingHorizontal: 2,
   },
   playlistCardTitle: {
     fontSize: 15,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#ffffff',
     letterSpacing: -0.2,
   },
   playlistCardSubtitle: {
     fontSize: 12,
+    fontFamily: 'Inter',
     color: '#71717a',
     marginTop: 2,
   },
@@ -571,9 +607,10 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   emptyCard: {
+    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: 50,
     paddingHorizontal: 24,
     backgroundColor: '#141416',
     borderRadius: 20,
@@ -582,6 +619,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 16,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#ffffff',
     marginTop: 14,
@@ -589,9 +627,10 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 12.5,
+    fontFamily: 'Inter',
     color: '#71717a',
     textAlign: 'center',
-    maxWidth: 240,
+    maxWidth: 260,
     lineHeight: 18,
   },
   modalBackdrop: {
@@ -618,6 +657,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#ffffff',
   },
@@ -629,6 +669,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.08)',
     paddingHorizontal: 14,
     fontSize: 14,
+    fontFamily: 'Inter',
     color: '#ffffff',
     marginBottom: 18,
   },
@@ -644,6 +685,7 @@ const styles = StyleSheet.create({
   },
   modalCancelText: {
     fontSize: 14,
+    fontFamily: 'Inter',
     fontWeight: '600',
     color: '#a1a1aa',
   },
@@ -658,6 +700,7 @@ const styles = StyleSheet.create({
   },
   modalConfirmText: {
     fontSize: 14,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#000000',
   },

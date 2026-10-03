@@ -7,6 +7,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
+import { useSettings } from '../../context/NativeContextProviders.jsx';
 
 function NavTabItem({ tab, isActive, onPress }) {
   const scale = useSharedValue(1);
@@ -56,19 +57,22 @@ function NavTabItem({ tab, isActive, onPress }) {
 export default function MobileBottomNav({ currentTab = 'home', onTabPress }) {
   const insets = useSafeAreaInsets();
   const bottomPadding = Math.max(insets.bottom, 10);
+  const { settings } = useSettings();
 
-  const tabs = [
-    { id: 'home', label: 'Home', Icon: Home },
-    { id: 'radio', label: 'Radio', Icon: Radio },
-    { id: 'search', label: 'Search', Icon: Search },
-    { id: 'library', label: 'Library', Icon: Library },
-    { id: 'settings', label: 'Settings', Icon: Settings },
+  const allTabs = [
+    { id: 'home', label: 'Home', Icon: Home, visible: settings.navVisibility?.home !== false },
+    { id: 'radio', label: 'Radio', Icon: Radio, visible: settings.navVisibility?.radio !== false },
+    { id: 'search', label: 'Explore', Icon: Search, visible: settings.navVisibility?.explore !== false },
+    { id: 'library', label: 'Library', Icon: Library, visible: settings.navVisibility?.library !== false },
+    { id: 'settings', label: 'Settings', Icon: Settings, visible: settings.navVisibility?.settings !== false },
   ];
+
+  const visibleTabs = allTabs.filter((t) => t.visible);
 
   return (
     <View style={[styles.navContainer, { paddingBottom: bottomPadding }]}>
       <View style={styles.tabsRow}>
-        {tabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <NavTabItem
             key={tab.id}
             tab={tab}
@@ -126,6 +130,7 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 10,
+    fontFamily: 'Inter',
     letterSpacing: -0.1,
   },
   tabLabelActive: {

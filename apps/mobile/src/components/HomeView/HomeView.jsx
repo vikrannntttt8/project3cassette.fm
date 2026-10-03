@@ -21,6 +21,7 @@ import {
 import SongRow from './SongRow.jsx';
 import AlbumCard from './AlbumCard.jsx';
 import { youtubeMusicApiService } from '../../services/youtubeMusicApiService.js';
+import { useSettings } from '../../context/NativeContextProviders.jsx';
 
 const CATEGORIES = [
   { id: 'all', label: 'All', icon: null },
@@ -50,19 +51,32 @@ export default function HomeView({
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { settings } = useSettings();
 
   // Load live feed from YouTube Music API pipeline and persistent user history
   const loadLiveFeed = useCallback(async () => {
     try {
       const data = await youtubeMusicApiService.fetchLiveHomeFeed();
-      setFeedData(data);
+      // Apply explicit filter if enabled
+      if (settings?.explicitFilter) {
+        const filterFn = (item) => !item.title?.includes('[E]') && !item.explicit;
+        setFeedData({
+          listenAgain: (data.listenAgain || []).filter(filterFn),
+          quickPicks: (data.quickPicks || []).filter(filterFn),
+          dailyMixes: data.dailyMixes || [],
+          trendingAlbums: data.trendingAlbums || [],
+          throwbacks: data.throwbacks || [],
+        });
+      } else {
+        setFeedData(data);
+      }
     } catch (err) {
       console.warn('[HomeView] Load feed error:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [settings?.explicitFilter]);
 
   useEffect(() => {
     loadLiveFeed();
@@ -144,7 +158,8 @@ export default function HomeView({
       ) : (
         <View style={styles.feedContent}>
           {/* ── 1. Listen Again Section ── */}
-          {(activeCategory === 'all' || activeCategory === 'picks') &&
+          {settings?.showListenAgain !== false &&
+            (activeCategory === 'all' || activeCategory === 'picks') &&
             feedData.listenAgain.length > 0 && (
               <View style={styles.sectionContainer}>
                 <View style={styles.sectionHeader}>
@@ -165,9 +180,7 @@ export default function HomeView({
                       key={song.id || song.videoId || `la-${idx}`}
                       song={song}
                       index={idx}
-                      isActive={
-                        (song.id || song.videoId) === activeSongId
-                      }
+                      isActive={(song.id || song.videoId) === activeSongId}
                       isPlaying={isPlaying}
                       isLiked={isSongLiked(song)}
                       onPlay={() => onPlaySong?.(song, feedData.listenAgain)}
@@ -179,7 +192,8 @@ export default function HomeView({
             )}
 
           {/* ── 2. Quick Picks Section ── */}
-          {(activeCategory === 'all' || activeCategory === 'picks') &&
+          {settings?.showQuickPicks !== false &&
+            (activeCategory === 'all' || activeCategory === 'picks') &&
             feedData.quickPicks.length > 0 && (
               <View style={styles.sectionContainer}>
                 <View style={styles.sectionHeaderBetween}>
@@ -212,9 +226,7 @@ export default function HomeView({
                       key={song.id || song.videoId || `qp-${idx}`}
                       song={song}
                       index={idx}
-                      isActive={
-                        (song.id || song.videoId) === activeSongId
-                      }
+                      isActive={(song.id || song.videoId) === activeSongId}
                       isPlaying={isPlaying}
                       isLiked={isSongLiked(song)}
                       onPlay={() => onPlaySong?.(song, feedData.quickPicks)}
@@ -377,6 +389,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 13,
+    fontFamily: 'Inter',
     fontWeight: '600',
   },
   chipTextActive: {
@@ -394,6 +407,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#a1a1aa',
     fontSize: 13,
+    fontFamily: 'Inter',
     fontWeight: '500',
   },
   feedContent: {
@@ -430,12 +444,14 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
+    fontFamily: 'Inter',
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: -0.3,
   },
   sectionSubtitle: {
     fontSize: 12,
+    fontFamily: 'Inter',
     color: '#71717a',
     marginTop: 1,
   },
@@ -453,6 +469,7 @@ const styles = StyleSheet.create({
   playAllText: {
     color: '#FFFFFF',
     fontSize: 12,
+    fontFamily: 'Inter',
     fontWeight: '700',
   },
   tracksList: {
@@ -484,6 +501,7 @@ const styles = StyleSheet.create({
   fidelityText: {
     color: '#a1a1aa',
     fontSize: 12,
+    fontFamily: 'Inter',
     fontWeight: '500',
     flex: 1,
   },

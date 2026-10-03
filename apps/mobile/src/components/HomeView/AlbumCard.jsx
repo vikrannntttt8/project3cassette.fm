@@ -118,12 +118,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 12.5,
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#ffffff',
     letterSpacing: -0.2,
   },
   subtitle: {
     fontSize: 11,
+    fontFamily: 'Inter',
     color: '#a1a1aa',
     marginTop: 2,
   },

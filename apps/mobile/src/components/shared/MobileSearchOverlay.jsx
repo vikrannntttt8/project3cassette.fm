@@ -252,6 +252,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: '#FFFFFF',
     fontSize: 14,
+    fontFamily: 'Inter',
     fontWeight: '500',
   },
   cancelButton: {
@@ -261,6 +262,7 @@ const styles = StyleSheet.create({
   cancelText: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontFamily: 'Inter',
     fontWeight: '600',
   },
   chipsRow: {
@@ -290,6 +292,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 12.5,
+    fontFamily: 'Inter',
     fontWeight: '600',
   },
   chipTextActive: {
@@ -317,6 +320,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#a1a1aa',
     fontSize: 13,
+    fontFamily: 'Inter',
   },
   emptyStateContainer: {
     alignItems: 'center',
@@ -338,11 +342,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     color: '#FFFFFF',
     fontSize: 17,
+    fontFamily: 'Inter',
     fontWeight: '700',
   },
   emptySubtitle: {
     color: '#71717a',
     fontSize: 13,
+    fontFamily: 'Inter',
   },
   resultsList: {
     gap: 4,

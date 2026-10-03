@@ -7,11 +7,11 @@ import Animated, {
   withTiming,
   withSequence,
 } from 'react-native-reanimated';
-import { Search, Settings } from 'lucide-react-native';
+import { Search, Settings, User } from 'lucide-react-native';
 import { usePlayerStore } from '@cassette/core';
 import { googleAuthSyncService } from '../../services/googleAuthSyncService.js';
 
-export default function MobileHeader({ onSearchPress, onProfilePress, onSettingsPress }) {
+export default function MobileHeader({ onSearchPress, onProfilePress, onSettingsPress, onBrandPress }) {
   const [user, setUser] = useState(googleAuthSyncService.getUser());
   const [isSyncing, setIsSyncing] = useState(false);
   const [isPlaying, setIsPlaying] = useState(usePlayerStore.getState().isPlaying);
@@ -24,10 +24,10 @@ export default function MobileHeader({ onSearchPress, onProfilePress, onSettings
     return () => unsubPlayer();
   }, []);
 
-  // Subscribe to live Google / YouTube sync state
+  // Subscribe to live Google / Auth sync state
   useEffect(() => {
     const unsubAuth = googleAuthSyncService.subscribe((u, syncing) => {
-      setUser({ ...u });
+      setUser(u);
       setIsSyncing(syncing);
     });
     return () => unsubAuth();
@@ -38,7 +38,7 @@ export default function MobileHeader({ onSearchPress, onProfilePress, onSettings
   useEffect(() => {
     if (isPlaying || isSyncing) {
       pulseOpacity.value = withRepeat(
-        withSequence(withTiming(0.4, { duration: 700 }), withTiming(1, { duration: 700 })),
+        withSequence(withTiming(0.35, { duration: 700 }), withTiming(1, { duration: 700 })),
         -1,
         true
       );
@@ -60,8 +60,12 @@ export default function MobileHeader({ onSearchPress, onProfilePress, onSettings
 
   return (
     <View style={styles.headerContainer}>
-      {/* Dynamic Brand Logo & Live Status Indicator */}
-      <View style={styles.brandRow}>
+      {/* Dynamic Brand Logo with Shrikhand web-parity font & Live Status Indicator */}
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={onBrandPress}
+        style={styles.brandRow}
+      >
         <Text style={styles.brandText}>cassette.fm</Text>
         <Animated.View
           style={[
@@ -70,9 +74,9 @@ export default function MobileHeader({ onSearchPress, onProfilePress, onSettings
             animatedDotStyle,
           ]}
         />
-      </View>
+      </TouchableOpacity>
 
-      {/* Right Action Icons: Search + Live Account Avatar + Settings */}
+      {/* Right Action Icons: Search + Live Account Avatar / Sign In + Settings */}
       <View style={styles.actionsRow}>
         <TouchableOpacity
           activeOpacity={0.7}
@@ -83,23 +87,27 @@ export default function MobileHeader({ onSearchPress, onProfilePress, onSettings
           <Search size={18} color="#D4D4D8" strokeWidth={2.2} />
         </TouchableOpacity>
 
-        {/* Live User Avatar reflecting connected Gmail/Google account */}
+        {/* Live User Avatar (reflects clean session state: User icon when logged out, initials when logged in) */}
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={onProfilePress}
           style={[
             styles.avatarButton,
-            { backgroundColor: user.isConnected ? user.avatarBg || '#ea580c' : '#3f3f46' },
+            user?.isConnected && { backgroundColor: user.avatarBg || '#ea580c' },
           ]}
-          accessibilityLabel={`Account ${user.name || 'Profile'}`}
+          accessibilityLabel={user?.isConnected ? `Account ${user.name || 'Profile'}` : 'Sign in'}
         >
-          <Text style={styles.avatarText}>{user.avatarLetter || 'V'}</Text>
+          {user?.isConnected ? (
+            <Text style={styles.avatarText}>{user.avatarLetter || 'U'}</Text>
+          ) : (
+            <User size={17} color="#a1a1aa" strokeWidth={2.2} />
+          )}
         </TouchableOpacity>
 
         {/* Settings Button */}
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={onSettingsPress || onProfilePress}
+          onPress={onSettingsPress}
           style={styles.actionButton}
           accessibilityLabel="Settings"
         >
@@ -118,6 +126,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     backgroundColor: '#0a0a0c',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   brandRow: {
     flexDirection: 'row',
@@ -126,9 +136,9 @@ const styles = StyleSheet.create({
   },
   brandText: {
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: 'Shrikhand',
     color: '#ffffff',
-    letterSpacing: -0.6,
+    letterSpacing: -0.4,
   },
   brandDot: {
     width: 6.5,
@@ -156,20 +166,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#ea580c',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#18181a',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#ea580c',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
   },
   avatarText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
+    fontFamily: 'Inter',
     fontWeight: '700',
   },
 });

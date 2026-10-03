@@ -7,6 +7,7 @@ import MobileHeader from '../src/components/shared/MobileHeader.jsx';
 import MobileBottomNav from '../src/components/shared/MobileBottomNav.jsx';
 import MobileSearchOverlay from '../src/components/shared/MobileSearchOverlay.jsx';
 import SettingsModal from '../src/components/shared/SettingsModal.jsx';
+import AuthModal from '../src/components/shared/AuthModal.jsx';
 import HomeView from '../src/components/HomeView/HomeView.jsx';
 import LibraryView from '../src/components/LibraryView/LibraryView.jsx';
 import AlbumView from '../src/components/AlbumView/AlbumView.jsx';
@@ -40,6 +41,7 @@ export default function MobileApp() {
   const [currentTab, setCurrentTab] = useState('home'); // 'home' | 'radio' | 'search' | 'library' | 'settings'
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [selectedAlbum, setSelectedAlbum] = useState(null);
   const [selectedArtist, setSelectedArtist] = useState(null);
 
@@ -193,8 +195,8 @@ export default function MobileApp() {
 
   const handleSelectMix = async (mix) => {
     if (!mix) return;
-    // Query live tracks for this mix or generate radio queue
-    const query = mix.title || mix.name || 'trending music';
+    // Query live tracks for this mix
+    const query = mix.title || mix.name || 'curated radio mix';
     const tracks = await youtubeMusicApiService.search(query, 'songs');
     if (tracks && tracks.length > 0) {
       handlePlayAll(tracks);
@@ -222,13 +224,19 @@ export default function MobileApp() {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#0a0a0c' }} edges={['top', 'left', 'right']}>
       {/* ── Dynamic Branded Header ── */}
       <MobileHeader
+        onBrandPress={() => {
+          animateLayout();
+          setSelectedAlbum(null);
+          setSelectedArtist(null);
+          setCurrentTab('home');
+        }}
         onSearchPress={() => {
           animateLayout();
           setIsSearchOpen(true);
         }}
         onProfilePress={() => {
           animateLayout();
-          setIsSettingsOpen(true);
+          setIsAuthOpen(true);
         }}
         onSettingsPress={() => {
           animateLayout();
@@ -290,6 +298,7 @@ export default function MobileApp() {
                 isPlaying={playerState.isPlaying}
                 onPlaySong={handlePlaySong}
                 onToggleLike={handleToggleLike}
+                onOpenAuth={() => setIsAuthOpen(true)}
               />
             )}
           </>
@@ -352,6 +361,16 @@ export default function MobileApp() {
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
+        onOpenAuth={() => {
+          setIsSettingsOpen(false);
+          setIsAuthOpen(true);
+        }}
+      />
+
+      {/* ── Real Auth Modal ── */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
       />
     </SafeAreaView>
   );

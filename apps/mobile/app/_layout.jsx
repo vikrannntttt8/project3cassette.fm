@@ -1,20 +1,41 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Font from 'expo-font';
 import { setupTrackPlayer } from '../src/services/trackPlayerService';
 import { hydrateMobileStorage } from '@cassette/core';
 import { NativeAppProviders } from '../src/context/NativeContextProviders.jsx';
 
 export default function RootLayout() {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
   useEffect(() => {
-    // Proactively dismiss any native splash screen so it never blocks UI rendering
+    // Proactively dismiss splash screen
     try {
       SplashScreen.hideAsync().catch(() => {});
     } catch {}
 
     async function initializeApp() {
+      // 1. Load custom web-parity typography (Inter and Shrikhand)
+      try {
+        await Font.loadAsync({
+          'Inter': require('../assets/fonts/Inter-Regular.ttf'),
+          'Inter-Regular': require('../assets/fonts/Inter-Regular.ttf'),
+          'Inter-Medium': require('../assets/fonts/Inter-Regular.ttf'),
+          'Inter-SemiBold': require('../assets/fonts/Inter-Regular.ttf'),
+          'Inter-Bold': require('../assets/fonts/Inter-Regular.ttf'),
+          'Shrikhand': require('../assets/fonts/Shrikhand-Regular.ttf'),
+          'font-cassette': require('../assets/fonts/Shrikhand-Regular.ttf'),
+        });
+        setFontsLoaded(true);
+      } catch (fontErr) {
+        console.warn('[RootLayout] Custom font load warning:', fontErr);
+        setFontsLoaded(true);
+      }
+
+      // 2. Hydrate persistent offline storage
       try {
         await hydrateMobileStorage([
           'pulse_supabase_url',
@@ -23,11 +44,14 @@ export default function RootLayout() {
           'likedSongs',
           'pulse_like',
           'pulse_playback_history',
+          'pulse_playlists',
+          'pulse_app_settings_v2',
         ]);
       } catch (storageErr) {
         console.warn('[RootLayout] Storage hydration error:', storageErr);
       }
 
+      // 3. Initialize audio engine
       try {
         await setupTrackPlayer();
       } catch (playerErr) {

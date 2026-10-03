@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Platform, UIManager, LayoutAnimation } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import MobileHeader from '../src/components/shared/MobileHeader.jsx';
 import MobileBottomNav from '../src/components/shared/MobileBottomNav.jsx';
 import MobileSearchOverlay from '../src/components/shared/MobileSearchOverlay.jsx';
@@ -11,9 +12,10 @@ import LibraryView from '../src/components/LibraryView/LibraryView.jsx';
 import AlbumView from '../src/components/AlbumView/AlbumView.jsx';
 import ArtistView from '../src/components/ArtistView/ArtistView.jsx';
 import PlayerDock from '../src/components/PlayerDock/PlayerDock.jsx';
-import { FALLBACK_HOME_FEED } from '../src/data/fallbackFeed.js';
 import { usePlayerStore, playerActions, resolveDirectAudioStream } from '@cassette/core';
 import { playTrack, pauseTrack, resumeTrack } from '../src/services/trackPlayerService.js';
+import { youtubeMusicApiService } from '../src/services/youtubeMusicApiService.js';
+import { googleAuthSyncService } from '../src/services/googleAuthSyncService.js';
 
 try {
   if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -31,55 +33,45 @@ const animateLayout = () => {
   }
 };
 
-const FEATURED_ARTISTS = [
-  {
-    id: 'art-weeknd',
-    name: 'The Weeknd',
-    thumbnail: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
-    topTracks: FALLBACK_HOME_FEED.quickPicks.filter((s) => s.artist === 'The Weeknd'),
-    albums: FALLBACK_HOME_FEED.trendingAlbums.filter((a) => a.artist === 'The Weeknd'),
-  },
-  {
-    id: 'art-queen',
-    name: 'Queen',
-    thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
-    topTracks: FALLBACK_HOME_FEED.quickPicks.filter((s) => s.artist === 'Queen'),
-    albums: FALLBACK_HOME_FEED.trendingAlbums.filter((a) => a.artist === 'Queen'),
-  },
-  {
-    id: 'art-sheeran',
-    name: 'Ed Sheeran',
-    thumbnail: 'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg',
-    topTracks: FALLBACK_HOME_FEED.quickPicks.filter((s) => s.artist === 'Ed Sheeran'),
-    albums: FALLBACK_HOME_FEED.trendingAlbums.filter((a) => a.artist === 'Ed Sheeran'),
-  },
-  {
-    id: 'art-gorillaz',
-    name: 'Gorillaz',
-    thumbnail: 'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg',
-    topTracks: FALLBACK_HOME_FEED.quickPicks.filter((s) => s.artist === 'Gorillaz'),
-    albums: FALLBACK_HOME_FEED.trendingAlbums.filter((a) => a.artist === 'Gorillaz'),
-  },
-  {
-    id: 'art-linkinpark',
-    name: 'Linkin Park',
-    thumbnail: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
-    topTracks: FALLBACK_HOME_FEED.quickPicks.filter((s) => s.artist === 'Linkin Park'),
-    albums: [],
-  },
-];
+const LIKED_KEY = 'likedSongs';
 
 export default function MobileApp() {
   const router = useRouter();
-  const [currentTab, setCurrentTab] = useState('home');
-  const [activeCategory, setActiveCategory] = useState('all');
+  const [currentTab, setCurrentTab] = useState('home'); // 'home' | 'radio' | 'search' | 'library' | 'settings'
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedAlbum, setSelectedAlbum] = useState(null);
   const [selectedArtist, setSelectedArtist] = useState(null);
-  
+
   const [playerState, setPlayerState] = useState(usePlayerStore.getState());
-  const [likedSongs, setLikedSongs] = useState(() => FALLBACK_HOME_FEED.quickPicks.slice(0, 3));
+  const [activeQueue, setActiveQueue] = useState([]);
+  const [likedSongs, setLikedSongs] = useState([]);
+
+  // Load user's liked songs from persistent storage on mount
+  useEffect(() => {
+    const loadLiked = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(LIKED_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) setLikedSongs(parsed);
+        }
+      } catch {}
+    };
+    loadLiked();
+
+    // Listen to Google Auth Sync updates
+    const unsubAuth = googleAuthSyncService.subscribe(async () => {
+      const raw = await AsyncStorage.getItem(LIKED_KEY);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) setLikedSongs(parsed);
+        } catch {}
+      }
+    });
+    return () => unsubAuth();
+  }, []);
 
   // Subscribe to reactive Zustand player store
   useEffect(() => {
@@ -88,17 +80,28 @@ export default function MobileApp() {
         if (!prev.currentSong && state.currentSong) {
           animateLayout();
         }
-        return state;
+        return { ...state };
       });
     });
     return () => unsubscribe();
   }, []);
 
-  const handlePlaySong = useCallback(async (song) => {
+  // Play a song and dynamically set queue
+  const handlePlaySong = useCallback(async (song, queue = []) => {
     if (!song) return;
     animateLayout();
+
+    if (queue && queue.length > 0) {
+      setActiveQueue(queue);
+    } else if (activeQueue.length === 0) {
+      setActiveQueue([song]);
+    }
+
     playerActions.setCurrentSong(song);
     playerActions.setIsPlaying(true);
+
+    // Save song to real-time playback history for "Listen Again"
+    youtubeMusicApiService.recordSongHistory(song);
 
     // Asynchronously resolve direct CDN audio streaming URL
     try {
@@ -107,7 +110,14 @@ export default function MobileApp() {
     } catch {
       await playTrack(song);
     }
-  }, []);
+  }, [activeQueue]);
+
+  // Play all tracks from a section (e.g. Quick Picks)
+  const handlePlayAll = useCallback((tracks) => {
+    if (!tracks || tracks.length === 0) return;
+    setActiveQueue(tracks);
+    handlePlaySong(tracks[0], tracks);
+  }, [handlePlaySong]);
 
   const handleTogglePlay = useCallback(() => {
     const nextPlayState = !playerState.isPlaying;
@@ -119,17 +129,55 @@ export default function MobileApp() {
     }
   }, [playerState.isPlaying]);
 
-  const handleToggleLike = useCallback((song) => {
+  const handleToggleLike = useCallback(async (song) => {
     if (!song) return;
-    setLikedSongs((prev) => {
-      const targetId = song.id || song.videoId;
-      const exists = prev.some((s) => (s.id || s.videoId) === targetId);
-      if (exists) {
-        return prev.filter((s) => (s.id || s.videoId) !== targetId);
+    const targetId = song.id || song.videoId;
+    const exists = likedSongs.some((s) => (s.id || s.videoId) === targetId);
+    let nextLiked;
+    if (exists) {
+      nextLiked = likedSongs.filter((s) => (s.id || s.videoId) !== targetId);
+    } else {
+      nextLiked = [song, ...likedSongs];
+    }
+    setLikedSongs(nextLiked);
+    try {
+      await AsyncStorage.setItem(LIKED_KEY, JSON.stringify(nextLiked));
+    } catch {}
+  }, [likedSongs]);
+
+  // Skip to Next Track
+  const handleSkipNext = useCallback(async () => {
+    if (!playerState.currentSong) return;
+    const currId = playerState.currentSong.id || playerState.currentSong.videoId;
+    const currIdx = activeQueue.findIndex((s) => (s.id || s.videoId) === currId);
+
+    if (currIdx !== -1 && currIdx < activeQueue.length - 1) {
+      handlePlaySong(activeQueue[currIdx + 1], activeQueue);
+    } else {
+      // Dynamic Radio Autoplay when queue reaches end
+      const radioTracks = await youtubeMusicApiService.getRadioQueue(playerState.currentSong);
+      if (radioTracks && radioTracks.length > 1) {
+        const nextSong = radioTracks[1];
+        setActiveQueue((prev) => [...prev, ...radioTracks.slice(1)]);
+        handlePlaySong(nextSong);
+      } else if (activeQueue.length > 0) {
+        handlePlaySong(activeQueue[0], activeQueue);
       }
-      return [song, ...prev];
-    });
-  }, []);
+    }
+  }, [playerState.currentSong, activeQueue, handlePlaySong]);
+
+  // Skip to Previous Track
+  const handleSkipPrev = useCallback(() => {
+    if (!playerState.currentSong || activeQueue.length === 0) return;
+    const currId = playerState.currentSong.id || playerState.currentSong.videoId;
+    const currIdx = activeQueue.findIndex((s) => (s.id || s.videoId) === currId);
+
+    if (currIdx > 0) {
+      handlePlaySong(activeQueue[currIdx - 1], activeQueue);
+    } else {
+      handlePlaySong(activeQueue[0], activeQueue);
+    }
+  }, [playerState.currentSong, activeQueue, handlePlaySong]);
 
   const handleSelectAlbum = (album) => {
     animateLayout();
@@ -140,24 +188,29 @@ export default function MobileApp() {
   const handleSelectArtist = (artist) => {
     animateLayout();
     setSelectedAlbum(null);
-    const matched = FEATURED_ARTISTS.find(
-      (a) => a.name.toLowerCase() === (artist.name || artist.title || '').toLowerCase()
-    ) || {
-      id: artist.id || 'art-generic',
-      name: artist.name || artist.title || 'Artist',
-      thumbnail: artist.thumbnail || artist.cover,
-      topTracks: FALLBACK_HOME_FEED.quickPicks.filter(
-        (s) => s.artist && s.artist.toLowerCase().includes((artist.name || artist.title || '').toLowerCase())
-      ),
-      albums: FALLBACK_HOME_FEED.trendingAlbums.filter(
-        (a) => a.artist && a.artist.toLowerCase().includes((artist.name || artist.title || '').toLowerCase())
-      ),
-    };
-    setSelectedArtist(matched);
+    setSelectedArtist(artist);
   };
 
-  const handleSelectMix = (mix) => {
-    handlePlaySong(FALLBACK_HOME_FEED.quickPicks[0]);
+  const handleSelectMix = async (mix) => {
+    if (!mix) return;
+    // Query live tracks for this mix or generate radio queue
+    const query = mix.title || mix.name || 'trending music';
+    const tracks = await youtubeMusicApiService.search(query, 'songs');
+    if (tracks && tracks.length > 0) {
+      handlePlayAll(tracks);
+    }
+  };
+
+  // Launch Instant Radio tab action
+  const handleStartInstantRadio = async () => {
+    const seed = playerState.currentSong || likedSongs[0];
+    if (seed) {
+      const radioTracks = await youtubeMusicApiService.getRadioQueue(seed);
+      if (radioTracks.length > 0) {
+        handlePlayAll(radioTracks);
+      }
+    }
+    setCurrentTab('home');
   };
 
   const isCurrentLiked = Boolean(
@@ -166,8 +219,8 @@ export default function MobileApp() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0e0e0e' }} className="flex-1 bg-[#0e0e0e]" edges={['top', 'left', 'right']}>
-      {/* ── Branded Header ── */}
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#0a0a0c' }} edges={['top', 'left', 'right']}>
+      {/* ── Dynamic Branded Header ── */}
       <MobileHeader
         onSearchPress={() => {
           animateLayout();
@@ -184,9 +237,9 @@ export default function MobileApp() {
       />
 
       {/* ── Main Tab & Detail Views ── */}
-      <View style={{ flex: 1, backgroundColor: '#0e0e0e' }} className="flex-1">
-        {/* Detail View: Album */}
+      <View style={{ flex: 1, backgroundColor: '#0a0a0c' }}>
         {selectedAlbum ? (
+          /* Detail View: Album */
           <AlbumView
             album={selectedAlbum}
             onBack={() => {
@@ -194,7 +247,7 @@ export default function MobileApp() {
               setSelectedAlbum(null);
             }}
             onPlaySong={handlePlaySong}
-            onPlayAll={(tracks) => tracks.length && handlePlaySong(tracks[0])}
+            onPlayAll={(tracks) => tracks.length && handlePlaySong(tracks[0], tracks)}
             onToggleLike={handleToggleLike}
             activeSongId={playerState.currentSong?.id || playerState.currentSong?.videoId}
             isPlaying={playerState.isPlaying}
@@ -218,32 +271,21 @@ export default function MobileApp() {
           <>
             {currentTab === 'home' && (
               <HomeView
-                topResult={FALLBACK_HOME_FEED.quickPicks[0]}
-                songs={FALLBACK_HOME_FEED.quickPicks}
-                albums={FALLBACK_HOME_FEED.trendingAlbums}
-                artists={FEATURED_ARTISTS}
-                dailyMixes={FALLBACK_HOME_FEED.dailyMixes}
-                dynamicSections={FALLBACK_HOME_FEED.dynamicSections}
                 activeSongId={playerState.currentSong?.id || playerState.currentSong?.videoId}
                 isPlaying={playerState.isPlaying}
+                likedSongs={likedSongs}
                 onPlaySong={handlePlaySong}
+                onPlayAll={handlePlayAll}
                 onSelectAlbum={handleSelectAlbum}
-                onSelectArtist={handleSelectArtist}
                 onSelectMix={handleSelectMix}
                 onToggleLike={handleToggleLike}
-                activeCategory={activeCategory}
-                onSelectCategory={setActiveCategory}
+                onOpenSettings={() => setIsSettingsOpen(true)}
               />
             )}
 
             {currentTab === 'library' && (
               <LibraryView
                 likedSongs={likedSongs}
-                playlists={[
-                  { id: 'pl-favorites', title: 'Favorite Hits', songs: likedSongs },
-                  { id: 'pl-chill', title: 'Late Night Chill', songs: FALLBACK_HOME_FEED.quickPicks.slice(4, 9) },
-                ]}
-                offlineTracks={likedSongs.slice(0, 2)}
                 activeSongId={playerState.currentSong?.id || playerState.currentSong?.videoId}
                 isPlaying={playerState.isPlaying}
                 onPlaySong={handlePlaySong}
@@ -263,12 +305,8 @@ export default function MobileApp() {
           isLiked={isCurrentLiked}
           onPress={() => router.push('/now-playing')}
           onTogglePlay={handleTogglePlay}
-          onSkipNext={() => {
-            const nextIdx = (FALLBACK_HOME_FEED.quickPicks.findIndex(
-              (s) => (s.id || s.videoId) === (playerState.currentSong.id || playerState.currentSong.videoId)
-            ) + 1) % FALLBACK_HOME_FEED.quickPicks.length;
-            handlePlaySong(FALLBACK_HOME_FEED.quickPicks[nextIdx]);
-          }}
+          onSkipNext={handleSkipNext}
+          onSkipPrev={handleSkipPrev}
           onToggleLike={() => handleToggleLike(playerState.currentSong)}
         />
       ) : null}
@@ -285,44 +323,32 @@ export default function MobileApp() {
           } else if (tabId === 'settings') {
             setIsSettingsOpen(true);
           } else if (tabId === 'radio') {
-            if (playerState.currentSong) {
-              handlePlaySong(playerState.currentSong);
-            } else if (FALLBACK_HOME_FEED.quickPicks.length > 0) {
-              handlePlaySong(FALLBACK_HOME_FEED.quickPicks[0]);
-            }
-            setCurrentTab('home');
-            setActiveCategory('mixes');
+            handleStartInstantRadio();
           } else {
             setCurrentTab(tabId);
           }
         }}
       />
 
-      {/* ── Real Search Overlay ── */}
+      {/* ── Real YouTube Music Search Overlay ── */}
       <MobileSearchOverlay
         isOpen={isSearchOpen}
         onClose={() => setIsSearchOpen(false)}
-        catalogSongs={FALLBACK_HOME_FEED.quickPicks}
-        catalogAlbums={FALLBACK_HOME_FEED.trendingAlbums}
-        catalogArtists={FEATURED_ARTISTS}
         activeSongId={playerState.currentSong?.id || playerState.currentSong?.videoId}
         isPlaying={playerState.isPlaying}
-        onPlaySong={(song) => {
-          handlePlaySong(song);
+        likedSongs={likedSongs}
+        onPlaySong={(song, queue) => {
+          handlePlaySong(song, queue);
           setIsSearchOpen(false);
         }}
         onSelectAlbum={(album) => {
           setIsSearchOpen(false);
           handleSelectAlbum(album);
         }}
-        onSelectArtist={(artist) => {
-          setIsSearchOpen(false);
-          handleSelectArtist(artist);
-        }}
         onToggleLike={handleToggleLike}
       />
 
-      {/* ── Settings & Audio Engine Modal ── */}
+      {/* ── Complete 6-Subpage Settings Modal ── */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}

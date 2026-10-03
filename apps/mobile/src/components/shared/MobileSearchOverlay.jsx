@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,85 +7,95 @@ import {
   ScrollView,
   StyleSheet,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
-import { Search, X, Clock, Play, ArrowUpLeft, Music, Trash2 } from 'lucide-react-native';
+import {
+  Search,
+  Globe,
+  Music,
+  Video,
+  Disc,
+  User,
+  Mic,
+  ListMusic,
+  FolderHeart,
+} from 'lucide-react-native';
 import SongRow from '../HomeView/SongRow.jsx';
 import AlbumCard from '../HomeView/AlbumCard.jsx';
-import ArtistCard from '../HomeView/ArtistCard.jsx';
+import { youtubeMusicApiService } from '../../services/youtubeMusicApiService.js';
 
-const SEARCH_TABS = [
-  { id: 'all', label: 'All' },
-  { id: 'songs', label: 'Songs' },
-  { id: 'albums', label: 'Albums' },
-  { id: 'artists', label: 'Artists' },
+const EXPLORE_CHIPS = [
+  { id: 'all', label: 'All', icon: null },
+  { id: 'songs', label: 'Songs', icon: Music },
+  { id: 'videos', label: 'Videos', icon: Video },
+  { id: 'albums', label: 'Albums', icon: Disc },
+  { id: 'artists', label: 'Artists', icon: User },
+  { id: 'podcasts', label: 'Podcasts', icon: Mic },
+  { id: 'community', label: 'Community Playlists', icon: ListMusic },
+  { id: 'featured', label: 'Featured Playlists', icon: FolderHeart },
 ];
 
 export default function MobileSearchOverlay({
   isOpen,
   onClose,
-  catalogSongs = [],
-  catalogAlbums = [],
-  catalogArtists = [],
   activeSongId,
   isPlaying,
+  likedSongs = [],
   onPlaySong,
   onSelectAlbum,
-  onSelectArtist,
   onToggleLike,
 }) {
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
-  const [recentSearches, setRecentSearches] = useState(['The Weeknd', 'Queen', 'Ed Sheeran', 'Gorillaz']);
+  const [suggestions, setSuggestions] = useState([]);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const debounceTimer = useRef(null);
 
-  const trimmed = query.trim().toLowerCase();
-
-  const searchResults = useMemo(() => {
-    if (!trimmed) {
-      return { songs: [], albums: [], artists: [] };
+  useEffect(() => {
+    if (!query.trim()) {
+      setSuggestions([]);
+      setResults([]);
+      setLoading(false);
+      return;
     }
 
-    const filteredSongs = catalogSongs.filter(
-      (s) =>
-        (s.title && s.title.toLowerCase().includes(trimmed)) ||
-        (s.artist && s.artist.toLowerCase().includes(trimmed))
-    );
+    setLoading(true);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
-    const filteredAlbums = catalogAlbums.filter(
-      (a) =>
-        (a.title && a.title.toLowerCase().includes(trimmed)) ||
-        (a.artist && a.artist.toLowerCase().includes(trimmed))
-    );
+    debounceTimer.current = setTimeout(async () => {
+      try {
+        const [suggs, searchRes] = await Promise.all([
+          youtubeMusicApiService.getSuggestions(query),
+          youtubeMusicApiService.search(query, activeTab),
+        ]);
+        setSuggestions(suggs);
+        setResults(searchRes);
+      } catch (e) {
+        console.warn('[Search] Query error:', e);
+      } finally {
+        setLoading(false);
+      }
+    }, 350);
 
-    const filteredArtists = catalogArtists.filter(
-      (ar) =>
-        (ar.name && ar.name.toLowerCase().includes(trimmed)) ||
-        (ar.title && ar.title.toLowerCase().includes(trimmed))
-    );
-
-    return {
-      songs: filteredSongs,
-      albums: filteredAlbums,
-      artists: filteredArtists,
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [trimmed, catalogSongs, catalogAlbums, catalogArtists]);
+  }, [query, activeTab]);
 
-  const handleSelectQuery = (text) => {
-    setQuery(text);
-    if (!recentSearches.includes(text)) {
-      setRecentSearches([text, ...recentSearches.slice(0, 4)]);
-    }
+  const handleClear = () => {
+    setQuery('');
+    setSuggestions([]);
+    setResults([]);
+    onClose?.();
   };
 
-  const handleClearHistory = () => {
-    setRecentSearches([]);
+  const isSongLiked = (song) => {
+    if (!song) return false;
+    const targetId = song.id || song.videoId;
+    return likedSongs.some((s) => (s.id || s.videoId) === targetId);
   };
-
-  const hasResults =
-    searchResults.songs.length > 0 ||
-    searchResults.albums.length > 0 ||
-    searchResults.artists.length > 0;
 
   if (!isOpen) return null;
 
@@ -97,206 +107,113 @@ export default function MobileSearchOverlay({
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        {/* Search Bar Header */}
-        <View style={styles.searchHeader}>
-          <View style={styles.inputWrapper}>
-            <Search size={18} color="#737373" />
+        {/* ── Search Bar Header matching Pages 2, 3, 4 ── */}
+        <View style={styles.headerBar}>
+          <View style={styles.inputContainer}>
+            <Search size={18} color="#71717a" style={styles.searchIcon} />
             <TextInput
               value={query}
               onChangeText={setQuery}
               placeholder="Search songs, artists, albums..."
-              placeholderTextColor="#737373"
-              returnKeyType="search"
-              autoFocus
+              placeholderTextColor="#71717a"
               style={styles.textInput}
+              autoFocus
+              returnKeyType="search"
             />
-            {query.length > 0 && (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => setQuery('')}
-                style={styles.clearButton}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <X size={16} color="#737373" />
-              </TouchableOpacity>
-            )}
           </View>
-
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={onClose}
+            onPress={handleClear}
             style={styles.cancelButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Filter Tabs when query is active */}
-        {trimmed.length > 0 && (
-          <View style={styles.tabsRow}>
-            {SEARCH_TABS.map((tab) => {
-              const isTabActive = activeTab === tab.id;
+        {/* ── Horizontal Filter Chips matching Pages 2, 3, 4 ── */}
+        <View style={styles.chipsRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipsScroll}
+          >
+            {EXPLORE_CHIPS.map((chip) => {
+              const isSelected = activeTab === chip.id;
+              const Icon = chip.icon;
               return (
                 <TouchableOpacity
-                  key={tab.id}
-                  activeOpacity={0.7}
-                  onPress={() => setActiveTab(tab.id)}
+                  key={chip.id}
+                  activeOpacity={0.8}
+                  onPress={() => setActiveTab(chip.id)}
                   style={[
-                    styles.tabChip,
-                    isTabActive ? styles.tabChipActive : styles.tabChipInactive,
+                    styles.chipPill,
+                    isSelected ? styles.chipPillActive : styles.chipPillInactive,
                   ]}
                 >
+                  {Icon && (
+                    <Icon
+                      size={13}
+                      color={isSelected ? '#000000' : '#D4D4D8'}
+                      strokeWidth={2.4}
+                      style={{ marginRight: 5 }}
+                    />
+                  )}
                   <Text
                     style={[
-                      styles.tabChipText,
-                      isTabActive ? styles.tabChipTextActive : styles.tabChipTextInactive,
+                      styles.chipText,
+                      isSelected ? styles.chipTextActive : styles.chipTextInactive,
                     ]}
                   >
-                    {tab.label}
+                    {chip.label}
                   </Text>
                 </TouchableOpacity>
               );
             })}
-          </View>
-        )}
+          </ScrollView>
+        </View>
 
-        {/* Main Scroll Content */}
+        {/* ── Content Area: Empty State vs Live Results ── */}
         <ScrollView
-          style={styles.scrollArea}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
+          style={styles.resultsScroll}
+          contentContainerStyle={styles.resultsContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Results Shelf */}
-          {trimmed.length > 0 && hasResults && (
-            <View style={styles.resultsContainer}>
-              {/* Top Match Hero */}
-              {searchResults.songs.length > 0 && (activeTab === 'all' || activeTab === 'songs') && (
-                <View style={styles.shelf}>
-                  <Text style={styles.sectionLabel}>Top Result</Text>
-                  <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={() => onPlaySong?.(searchResults.songs[0])}
-                    style={styles.topResultCard}
-                  >
-                    <Image
-                      source={{ uri: searchResults.songs[0].thumbnail || searchResults.songs[0].cover }}
-                      style={styles.topResultThumb}
-                      contentFit="cover"
-                      transition={200}
-                    />
-                    <View style={styles.topResultDetails}>
-                      <Text numberOfLines={1} style={styles.topResultTitle}>
-                        {searchResults.songs[0].title}
-                      </Text>
-                      <Text numberOfLines={1} style={styles.topResultSubtitle}>
-                        Song • {searchResults.songs[0].artist}
-                      </Text>
-                      <View style={styles.hitBadge}>
-                        <Text style={styles.hitBadgeText}>HIT TRACK</Text>
-                      </View>
-                    </View>
-                    <View style={styles.playIconCircle}>
-                      <Play size={18} color="#000000" fill="#000000" style={{ marginLeft: 2 }} />
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {/* Songs Results */}
-              {(activeTab === 'all' || activeTab === 'songs') && searchResults.songs.length > 0 && (
-                <View style={styles.shelf}>
-                  <Text style={styles.shelfTitle}>Songs</Text>
-                  {searchResults.songs.map((song, idx) => (
-                    <SongRow
-                      key={song.id || idx}
-                      song={song}
-                      index={idx}
-                      isActive={activeSongId === (song.id || song.videoId)}
-                      isPlaying={isPlaying}
-                      onPlay={() => onPlaySong?.(song)}
-                      onToggleLike={() => onToggleLike?.(song)}
-                    />
-                  ))}
-                </View>
-              )}
-
-              {/* Albums Results */}
-              {(activeTab === 'all' || activeTab === 'albums') && searchResults.albums.length > 0 && (
-                <View style={styles.shelf}>
-                  <Text style={styles.shelfTitle}>Albums</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {searchResults.albums.map((album, idx) => (
-                      <AlbumCard
-                        key={album.id || idx}
-                        item={album}
-                        onPress={() => onSelectAlbum?.(album)}
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-
-              {/* Artists Results */}
-              {(activeTab === 'all' || activeTab === 'artists') && searchResults.artists.length > 0 && (
-                <View style={styles.shelf}>
-                  <Text style={styles.shelfTitle}>Artists</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    {searchResults.artists.map((artist, idx) => (
-                      <ArtistCard
-                        key={artist.id || idx}
-                        item={artist}
-                        onPress={() => onSelectArtist?.(artist)}
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
+          {loading && (
+            <View style={styles.loadingWrapper}>
+              <ActivityIndicator size="small" color="#10b981" />
+              <Text style={styles.loadingText}>Searching YouTube Music…</Text>
             </View>
           )}
 
-          {/* No Results Message */}
-          {trimmed.length > 0 && !hasResults && (
-            <View style={styles.noResultsContainer}>
-              <Music size={40} color="#525252" style={{ marginBottom: 12 }} />
-              <Text style={styles.noResultsTitle}>No results for "{query}"</Text>
-              <Text style={styles.noResultsSubtitle}>
-                Check spelling or try searching for another artist, track, or album.
+          {!query.trim() && !loading && (
+            <View style={styles.emptyStateContainer}>
+              <View style={styles.globeBadge}>
+                <Globe size={32} color="#71717a" strokeWidth={1.8} />
+              </View>
+              <Text style={styles.emptyTitle}>Discover YouTube Music</Text>
+              <Text style={styles.emptySubtitle}>
+                Type a title, artist, or album name above
               </Text>
             </View>
           )}
 
-          {/* Recent Searches */}
-          {!trimmed && recentSearches.length > 0 && (
-            <View style={styles.recentSection}>
-              <View style={styles.recentHeader}>
-                <Text style={styles.recentTitle}>Recent Searches</Text>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={handleClearHistory}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Text style={styles.clearAllText}>Clear All</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.recentList}>
-                {recentSearches.map((term, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    activeOpacity={0.7}
-                    onPress={() => handleSelectQuery(term)}
-                    style={styles.recentItem}
-                  >
-                    <View style={styles.recentLeft}>
-                      <Clock size={16} color="#737373" />
-                      <Text style={styles.recentTermText}>{term}</Text>
-                    </View>
-                    <ArrowUpLeft size={16} color="#525252" />
-                  </TouchableOpacity>
-                ))}
-              </View>
+          {query.trim() && results.length > 0 && (
+            <View style={styles.resultsList}>
+              {results.map((item, idx) => (
+                <SongRow
+                  key={item.id || item.videoId || `res-${idx}`}
+                  song={item}
+                  index={idx}
+                  isActive={(item.id || item.videoId) === activeSongId}
+                  isPlaying={isPlaying}
+                  isLiked={isSongLiked(item)}
+                  onPlay={() => {
+                    onPlaySong?.(item, results);
+                    onClose?.();
+                  }}
+                  onToggleLike={() => onToggleLike?.(item)}
+                />
+              ))}
             </View>
           )}
         </ScrollView>
@@ -308,225 +225,126 @@ export default function MobileSearchOverlay({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0e0e0e',
+    backgroundColor: '#0a0a0c',
   },
-  searchHeader: {
+  headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    paddingVertical: 10,
+    gap: 12,
   },
-  inputWrapper: {
+  inputContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#18181a',
-    borderRadius: 16,
+    borderRadius: 24,
     paddingHorizontal: 14,
     height: 44,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
+  searchIcon: {
+    marginRight: 8,
+  },
   textInput: {
     flex: 1,
+    color: '#FFFFFF',
     fontSize: 14,
-    color: '#ffffff',
     fontWeight: '500',
-    marginLeft: 8,
-    paddingVertical: 0,
-  },
-  clearButton: {
-    padding: 4,
   },
   cancelButton: {
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
   cancelText: {
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
-    color: '#a3a3a3',
   },
-  tabsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+  chipsRow: {
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
-    gap: 8,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
-  tabChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  tabChipActive: {
-    backgroundColor: '#ffffff',
-    borderColor: '#ffffff',
-  },
-  tabChipInactive: {
-    backgroundColor: '#18181a',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  tabChipText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  tabChipTextActive: {
-    color: '#000000',
-  },
-  tabChipTextInactive: {
-    color: '#a3a3a3',
-  },
-  scrollArea: {
-    flex: 1,
-  },
-  scrollContent: {
+  chipsScroll: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 100,
+    gap: 8,
+    flexDirection: 'row',
   },
-  resultsContainer: {
-    paddingTop: 4,
+  chipPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
   },
-  shelf: {
-    marginBottom: 24,
+  chipPillActive: {
+    backgroundColor: '#FFFFFF',
   },
-  sectionLabel: {
-    fontSize: 11,
-    fontFamily: 'monospace',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    color: '#737373',
-    marginBottom: 8,
-  },
-  shelfTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 12,
-    letterSpacing: -0.3,
-  },
-  topResultCard: {
+  chipPillInactive: {
     backgroundColor: '#18181a',
-    padding: 16,
-    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 8,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  topResultThumb: {
-    width: 64,
-    height: 64,
-    borderRadius: 14,
-    backgroundColor: '#262626',
-  },
-  topResultDetails: {
-    flex: 1,
-    minWidth: 0,
-  },
-  topResultTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 2,
-  },
-  topResultSubtitle: {
-    fontSize: 12,
-    color: '#a3a3a3',
-    marginBottom: 8,
-  },
-  hitBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  hitBadgeText: {
-    fontSize: 9,
-    fontFamily: 'monospace',
-    color: '#d4d4d4',
-  },
-  playIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#ffffff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  noResultsContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 24,
-  },
-  noResultsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 6,
-    textAlign: 'center',
-  },
-  noResultsSubtitle: {
-    fontSize: 13,
-    color: '#737373',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  recentSection: {
-    paddingTop: 8,
-  },
-  recentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  recentTitle: {
-    fontSize: 12,
-    fontFamily: 'monospace',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    color: '#737373',
-  },
-  clearAllText: {
-    fontSize: 12,
+  chipText: {
+    fontSize: 12.5,
     fontWeight: '600',
-    color: '#a3a3a3',
   },
-  recentList: {
-    gap: 4,
+  chipTextActive: {
+    color: '#000000',
+    fontWeight: '700',
   },
-  recentItem: {
+  chipTextInactive: {
+    color: '#D4D4D8',
+  },
+  resultsScroll: {
+    flex: 1,
+  },
+  resultsContent: {
+    paddingTop: 16,
+    paddingBottom: 40,
+    paddingHorizontal: 16,
+  },
+  loadingWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 20,
   },
-  recentLeft: {
-    flexDirection: 'row',
+  loadingText: {
+    color: '#a1a1aa',
+    fontSize: 13,
+  },
+  emptyStateContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 120,
     gap: 12,
   },
-  recentTermText: {
-    fontSize: 14,
-    color: '#d4d4d8',
-    fontWeight: '500',
+  globeBadge: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#141416',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  emptySubtitle: {
+    color: '#71717a',
+    fontSize: 13,
+  },
+  resultsList: {
+    gap: 4,
   },
 });

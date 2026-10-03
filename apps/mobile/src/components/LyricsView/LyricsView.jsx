@@ -249,6 +249,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   switchText: {
+    fontFamily: 'Inter',
     fontSize: 12,
     fontWeight: '600',
   },

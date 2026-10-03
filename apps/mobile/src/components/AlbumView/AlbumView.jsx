@@ -283,6 +283,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   playAllText: {
+    fontFamily: 'Inter',
     color: '#000000',
     fontWeight: '700',
     fontSize: 14,
@@ -350,6 +351,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   trackTitle: {
+    fontFamily: 'Inter',
     fontSize: 14,
     fontWeight: '600',
     color: '#e4e4e7',
@@ -359,6 +361,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   trackArtist: {
+    fontFamily: 'Inter',
     fontSize: 12,
     color: '#71717a',
     marginTop: 2,

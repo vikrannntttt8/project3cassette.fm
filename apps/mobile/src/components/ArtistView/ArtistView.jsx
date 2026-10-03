@@ -180,6 +180,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
+    fontFamily: 'Inter',
     fontSize: 14,
     fontWeight: '700',
     color: '#d4d4d8',
@@ -226,6 +227,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   artistTitle: {
+    fontFamily: 'Inter',
     fontSize: 22,
     fontWeight: '800',
     color: '#ffffff',
@@ -268,6 +270,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   playText: {
+    fontFamily: 'Inter',
     color: '#000000',
     fontWeight: '700',
     fontSize: 13.5,
@@ -289,6 +292,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.35)',
   },
   followText: {
+    fontFamily: 'Inter',
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -306,6 +310,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: {
+    fontFamily: 'Inter',
     fontSize: 17,
     fontWeight: '700',
     color: '#ffffff',

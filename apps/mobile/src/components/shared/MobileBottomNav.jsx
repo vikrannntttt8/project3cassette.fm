@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, Radio, Search, Library, Settings } from 'lucide-react-native';
+import { Home, Radio, Search, Library } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -59,12 +59,12 @@ export default function MobileBottomNav({ currentTab = 'home', onTabPress }) {
   const bottomPadding = Math.max(insets.bottom, 10);
   const { settings } = useSettings();
 
+  // Strictly 4 tabs: Home, Radio, Explore, Library (Settings only in top-right header gear)
   const allTabs = [
     { id: 'home', label: 'Home', Icon: Home, visible: settings.navVisibility?.home !== false },
     { id: 'radio', label: 'Radio', Icon: Radio, visible: settings.navVisibility?.radio !== false },
     { id: 'search', label: 'Explore', Icon: Search, visible: settings.navVisibility?.explore !== false },
     { id: 'library', label: 'Library', Icon: Library, visible: settings.navVisibility?.library !== false },
-    { id: 'settings', label: 'Settings', Icon: Settings, visible: settings.navVisibility?.settings !== false },
   ];
 
   const visibleTabs = allTabs.filter((t) => t.visible);

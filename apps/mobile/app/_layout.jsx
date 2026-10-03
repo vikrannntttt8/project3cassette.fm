@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -8,18 +9,16 @@ import { setupTrackPlayer } from '../src/services/trackPlayerService';
 import { hydrateMobileStorage } from '@cassette/core';
 import { NativeAppProviders } from '../src/context/NativeContextProviders.jsx';
 
+// Prevent splash screen from auto-hiding before fonts & storage are hydrated
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 export default function RootLayout() {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Proactively dismiss splash screen
-    try {
-      SplashScreen.hideAsync().catch(() => {});
-    } catch {}
-
     async function initializeApp() {
-      // 1. Load custom web-parity typography (Inter and Shrikhand)
       try {
+        // 1. Load custom web-parity typography (Inter and Shrikhand)
         await Font.loadAsync({
           'Inter': require('../assets/fonts/Inter-Regular.ttf'),
           'Inter-Regular': require('../assets/fonts/Inter-Regular.ttf'),
@@ -29,10 +28,8 @@ export default function RootLayout() {
           'Shrikhand': require('../assets/fonts/Shrikhand-Regular.ttf'),
           'font-cassette': require('../assets/fonts/Shrikhand-Regular.ttf'),
         });
-        setFontsLoaded(true);
       } catch (fontErr) {
         console.warn('[RootLayout] Custom font load warning:', fontErr);
-        setFontsLoaded(true);
       }
 
       // 2. Hydrate persistent offline storage
@@ -57,8 +54,9 @@ export default function RootLayout() {
       } catch (playerErr) {
         console.warn('[RootLayout] TrackPlayer init warning:', playerErr);
       } finally {
+        setIsReady(true);
         try {
-          SplashScreen.hideAsync().catch(() => {});
+          await SplashScreen.hideAsync().catch(() => {});
         } catch {}
       }
     }
@@ -67,26 +65,28 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <NativeAppProviders>
-      <SafeAreaProvider style={{ flex: 1, backgroundColor: '#0e0e0e' }}>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: '#0e0e0e' },
-            animation: 'slide_from_right',
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen
-            name="now-playing"
-            options={{
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
+    <View style={{ flex: 1, backgroundColor: '#000000' }}>
+      <NativeAppProviders>
+        <SafeAreaProvider style={{ flex: 1, backgroundColor: '#000000' }}>
+          <StatusBar style="light" backgroundColor="#000000" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: '#000000' },
+              animation: 'slide_from_right',
             }}
-          />
-        </Stack>
-      </SafeAreaProvider>
-    </NativeAppProviders>
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen
+              name="now-playing"
+              options={{
+                presentation: 'modal',
+                animation: 'slide_from_bottom',
+              }}
+            />
+          </Stack>
+        </SafeAreaProvider>
+      </NativeAppProviders>
+    </View>
   );
 }

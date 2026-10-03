@@ -205,6 +205,50 @@ class YouTubeMusicApiService {
       console.warn('[YouTubeMusicApi] recordHistory error:', err);
     }
   }
+
+  /**
+   * Two-way synchronization of song like status (Cloud Supabase + YouTube Music backend)
+   */
+  async syncSongLikeState(song, isLiked, updatedLikedList = null) {
+    if (!song) return;
+    const videoId = song.videoId || song.id;
+
+    // 1. If updatedLikedList is provided and user is logged into Supabase, sync immediately
+    try {
+      const userRaw = await AsyncStorage.getItem('pulse_auth_user_v2');
+      if (userRaw) {
+        const user = JSON.parse(userRaw);
+        if (user && user.id && updatedLikedList) {
+          const { syncLikedSongsCloud } = await import('@cassette/core');
+          await syncLikedSongsCloud(user.id, updatedLikedList).catch(() => {});
+        }
+      }
+    } catch (e) {
+      console.warn('[YouTubeMusicApi] Cloud like sync notice:', e);
+    }
+
+    // 2. Dispatch to YouTube Music backend API endpoint for like/dislike synchronization
+    if (videoId) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        await fetch(apiUrl('/api/ytmusic/like'), {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoId,
+            liked: isLiked,
+            song,
+          }),
+        }).catch(() => null);
+        clearTimeout(timeoutId);
+      } catch (err) {
+        console.warn('[YouTubeMusicApi] YouTube Music backend like dispatch notice:', err.message);
+      }
+    }
+  }
 }
 
 export const youtubeMusicApiService = new YouTubeMusicApiService();
+

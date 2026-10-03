@@ -97,6 +97,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   title: {
+    fontFamily: 'Inter',
     fontSize: 22,
     fontWeight: '800',
     color: '#ffffff',
@@ -104,6 +105,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
   },
   artist: {
+    fontFamily: 'Inter',
     fontSize: 14,
     color: '#a1a1aa',
     textAlign: 'center',

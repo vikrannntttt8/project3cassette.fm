@@ -145,6 +145,9 @@ export default function MobileApp() {
     try {
       await AsyncStorage.setItem(LIKED_KEY, JSON.stringify(nextLiked));
     } catch {}
+
+    // Live two-way synchronization to Supabase Cloud & YouTube Music backend
+    youtubeMusicApiService.syncSongLikeState(song, !exists, nextLiked).catch(() => {});
   }, [likedSongs]);
 
   // Skip to Next Track
@@ -329,8 +332,6 @@ export default function MobileApp() {
           setSelectedArtist(null);
           if (tabId === 'search') {
             setIsSearchOpen(true);
-          } else if (tabId === 'settings') {
-            setIsSettingsOpen(true);
           } else if (tabId === 'radio') {
             handleStartInstantRadio();
           } else {

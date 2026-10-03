@@ -7,9 +7,16 @@
     "icon": "./assets/icon.png",
     "scheme": "cassette",
     "userInterfaceStyle": "dark",
+    "backgroundColor": "#000000",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "fm.cassette.mobile",
+      "backgroundColor": "#000000",
       "infoPlist": {
         "UIBackgroundModes": [
           "audio"
@@ -17,9 +24,10 @@
       }
     },
     "android": {
+      "backgroundColor": "#000000",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0e0e0e"
+        "backgroundColor": "#000000"
       },
       "package": "fm.cassette.mobile",
       "permissions": [
@@ -28,9 +36,29 @@
         "FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
+    "androidStatusBar": {
+      "backgroundColor": "#000000",
+      "barStyle": "light-content",
+      "translucent": true
+    },
+    "androidNavigationBar": {
+      "backgroundColor": "#000000",
+      "barStyle": "light-content"
+    },
     "plugins": [
       "expo-router",
-      "expo-splash-screen"
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#000000",
+          "image": "./assets/splash.png",
+          "dark": {
+            "image": "./assets/splash.png",
+            "backgroundColor": "#000000"
+          },
+          "imageWidth": 200
+        }
+      ]
     ],
     "extra": {
       "router": {},

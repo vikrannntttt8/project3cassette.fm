@@ -18,21 +18,7 @@ const config = getDefaultConfig(projectRoot);
 // TreeFS crashes when watchFolders contains both a parent folder and its children.
 // We strictly retain only the necessary, disjoint workspace directories and
 // explicitly exclude non-mobile workspaces (like apps/desktop).
-const initialWatchFolders = Array.isArray(config.watchFolders) ? config.watchFolders : [];
-
-const filteredWatchFolders = initialWatchFolders.filter((folder) => {
-  const normalized = folder.replace(/\\/g, '/');
-  return !normalized.includes('/apps/desktop') && normalized !== monorepoRoot.replace(/\\/g, '/');
-});
-
-const watchSet = new Set([
-  projectRoot,
-  corePackageRoot,
-  rootNodeModules,
-  ...filteredWatchFolders,
-]);
-
-config.watchFolders = Array.from(watchSet);
+config.watchFolders = [monorepoRoot];
 
 // ── 4. Node Modules Resolution Order ──────────────────────────────────────────
 // Ensure Metro searches local apps/mobile/node_modules first, then hoisted root node_modules.
@@ -84,15 +70,23 @@ config.resolver.extraNodeModules = {
   ...config.resolver.extraNodeModules,
   // Canonical alias for the shared core package
   '@cassette/core': corePackageRoot,
+  'expo-router': path.resolve(monorepoRoot, 'node_modules/expo-router'),
   // NativeWind v2 JSX runtime shims to avoid createElement crashes
   'nativewind/jsx-runtime': require.resolve('react/jsx-runtime'),
   'nativewind/jsx-dev-runtime': require.resolve('react/jsx-dev-runtime'),
 };
 
 // ── 7. Custom Module Resolution Hook ──────────────────────────────────────────
+const emptyShim = path.resolve(projectRoot, 'shims/empty.js');
+const nodeBuiltins = ['crypto', 'stream', 'http', 'https', 'net', 'tls', 'fs', 'path', 'os', 'zlib', 'vm'];
+
 const defaultResolveRequest = config.resolver.resolveRequest;
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (nodeBuiltins.includes(moduleName) || moduleName.startsWith('node:')) {
+    return { filePath: emptyShim, type: 'sourceFile' };
+  }
+
   // @cassette/core root
   if (moduleName === '@cassette/core') {
     return {
@@ -119,10 +113,36 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     return { filePath: require.resolve('react/jsx-dev-runtime'), type: 'sourceFile' };
   }
 
-  if (defaultResolveRequest) {
-    return defaultResolveRequest(context, moduleName, platform);
+  // Expo Router entry and subpaths resolution for hoisted monorepo
+  if (moduleName === './node_modules/expo-router/entry' || moduleName.endsWith('expo-router/entry')) {
+    return {
+      filePath: require.resolve('expo-router/entry', { paths: [projectRoot, monorepoRoot] }),
+      type: 'sourceFile',
+    };
   }
-  return context.resolveRequest(context, moduleName, platform);
+  if (moduleName.startsWith('expo-router/')) {
+    const sub = moduleName.slice('expo-router/'.length);
+    const candidate = path.resolve(monorepoRoot, 'node_modules/expo-router', sub.endsWith('.js') ? sub : `${sub}.js`);
+    if (fs.existsSync(candidate)) {
+      return { filePath: candidate, type: 'sourceFile' };
+    }
+  }
+
+  const resolve = defaultResolveRequest || context.resolveRequest;
+  try {
+    return resolve(context, moduleName, platform);
+  } catch (err) {
+    if (!moduleName.startsWith('.') && !moduleName.startsWith('/')) {
+      try {
+        const resolved = require.resolve(moduleName, { paths: [projectRoot, monorepoRoot, rootNodeModules] });
+        if (path.isAbsolute(resolved)) {
+          return { filePath: resolved, type: 'sourceFile' };
+        }
+        return { type: 'empty' };
+      } catch {}
+    }
+    throw err;
+  }
 };
 
 module.exports = config;

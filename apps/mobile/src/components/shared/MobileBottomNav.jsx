@@ -108,10 +108,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontFamily: 'Inter',
     textAlign: 'center',
-    includeFontPadding: false,
-    paddingHorizontal: 2,
+    paddingHorizontal: 6,
+    paddingRight: 8,
   },
 });

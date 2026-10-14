@@ -10,11 +10,17 @@ import Animated, {
 import { Search, Settings, User } from 'lucide-react-native';
 import { usePlayerStore } from '@cassette/core';
 import { googleAuthSyncService } from '../../services/googleAuthSyncService.js';
+import { useTheme } from '../../context/NativeContextProviders.jsx';
 
-export default function MobileHeader({ onSearchPress, onProfilePress, onSettingsPress, onBrandPress }) {
-  const [user, setUser] = useState(googleAuthSyncService.getUser());
-  const [isSyncing, setIsSyncing] = useState(false);
+export default function MobileHeader({
+  onBrandPress,
+  onSearchPress,
+  onSettingsPress,
+  onProfilePress,
+}) {
+  const { theme } = useTheme();
   const [isPlaying, setIsPlaying] = useState(usePlayerStore.getState().isPlaying);
+  const [user, setUser] = useState(googleAuthSyncService.getUser());
 
   // Subscribe to live audio playback state
   useEffect(() => {
@@ -24,43 +30,35 @@ export default function MobileHeader({ onSearchPress, onProfilePress, onSettings
     return () => unsubPlayer();
   }, []);
 
-  // Subscribe to live Google / Auth sync state
+  // Subscribe to live Google auth state
   useEffect(() => {
-    const unsubAuth = googleAuthSyncService.subscribe((u, syncing) => {
+    const unsubAuth = googleAuthSyncService.subscribe((u) => {
       setUser(u);
-      setIsSyncing(syncing);
     });
     return () => unsubAuth();
   }, []);
 
-  // Dynamic status pulse animation
+  // Status pulse indicator for active streaming
   const pulseOpacity = useSharedValue(1);
   useEffect(() => {
-    if (isPlaying || isSyncing) {
+    if (isPlaying) {
       pulseOpacity.value = withRepeat(
-        withSequence(withTiming(0.35, { duration: 700 }), withTiming(1, { duration: 700 })),
+        withSequence(withTiming(0.4, { duration: 700 }), withTiming(1, { duration: 700 })),
         -1,
         true
       );
     } else {
       pulseOpacity.value = withTiming(1, { duration: 300 });
     }
-  }, [isPlaying, isSyncing]);
+  }, [isPlaying]);
 
   const animatedDotStyle = useAnimatedStyle(() => ({
     opacity: pulseOpacity.value,
   }));
 
-  // Dynamic indicator color based on live runtime status
-  const getDotColor = () => {
-    if (isSyncing) return '#f59e0b'; // Amber: live cloud/YouTube sync
-    if (isPlaying) return '#10b981'; // Emerald: active audio stream
-    return '#a1a1aa'; // Neutral zinc: idle
-  };
-
   return (
-    <View style={styles.headerContainer}>
-      {/* Dynamic Brand Logo with Shrikhand web-parity font & Live Status Indicator */}
+    <View style={[styles.headerContainer, { backgroundColor: theme.bg, borderBottomColor: theme.border }]}>
+      {/* Brand Wordmark (no truncation) */}
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={onBrandPress}
@@ -70,48 +68,49 @@ export default function MobileHeader({ onSearchPress, onProfilePress, onSettings
         <Animated.View
           style={[
             styles.brandDot,
-            { backgroundColor: getDotColor() },
+            { backgroundColor: isPlaying ? '#10b981' : '#71717a' },
             animatedDotStyle,
           ]}
         />
       </TouchableOpacity>
 
-      {/* Right Action Icons: Search + Live Account Avatar / Sign In + Settings */}
+      {/* Right Actions: Search + User Avatar / Sign In + Settings Gear */}
       <View style={styles.actionsRow}>
+        {/* Search Icon */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onSearchPress}
-          style={styles.actionButton}
+          style={[styles.actionButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
           accessibilityLabel="Search music"
         >
-          <Search size={18} color="#D4D4D8" strokeWidth={2.2} />
+          <Search size={18} color="#FFFFFF" strokeWidth={2.2} />
         </TouchableOpacity>
 
-        {/* Live User Avatar (reflects clean session state: User icon when logged out, initials when logged in) */}
+        {/* User Profile / Google Avatar */}
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={onProfilePress}
           style={[
             styles.avatarButton,
-            user?.isConnected && { backgroundColor: user.avatarBg || '#ea580c' },
+            { backgroundColor: user?.isConnected ? '#ea580c' : theme.surface, borderColor: theme.border },
           ]}
           accessibilityLabel={user?.isConnected ? `Account ${user.name || 'Profile'}` : 'Sign in'}
         >
           {user?.isConnected ? (
-            <Text style={styles.avatarText}>{user.avatarLetter || 'U'}</Text>
+            <Text style={styles.avatarText}>{user.avatarLetter || user.name?.[0]?.toUpperCase() || 'V'}</Text>
           ) : (
-            <User size={17} color="#a1a1aa" strokeWidth={2.2} />
+            <Text style={styles.avatarText}>V</Text>
           )}
         </TouchableOpacity>
 
-        {/* Settings Button */}
+        {/* Settings Gear (links directly to Settings) */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onSettingsPress}
-          style={styles.actionButton}
+          style={[styles.actionButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
           accessibilityLabel="Settings"
         >
-          <Settings size={18} color="#D4D4D8" strokeWidth={2.2} />
+          <Settings size={18} color="#FFFFFF" strokeWidth={2.2} />
         </TouchableOpacity>
       </View>
     </View>
@@ -120,48 +119,42 @@ export default function MobileHeader({ onSearchPress, onProfilePress, onSettings
 
 const styles = StyleSheet.create({
   headerContainer: {
-    height: 52,
+    height: 54,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    backgroundColor: '#0a0a0c',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
+    flexShrink: 0,
   },
   brandText: {
-    fontSize: 22,
     fontFamily: 'Shrikhand',
-    color: '#ffffff',
-    letterSpacing: -0.4,
+    fontSize: 22,
+    color: '#FFFFFF',
+    paddingRight: 8,
+    includeFontPadding: false,
   },
   brandDot: {
-    width: 6.5,
-    height: 6.5,
-    borderRadius: 3.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     marginTop: 2,
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 5,
   },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   actionButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#18181a',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -169,15 +162,13 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#18181a',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: '#ffffff',
-    fontSize: 13,
+    color: '#FFFFFF',
+    fontSize: 14,
     fontFamily: 'Inter',
     fontWeight: '700',
   },

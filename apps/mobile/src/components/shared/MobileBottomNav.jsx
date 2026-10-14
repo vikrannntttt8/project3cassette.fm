@@ -1,20 +1,20 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Home, Radio, Search, Library } from 'lucide-react-native';
+import { Home, Compass, Library, Clock } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { useSettings } from '../../context/NativeContextProviders.jsx';
+import { useTheme } from '../../context/NativeContextProviders.jsx';
 
-function NavTabItem({ tab, isActive, onPress }) {
+function NavTabItem({ tab, isActive, onPress, theme }) {
   const scale = useSharedValue(1);
   const IconComponent = tab.Icon;
 
   const handlePressIn = () => {
-    scale.value = withSpring(0.85, { damping: 12, stiffness: 350 });
+    scale.value = withSpring(0.88, { damping: 12, stiffness: 350 });
   };
 
   const handlePressOut = () => {
@@ -26,56 +26,56 @@ function NavTabItem({ tab, isActive, onPress }) {
   }));
 
   return (
-    <Pressable
+    <TouchableOpacity
+      activeOpacity={0.7}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       style={styles.tabItem}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: isActive }}
+      accessibilityLabel={tab.label}
     >
-      {/* Active Top Indicator */}
-      {isActive && <View style={styles.activeIndicator} />}
-
       <Animated.View style={[styles.iconWrapper, animatedStyle]}>
         <IconComponent
-          size={21}
-          color={isActive ? '#FFFFFF' : '#737373'}
-          strokeWidth={isActive ? 2.5 : 1.9}
+          size={20}
+          color={isActive ? '#FFFFFF' : '#71717A'}
+          strokeWidth={isActive ? 2.4 : 1.8}
         />
       </Animated.View>
       <Text
         style={[
           styles.tabLabel,
-          isActive ? styles.tabLabelActive : styles.tabLabelInactive,
+          { color: isActive ? '#FFFFFF' : '#71717A', fontWeight: isActive ? '700' : '500' },
         ]}
       >
         {tab.label}
       </Text>
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 
 export default function MobileBottomNav({ currentTab = 'home', onTabPress }) {
   const insets = useSafeAreaInsets();
-  const bottomPadding = Math.max(insets.bottom, 10);
-  const { settings } = useSettings();
+  const bottomPadding = Math.max(insets.bottom, 6);
+  const { theme } = useTheme();
 
-  // Strictly 4 tabs: Home, Radio, Explore, Library (Settings only in top-right header gear)
-  const allTabs = [
-    { id: 'home', label: 'Home', Icon: Home, visible: settings.navVisibility?.home !== false },
-    { id: 'radio', label: 'Radio', Icon: Radio, visible: settings.navVisibility?.radio !== false },
-    { id: 'search', label: 'Explore', Icon: Search, visible: settings.navVisibility?.explore !== false },
-    { id: 'library', label: 'Library', Icon: Library, visible: settings.navVisibility?.library !== false },
+  // PWA Tabs: Home, Explore, Library, History (PRD NAV-01 & HIS-01)
+  const tabs = [
+    { id: 'home', label: 'Home', Icon: Home },
+    { id: 'explore', label: 'Explore', Icon: Compass },
+    { id: 'library', label: 'Library', Icon: Library },
+    { id: 'history', label: 'History', Icon: Clock },
   ];
 
-  const visibleTabs = allTabs.filter((t) => t.visible);
-
   return (
-    <View style={[styles.navContainer, { paddingBottom: bottomPadding }]}>
+    <View style={[styles.navContainer, { backgroundColor: theme.bg, borderTopColor: theme.border, paddingBottom: bottomPadding }]}>
       <View style={styles.tabsRow}>
-        {visibleTabs.map((tab) => (
+        {tabs.map((tab) => (
           <NavTabItem
             key={tab.id}
             tab={tab}
+            theme={theme}
             isActive={currentTab === tab.id}
             onPress={() => onTabPress?.(tab.id)}
           />
@@ -87,17 +87,10 @@ export default function MobileBottomNav({ currentTab = 'home', onTabPress }) {
 
 const styles = StyleSheet.create({
   navContainer: {
-    backgroundColor: '#0c0c0e',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 20,
   },
   tabsRow: {
-    height: 56,
+    height: 52,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
@@ -105,40 +98,20 @@ const styles = StyleSheet.create({
   },
   tabItem: {
     flex: 1,
-    height: 56,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
     gap: 3,
-  },
-  activeIndicator: {
-    position: 'absolute',
-    top: 0,
-    width: 24,
-    height: 2.5,
-    borderRadius: 2,
-    backgroundColor: '#ffffff',
-    shadowColor: '#ffffff',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    elevation: 3,
   },
   iconWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: 'Inter',
-    letterSpacing: -0.1,
-  },
-  tabLabelActive: {
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  tabLabelInactive: {
-    fontWeight: '500',
-    color: '#737373',
+    textAlign: 'center',
+    includeFontPadding: false,
+    paddingHorizontal: 2,
   },
 });

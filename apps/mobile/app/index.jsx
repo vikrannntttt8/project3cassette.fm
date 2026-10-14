@@ -6,17 +6,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import MobileHeader from '../src/components/shared/MobileHeader.jsx';
 import MobileBottomNav from '../src/components/shared/MobileBottomNav.jsx';
 import MobileSearchOverlay from '../src/components/shared/MobileSearchOverlay.jsx';
+import ActionMenuSheet from '../src/components/shared/ActionMenuSheet.jsx';
 import SettingsModal from '../src/components/shared/SettingsModal.jsx';
 import AuthModal from '../src/components/shared/AuthModal.jsx';
 import HomeView from '../src/components/HomeView/HomeView.jsx';
 import LibraryView from '../src/components/LibraryView/LibraryView.jsx';
+import HistoryView from '../src/components/HistoryView/HistoryView.jsx';
 import AlbumView from '../src/components/AlbumView/AlbumView.jsx';
 import ArtistView from '../src/components/ArtistView/ArtistView.jsx';
+import ArchiveTuneActionBar from '../src/components/shared/ArchiveTuneActionBar.jsx';
+import TrackOptionsMenuSheet from '../src/components/shared/TrackOptionsMenuSheet.jsx';
+import CreditsModal from '../src/components/shared/CreditsModal.jsx';
 import PlayerDock from '../src/components/PlayerDock/PlayerDock.jsx';
 import { usePlayerStore, playerActions, resolveDirectAudioStream } from '@cassette/core';
 import { playTrack, pauseTrack, resumeTrack } from '../src/services/trackPlayerService.js';
 import { youtubeMusicApiService } from '../src/services/youtubeMusicApiService.js';
 import { googleAuthSyncService } from '../src/services/googleAuthSyncService.js';
+import { useTheme } from '../src/context/NativeContextProviders.jsx';
 
 try {
   if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -38,12 +44,16 @@ const LIKED_KEY = 'likedSongs';
 
 export default function MobileApp() {
   const router = useRouter();
-  const [currentTab, setCurrentTab] = useState('home'); // 'home' | 'radio' | 'search' | 'library' | 'settings'
+  const [currentTab, setCurrentTab] = useState('home'); // 'home' | 'library' | 'history'
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [selectedAlbum, setSelectedAlbum] = useState(null);
   const [selectedArtist, setSelectedArtist] = useState(null);
+  const [selectedTrackForOptions, setSelectedTrackForOptions] = useState(null);
+  const [isTrackOptionsOpen, setIsTrackOptionsOpen] = useState(false);
+  const [isCreditsOpen, setIsCreditsOpen] = useState(false);
 
   const [playerState, setPlayerState] = useState(usePlayerStore.getState());
   const [activeQueue, setActiveQueue] = useState([]);
@@ -190,11 +200,54 @@ export default function MobileApp() {
     setSelectedAlbum(album);
   };
 
-  const handleSelectArtist = (artist) => {
+  const handleSelectArtist = useCallback(async (artist) => {
     animateLayout();
     setSelectedAlbum(null);
-    setSelectedArtist(artist);
-  };
+    if (!artist) return;
+    if (typeof artist === 'object') {
+      setSelectedArtist(artist);
+      return;
+    }
+    try {
+      const details = await youtubeMusicApiService.fetchArtistDetails(artist);
+      setSelectedArtist(details);
+    } catch {
+      setSelectedArtist({ name: artist, title: artist, topTracks: [], albums: [] });
+    }
+  }, []);
+
+  const handleStartRadio = useCallback(async (song) => {
+    if (!song) return;
+    try {
+      const radioTracks = await youtubeMusicApiService.getRadioQueue(song);
+      if (radioTracks && radioTracks.length > 0) {
+        handlePlayAll(radioTracks);
+      }
+    } catch (e) {
+      console.warn('[handleStartRadio] error:', e);
+    }
+  }, [handlePlayAll]);
+
+  const handlePlayNext = useCallback((song) => {
+    if (!song) return;
+    const currentId = playerState.currentSong?.id || playerState.currentSong?.videoId;
+    const idx = activeQueue.findIndex((s) => (s.id || s.videoId) === currentId);
+    let nextQueue;
+    if (idx !== -1) {
+      nextQueue = [...activeQueue.slice(0, idx + 1), song, ...activeQueue.slice(idx + 1)];
+    } else {
+      nextQueue = [song, ...activeQueue];
+    }
+    setActiveQueue(nextQueue);
+    playerActions.setQueue?.(nextQueue);
+  }, [activeQueue, playerState.currentSong]);
+
+  const handleAddToQueue = useCallback((song) => {
+    if (!song) return;
+    const nextQueue = [...activeQueue, song];
+    setActiveQueue(nextQueue);
+    playerActions.setQueue?.(nextQueue);
+  }, [activeQueue]);
 
   const handleSelectMix = async (mix) => {
     if (!mix) return;
@@ -218,14 +271,32 @@ export default function MobileApp() {
     setCurrentTab('home');
   };
 
+  // PRD SHF-01 to SHF-03: Pin current track, Fisher-Yates shuffle candidate pool
+  const handleShuffleQueue = useCallback(() => {
+    if (!activeQueue || activeQueue.length < 3) return;
+    const currId = playerState.currentSong?.id || playerState.currentSong?.videoId;
+    const currIdx = activeQueue.findIndex((s) => (s.id || s.videoId) === currId);
+    const pinned = currIdx !== -1 ? activeQueue.slice(0, currIdx + 1) : [activeQueue[0]];
+    const pool = currIdx !== -1 ? [...activeQueue.slice(currIdx + 1)] : [...activeQueue.slice(1)];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const shuffled = [...pinned, ...pool];
+    setActiveQueue(shuffled);
+    playerActions.setQueue?.(shuffled);
+  }, [activeQueue, playerState.currentSong]);
+
   const isCurrentLiked = Boolean(
     playerState.currentSong &&
     likedSongs.some((s) => (s.id || s.videoId) === (playerState.currentSong.id || playerState.currentSong.videoId))
   );
 
+  const { theme } = useTheme();
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#0a0a0c' }} edges={['top', 'left', 'right']}>
-      {/* ── Dynamic Branded Header ── */}
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }} edges={['top', 'left', 'right']}>
+      {/* ── Dynamic Branded Header (PRD HOME-09) ── */}
       <MobileHeader
         onBrandPress={() => {
           animateLayout();
@@ -238,17 +309,15 @@ export default function MobileApp() {
           setIsSearchOpen(true);
         }}
         onProfilePress={() => {
-          animateLayout();
           setIsAuthOpen(true);
         }}
         onSettingsPress={() => {
-          animateLayout();
           setIsSettingsOpen(true);
         }}
       />
 
       {/* ── Main Tab & Detail Views ── */}
-      <View style={{ flex: 1, backgroundColor: '#0a0a0c' }}>
+      <View style={{ flex: 1, backgroundColor: theme.bg }}>
         {selectedAlbum ? (
           /* Detail View: Album */
           <AlbumView
@@ -274,6 +343,10 @@ export default function MobileApp() {
             onPlaySong={handlePlaySong}
             onSelectAlbum={handleSelectAlbum}
             onToggleLike={handleToggleLike}
+            onMorePress={(song) => {
+              setSelectedTrackForOptions(song);
+              setIsTrackOptionsOpen(true);
+            }}
             activeSongId={playerState.currentSong?.id || playerState.currentSong?.videoId}
             isPlaying={playerState.isPlaying}
           />
@@ -290,6 +363,11 @@ export default function MobileApp() {
                 onSelectAlbum={handleSelectAlbum}
                 onSelectMix={handleSelectMix}
                 onToggleLike={handleToggleLike}
+                onMorePress={(song) => {
+                  setSelectedTrackForOptions(song);
+                  setIsTrackOptionsOpen(true);
+                }}
+                onArtistPress={handleSelectArtist}
                 onOpenSettings={() => setIsSettingsOpen(true)}
               />
             )}
@@ -304,36 +382,65 @@ export default function MobileApp() {
                 onOpenAuth={() => setIsAuthOpen(true)}
               />
             )}
+
+            {currentTab === 'history' && (
+              <HistoryView
+                activeSongId={playerState.currentSong?.id || playerState.currentSong?.videoId}
+                isPlaying={playerState.isPlaying}
+                onPlaySong={handlePlaySong}
+                onPlayAll={handlePlayAll}
+                onToggleLike={handleToggleLike}
+                onOpenTrackOptions={(song) => {
+                  setSelectedTrackForOptions(song);
+                  setIsTrackOptionsOpen(true);
+                }}
+                onOpenArtist={handleSelectArtist}
+                onOpenAuth={() => setIsAuthOpen(true)}
+              />
+            )}
           </>
         )}
       </View>
 
-      {/* ── Persistent Floating Bottom Mini Player Dock ── */}
-      {playerState.currentSong ? (
-        <PlayerDock
-          currentSong={playerState.currentSong}
-          isPlaying={playerState.isPlaying}
-          isLoading={playerState.isLoading}
-          isLiked={isCurrentLiked}
-          onPress={() => router.push('/now-playing')}
-          onTogglePlay={handleTogglePlay}
-          onSkipNext={handleSkipNext}
-          onSkipPrev={handleSkipPrev}
-          onToggleLike={() => handleToggleLike(playerState.currentSong)}
-        />
-      ) : null}
+      {/* ── ArchiveTune Action Bar directly above Mini Player (ArchiveTune 3-Dot Layout) ── */}
+      <ArchiveTuneActionBar
+        onOpenActionMenu={() => setIsMenuOpen(true)}
+        onRecognizeMusic={() => {
+          setIsSearchOpen(true);
+        }}
+        onMusicTogether={() => {
+          setIsAuthOpen(true);
+        }}
+        onShuffleQueue={handleShuffleQueue}
+        queueLength={activeQueue.length}
+      />
 
-      {/* ── Bottom Navigation Bar ── */}
+      {/* ── Persistent Floating Bottom Mini Player Dock (PWA Style) ── */}
+      <PlayerDock
+        currentSong={playerState.currentSong}
+        isPlaying={playerState.isPlaying}
+        isLoading={playerState.isLoading}
+        onPress={() => {
+          if (playerState.currentSong) {
+            router.push('/now-playing');
+          } else {
+            setIsSearchOpen(true);
+          }
+        }}
+        onTogglePlay={handleTogglePlay}
+        onSkipNext={handleSkipNext}
+        onSkipPrev={handleSkipPrev}
+      />
+
+      {/* ── Bottom Navigation Bar: Home, Explore, Library, History (PRD NAV-01) ── */}
       <MobileBottomNav
         currentTab={currentTab}
         onTabPress={(tabId) => {
           animateLayout();
           setSelectedAlbum(null);
           setSelectedArtist(null);
-          if (tabId === 'search') {
+          if (tabId === 'explore') {
             setIsSearchOpen(true);
-          } else if (tabId === 'radio') {
-            handleStartInstantRadio();
           } else {
             setCurrentTab(tabId);
           }
@@ -358,6 +465,15 @@ export default function MobileApp() {
         onToggleLike={handleToggleLike}
       />
 
+      {/* ── PRD Section 6.3: Three-Dot Action Menu Sheet ── */}
+      <ActionMenuSheet
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        onShuffleQueue={handleShuffleQueue}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        queueLength={activeQueue.length}
+      />
+
       {/* ── Complete 6-Subpage Settings Modal ── */}
       <SettingsModal
         isOpen={isSettingsOpen}
@@ -372,6 +488,43 @@ export default function MobileApp() {
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
+      />
+
+      {/* ── Comprehensive Track Options Menu Sheet (Start Radio, Add to Queue, Go to Artist, Credits) ── */}
+      <TrackOptionsMenuSheet
+        isOpen={isTrackOptionsOpen}
+        onClose={() => setIsTrackOptionsOpen(false)}
+        song={selectedTrackForOptions}
+        isLiked={likedSongs.some(
+          (s) =>
+            (s.id || s.videoId) ===
+            (selectedTrackForOptions?.id || selectedTrackForOptions?.videoId)
+        )}
+        onToggleLike={handleToggleLike}
+        onStartRadio={handleStartRadio}
+        onPlayNext={handlePlayNext}
+        onAddToQueue={handleAddToQueue}
+        onAddToPlaylist={() => {}}
+        onAddToAlbums={(song) => handleToggleLike(song)}
+        onGoToArtist={(artist) => {
+          setIsTrackOptionsOpen(false);
+          setTimeout(() => {
+            handleSelectArtist(artist);
+          }, 120);
+        }}
+        onViewCredits={(song) => {
+          setIsTrackOptionsOpen(false);
+          setTimeout(() => {
+            setIsCreditsOpen(true);
+          }, 150);
+        }}
+      />
+
+      {/* ── Track Credits Sheet ── */}
+      <CreditsModal
+        isOpen={isCreditsOpen}
+        onClose={() => setIsCreditsOpen(false)}
+        song={selectedTrackForOptions}
       />
     </SafeAreaView>
   );

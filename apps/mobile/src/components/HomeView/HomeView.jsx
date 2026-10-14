@@ -6,28 +6,31 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import {
   Clock,
   Zap,
   Radio,
   Disc,
-  Sliders,
+  Play,
   Sparkles,
   ChevronRight,
-  Play,
 } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import QuickPicksGrid from './QuickPicksGrid.jsx';
 import SongRow from './SongRow.jsx';
 import AlbumCard from './AlbumCard.jsx';
 import { youtubeMusicApiService } from '../../services/youtubeMusicApiService.js';
-import { useSettings } from '../../context/NativeContextProviders.jsx';
+import { INITIAL_HOME_FEED } from '../../data/fallbackFeed.js';
+import { colors, typography } from '../../theme/tokens.js';
+
+const CATEGORY_STORAGE_KEY = 'pulse_home_category';
 
 const CATEGORIES = [
-  { id: 'all', label: 'All', icon: null },
-  { id: 'picks', label: 'Quick Picks', icon: Zap },
-  { id: 'mixes', label: 'Mixes', icon: Radio },
-  { id: 'albums', label: 'Albums', icon: Disc },
+  { id: 'all', label: 'All' },
+  { id: 'picks', label: 'Quick Picks' },
+  { id: 'mixes', label: 'Mixes' },
+  { id: 'albums', label: 'Albums' },
 ];
 
 export default function HomeView({
@@ -40,43 +43,49 @@ export default function HomeView({
   onSelectMix,
   onToggleLike,
   onOpenSettings,
+  onMorePress,
+  onArtistPress,
 }) {
+  // PRD HOME-02: Selection persists across launches. Default is All.
   const [activeCategory, setActiveCategory] = useState('all');
-  const [feedData, setFeedData] = useState({
-    listenAgain: [],
-    quickPicks: [],
-    dailyMixes: [],
-    trendingAlbums: [],
-    throwbacks: [],
-  });
-  const [loading, setLoading] = useState(true);
+  // PRD HOME-01: Render the last cached response from MMKV/storage first (stale-while-revalidate)
+  const [feedData, setFeedData] = useState(INITIAL_HOME_FEED);
   const [refreshing, setRefreshing] = useState(false);
-  const { settings } = useSettings();
 
-  // Load live feed from YouTube Music API pipeline and persistent user history
+  // Restore persisted category
+  useEffect(() => {
+    AsyncStorage.getItem(CATEGORY_STORAGE_KEY).then((saved) => {
+      if (saved && CATEGORIES.some((c) => c.id === saved)) {
+        setActiveCategory(saved);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleSelectCategory = (catId) => {
+    setActiveCategory(catId);
+    AsyncStorage.setItem(CATEGORY_STORAGE_KEY, catId).catch(() => {});
+  };
+
+  // Load cached feed instantly, then revalidate in background
   const loadLiveFeed = useCallback(async () => {
     try {
-      const data = await youtubeMusicApiService.fetchLiveHomeFeed();
-      // Apply explicit filter if enabled
-      if (settings?.explicitFilter) {
-        const filterFn = (item) => !item.title?.includes('[E]') && !item.explicit;
-        setFeedData({
-          listenAgain: (data.listenAgain || []).filter(filterFn),
-          quickPicks: (data.quickPicks || []).filter(filterFn),
-          dailyMixes: data.dailyMixes || [],
-          trendingAlbums: data.trendingAlbums || [],
-          throwbacks: data.throwbacks || [],
-        });
-      } else {
-        setFeedData(data);
+      // 1. Instant local read-through
+      const cached = await youtubeMusicApiService.getCachedHomeFeed();
+      if (cached?.quickPicks?.length) {
+        setFeedData((prev) => ({ ...prev, ...cached }));
+      }
+
+      // 2. Fetch fresh feed from YouTube Music API pipeline
+      const fresh = await youtubeMusicApiService.fetchLiveHomeFeed();
+      if (fresh?.quickPicks?.length) {
+        setFeedData(fresh);
       }
     } catch (err) {
-      console.warn('[HomeView] Load feed error:', err);
+      console.warn('[HomeView] Load feed notice:', err.message);
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  }, [settings?.explicitFilter]);
+  }, []);
 
   useEffect(() => {
     loadLiveFeed();
@@ -102,13 +111,13 @@ export default function HomeView({
         <RefreshControl
           refreshing={refreshing}
           onRefresh={handleRefresh}
-          tintColor="#10b981"
-          colors={['#10b981']}
-          progressBackgroundColor="#18181a"
+          tintColor={colors.accent}
+          colors={[colors.accent]}
+          progressBackgroundColor="#000000"
         />
       }
     >
-      {/* ── Category Filter Chips (Pill Navbar) ── */}
+      {/* ── Category Filter Chips Pinned Under Top Bar (PRD HOME-02) ── */}
       <View style={styles.chipsWrapper}>
         <ScrollView
           horizontal
@@ -117,25 +126,16 @@ export default function HomeView({
         >
           {CATEGORIES.map((cat) => {
             const isSelected = activeCategory === cat.id;
-            const Icon = cat.icon;
             return (
               <TouchableOpacity
                 key={cat.id}
                 activeOpacity={0.8}
-                onPress={() => setActiveCategory(cat.id)}
+                onPress={() => handleSelectCategory(cat.id)}
                 style={[
                   styles.chipPill,
                   isSelected ? styles.chipPillActive : styles.chipPillInactive,
                 ]}
               >
-                {Icon && (
-                  <Icon
-                    size={14}
-                    color={isSelected ? '#000000' : '#D4D4D8'}
-                    strokeWidth={2.4}
-                    style={{ marginRight: 5 }}
-                  />
-                )}
                 <Text
                   style={[
                     styles.chipText,
@@ -150,205 +150,195 @@ export default function HomeView({
         </ScrollView>
       </View>
 
-      {loading && !refreshing ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#10b981" />
-          <Text style={styles.loadingText}>Fetching live YouTube Music feed…</Text>
-        </View>
-      ) : (
-        <View style={styles.feedContent}>
-          {/* ── 1. Listen Again Section ── */}
-          {settings?.showListenAgain !== false &&
-            (activeCategory === 'all' || activeCategory === 'picks') &&
-            feedData.listenAgain.length > 0 && (
-              <View style={styles.sectionContainer}>
-                <View style={styles.sectionHeader}>
+      <View style={styles.feedContent}>
+        {/* ── 1. Quick Picks Section (PRD HOME-04: 4 rows tall, horizontally paged) ── */}
+        {(activeCategory === 'all' || activeCategory === 'picks') &&
+          feedData.quickPicks?.length > 0 && (
+            <View style={styles.sectionContainerFull}>
+              <View style={styles.sectionHeaderBetween}>
+                <View style={styles.sectionHeaderLeft}>
                   <View style={styles.sectionIconBadge}>
-                    <Clock size={16} color="#FFFFFF" strokeWidth={2.4} />
+                    <Zap size={15} color={colors.accent} strokeWidth={2.4} />
                   </View>
                   <View>
-                    <Text style={styles.sectionTitle}>Listen Again</Text>
+                    <Text style={styles.sectionTitle}>Quick Picks</Text>
                     <Text style={styles.sectionSubtitle}>
-                      Jump back into your recent tracks
+                      Start instant radio with live YouTube Music
                     </Text>
                   </View>
                 </View>
 
-                <View style={styles.tracksList}>
-                  {feedData.listenAgain.slice(0, 6).map((song, idx) => (
-                    <SongRow
-                      key={song.id || song.videoId || `la-${idx}`}
-                      song={song}
-                      index={idx}
-                      isActive={(song.id || song.videoId) === activeSongId}
-                      isPlaying={isPlaying}
-                      isLiked={isSongLiked(song)}
-                      onPlay={() => onPlaySong?.(song, feedData.listenAgain)}
-                      onToggleLike={() => onToggleLike?.(song)}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-
-          {/* ── 2. Quick Picks Section ── */}
-          {settings?.showQuickPicks !== false &&
-            (activeCategory === 'all' || activeCategory === 'picks') &&
-            feedData.quickPicks.length > 0 && (
-              <View style={styles.sectionContainer}>
-                <View style={styles.sectionHeaderBetween}>
-                  <View style={styles.sectionHeaderLeft}>
-                    <View style={styles.sectionIconBadge}>
-                      <Zap size={16} color="#FFFFFF" strokeWidth={2.4} />
-                    </View>
-                    <View>
-                      <Text style={styles.sectionTitle}>Quick Picks</Text>
-                      <Text style={styles.sectionSubtitle}>
-                        Start instant radio with live YouTube Music
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Play All Button */}
-                  <TouchableOpacity
-                    activeOpacity={0.7}
-                    onPress={() => onPlayAll?.(feedData.quickPicks)}
-                    style={styles.playAllButton}
-                  >
-                    <Play size={11} color="#FFFFFF" fill="#FFFFFF" />
-                    <Text style={styles.playAllText}>Play All</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.tracksList}>
-                  {feedData.quickPicks.slice(0, 5).map((song, idx) => (
-                    <SongRow
-                      key={song.id || song.videoId || `qp-${idx}`}
-                      song={song}
-                      index={idx}
-                      isActive={(song.id || song.videoId) === activeSongId}
-                      isPlaying={isPlaying}
-                      isLiked={isSongLiked(song)}
-                      onPlay={() => onPlaySong?.(song, feedData.quickPicks)}
-                      onToggleLike={() => onToggleLike?.(song)}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
-
-          {/* ── 3. Daily Mixes & Radio ── */}
-          {(activeCategory === 'all' || activeCategory === 'mixes') &&
-            feedData.dailyMixes.length > 0 && (
-              <View style={styles.sectionContainer}>
-                <View style={styles.sectionHeader}>
-                  <View style={styles.sectionIconBadge}>
-                    <Radio size={16} color="#FFFFFF" strokeWidth={2.4} />
-                  </View>
-                  <View>
-                    <Text style={styles.sectionTitle}>Daily Mixes & Radio</Text>
-                    <Text style={styles.sectionSubtitle}>
-                      Non-stop curated radio stations
-                    </Text>
-                  </View>
-                </View>
-
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.horizontalCardsScroll}
+                {/* Play All Button */}
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => onPlayAll?.(feedData.quickPicks)}
+                  style={styles.playAllButton}
                 >
-                  {feedData.dailyMixes.map((mix, idx) => (
-                    <AlbumCard
-                      key={mix.id || `dm-${idx}`}
-                      item={mix}
-                      onPress={() => onSelectMix?.(mix)}
-                    />
-                  ))}
-                </ScrollView>
+                  <Play size={11} color="#FFFFFF" fill="#FFFFFF" />
+                  <Text style={styles.playAllText}>Play All</Text>
+                </TouchableOpacity>
               </View>
-            )}
 
-          {/* ── 4. Trending Albums ── */}
-          {(activeCategory === 'all' || activeCategory === 'albums') &&
-            feedData.trendingAlbums.length > 0 && (
-              <View style={styles.sectionContainer}>
-                <View style={styles.sectionHeader}>
-                  <View style={styles.sectionIconBadge}>
-                    <Disc size={16} color="#FFFFFF" strokeWidth={2.4} />
-                  </View>
-                  <View>
-                    <Text style={styles.sectionTitle}>Trending Albums</Text>
-                    <Text style={styles.sectionSubtitle}>
-                      Top chart-topping albums on YouTube Music
-                    </Text>
-                  </View>
-                </View>
-
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.horizontalCardsScroll}
-                >
-                  {feedData.trendingAlbums.map((album, idx) => (
-                    <AlbumCard
-                      key={album.id || `ta-${idx}`}
-                      item={album}
-                      onPress={() => onSelectAlbum?.(album)}
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-          {/* ── 5. Throwbacks ── */}
-          {(activeCategory === 'all' || activeCategory === 'mixes') &&
-            feedData.throwbacks.length > 0 && (
-              <View style={styles.sectionContainer}>
-                <View style={styles.sectionHeader}>
-                  <View style={styles.sectionIconBadge}>
-                    <Sliders size={16} color="#FFFFFF" strokeWidth={2.4} />
-                  </View>
-                  <View>
-                    <Text style={styles.sectionTitle}>Throwbacks</Text>
-                    <Text style={styles.sectionSubtitle}>
-                      Timeless classics & essential albums
-                    </Text>
-                  </View>
-                </View>
-
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.horizontalCardsScroll}
-                >
-                  {feedData.throwbacks.map((tb, idx) => (
-                    <AlbumCard
-                      key={tb.id || `tb-${idx}`}
-                      item={tb}
-                      onPress={() => onSelectMix?.(tb)}
-                    />
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-          {/* ── 6. Fidelity Engine Banner ── */}
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={onOpenSettings}
-            style={styles.fidelityBanner}
-          >
-            <View style={styles.fidelityLeft}>
-              <Sparkles size={16} color="#a1a1aa" />
-              <Text style={styles.fidelityText}>
-                Fidelity Engine: All tracks stream in high-bitrate OPUS
-              </Text>
+              {/* 4 rows tall, horizontally paged matrix */}
+              <QuickPicksGrid
+                tracks={feedData.quickPicks}
+                activeSongId={activeSongId}
+                isPlaying={isPlaying}
+                likedSongs={likedSongs}
+                onPlayTrack={onPlaySong}
+                onMorePress={onMorePress}
+                onArtistPress={onArtistPress}
+                onToggleLike={onToggleLike}
+              />
             </View>
-            <ChevronRight size={16} color="#71717a" />
-          </TouchableOpacity>
-        </View>
-      )}
+          )}
+
+        {/* ── 2. Listen Again / Jump Back In ── */}
+        {(activeCategory === 'all' || activeCategory === 'picks') &&
+          feedData.listenAgain?.length > 0 && (
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionIconBadge}>
+                  <Clock size={15} color={colors.textPrimary} strokeWidth={2.4} />
+                </View>
+                <View>
+                  <Text style={styles.sectionTitle}>Listen Again</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Jump back into your recent tracks
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.tracksList}>
+                {feedData.listenAgain.slice(0, 5).map((song, idx) => (
+                  <SongRow
+                    key={`${song.id || song.videoId || 'la'}-${idx}`}
+                    song={song}
+                    index={idx}
+                    isActive={(song.id || song.videoId) === activeSongId}
+                    isPlaying={isPlaying}
+                    isLiked={isSongLiked(song)}
+                    onPlay={() => onPlaySong?.(song, feedData.listenAgain)}
+                    onToggleLike={() => onToggleLike?.(song)}
+                    onMorePress={onMorePress}
+                    onArtistPress={onArtistPress}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+
+        {/* ── 3. Daily Mixes & Radio (PRD HOME-05: 148 dp wide cards) ── */}
+        {(activeCategory === 'all' || activeCategory === 'mixes') &&
+          feedData.dailyMixes?.length > 0 && (
+            <View style={styles.sectionContainerFull}>
+              <View style={[styles.sectionHeader, { paddingHorizontal: 16 }]}>
+                <View style={styles.sectionIconBadge}>
+                  <Radio size={15} color={colors.accent} strokeWidth={2.4} />
+                </View>
+                <View>
+                  <Text style={styles.sectionTitle}>Daily Mixes & Radio</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Non-stop curated radio stations
+                  </Text>
+                </View>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalCardsScroll}
+              >
+                {feedData.dailyMixes.map((mix, idx) => (
+                  <AlbumCard
+                    key={mix.id || `dm-${idx}`}
+                    item={mix}
+                    onPress={() => onSelectMix?.(mix)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+        {/* ── 4. Trending Albums (PRD HOME-05: 148 dp wide cards, two-line title) ── */}
+        {(activeCategory === 'all' || activeCategory === 'albums') &&
+          feedData.trendingAlbums?.length > 0 && (
+            <View style={styles.sectionContainerFull}>
+              <View style={[styles.sectionHeader, { paddingHorizontal: 16 }]}>
+                <View style={styles.sectionIconBadge}>
+                  <Disc size={15} color={colors.textPrimary} strokeWidth={2.4} />
+                </View>
+                <View>
+                  <Text style={styles.sectionTitle}>Trending Albums</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Top chart-topping albums on YouTube Music
+                  </Text>
+                </View>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalCardsScroll}
+              >
+                {feedData.trendingAlbums.map((album, idx) => (
+                  <AlbumCard
+                    key={album.id || `ta-${idx}`}
+                    item={album}
+                    onPress={() => onSelectAlbum?.(album)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+        {/* ── 5. Throwbacks / Deep Cuts ── */}
+        {(activeCategory === 'all' || activeCategory === 'mixes') &&
+          feedData.throwbacks?.length > 0 && (
+            <View style={styles.sectionContainerFull}>
+              <View style={[styles.sectionHeader, { paddingHorizontal: 16 }]}>
+                <View style={styles.sectionIconBadge}>
+                  <Sparkles size={15} color={colors.accent} strokeWidth={2.4} />
+                </View>
+                <View>
+                  <Text style={styles.sectionTitle}>Essential Throwbacks</Text>
+                  <Text style={styles.sectionSubtitle}>
+                    Timeless classics & essential albums
+                  </Text>
+                </View>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalCardsScroll}
+              >
+                {feedData.throwbacks.map((tb, idx) => (
+                  <AlbumCard
+                    key={tb.id || `tb-${idx}`}
+                    item={tb}
+                    onPress={() => onSelectMix?.(tb)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+        {/* ── 6. Audio Fidelity Engine Banner ── */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={onOpenSettings}
+          style={styles.fidelityBanner}
+        >
+          <View style={styles.fidelityLeft}>
+            <Sparkles size={16} color={colors.accent} />
+            <Text style={styles.fidelityText}>
+              Fidelity Engine: Streaming high-bitrate Opus 251 audio
+            </Text>
+          </View>
+          <ChevronRight size={16} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -356,15 +346,16 @@ export default function HomeView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0c',
+    backgroundColor: colors.bg,
   },
   contentContainer: {
-    paddingBottom: 110,
+    paddingBottom: 120,
   },
   chipsWrapper: {
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomColor: colors.border,
+    backgroundColor: colors.bg,
   },
   chipsScroll: {
     paddingHorizontal: 16,
@@ -373,41 +364,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   chipPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: 7,
+    borderRadius: 18,
   },
   chipPillActive: {
     backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
   },
   chipPillInactive: {
-    backgroundColor: '#18181a',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.border,
   },
   chipText: {
     fontSize: 13,
     fontFamily: 'Inter',
-    fontWeight: '600',
+    includeFontPadding: false,
+    paddingRight: 4,
   },
   chipTextActive: {
     color: '#000000',
     fontWeight: '700',
   },
   chipTextInactive: {
-    color: '#D4D4D8',
-  },
-  loaderContainer: {
-    paddingTop: 80,
-    alignItems: 'center',
-    gap: 12,
-  },
-  loadingText: {
-    color: '#a1a1aa',
-    fontSize: 13,
-    fontFamily: 'Inter',
+    color: colors.textSecondary,
     fontWeight: '500',
   },
   feedContent: {
@@ -417,17 +399,21 @@ const styles = StyleSheet.create({
   sectionContainer: {
     paddingHorizontal: 16,
   },
+  sectionContainerFull: {
+    width: '100%',
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   sectionHeaderBetween: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    paddingHorizontal: 16,
+    marginBottom: 12,
   },
   sectionHeaderLeft: {
     flexDirection: 'row',
@@ -438,21 +424,23 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 6,
-    backgroundColor: '#18181a',
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontFamily: 'Inter',
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: colors.textPrimary,
     letterSpacing: -0.3,
   },
   sectionSubtitle: {
     fontSize: 12,
     fontFamily: 'Inter',
-    color: '#71717a',
+    color: colors.textSecondary,
     marginTop: 1,
   },
   playAllButton: {
@@ -462,32 +450,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 14,
-    backgroundColor: '#18181a',
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: colors.border,
   },
   playAllText: {
-    color: '#FFFFFF',
+    color: colors.textPrimary,
     fontSize: 12,
     fontFamily: 'Inter',
-    fontWeight: '700',
+    fontWeight: '600',
   },
   tracksList: {
-    gap: 2,
+    gap: 4,
   },
   horizontalCardsScroll: {
     gap: 12,
-    paddingRight: 16,
+    paddingHorizontal: 16,
   },
   fidelityBanner: {
     marginHorizontal: 16,
-    marginTop: 8,
+    marginTop: 4,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: '#131316',
+    borderRadius: 10,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: colors.border,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -499,7 +487,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fidelityText: {
-    color: '#a1a1aa',
+    color: colors.textSecondary,
     fontSize: 12,
     fontFamily: 'Inter',
     fontWeight: '500',

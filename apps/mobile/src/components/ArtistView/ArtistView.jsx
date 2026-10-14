@@ -17,6 +17,7 @@ export default function ArtistView({
   onPlaySong,
   onSelectAlbum,
   onToggleLike,
+  onMorePress,
   activeSongId,
   isPlaying,
 }) {
@@ -133,8 +134,9 @@ export default function ArtistView({
               index={idx}
               isActive={activeSongId === (song.id || song.videoId)}
               isPlaying={isPlaying}
-              onPlay={() => onPlaySong?.(song)}
+              onPlay={() => onPlaySong?.(song, topTracks)}
               onToggleLike={() => onToggleLike?.(song)}
+              onMorePress={onMorePress}
             />
           ))}
         </View>

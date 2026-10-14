@@ -1,35 +1,36 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Pressable,
+} from 'react-native';
 import { Image } from 'expo-image';
-import { Play, Pause, SkipForward, SkipBack, Heart, Music } from 'lucide-react-native';
+import { Play, Pause, SkipForward, SkipBack, Disc } from 'lucide-react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withSequence,
-  SlideInDown,
-  SlideOutDown,
 } from 'react-native-reanimated';
 import { usePlayerStore } from '@cassette/core';
-import { useSettings, useTheme } from '../../context/NativeContextProviders.jsx';
+import { useTheme } from '../../context/NativeContextProviders.jsx';
 
 export default function PlayerDock({
   currentSong,
   isPlaying = false,
   isLoading = false,
-  isLiked = false,
   onPress,
   onTogglePlay,
   onSkipNext,
   onSkipPrev,
-  onToggleLike,
 }) {
-  if (!currentSong) return null;
+  const { theme, themeStyle } = useTheme();
+  const isOled = themeStyle === 'oled';
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(210);
-  const { settings } = useSettings();
-  const { accentColor } = useTheme();
 
   // Subscribe to playback progress
   useEffect(() => {
@@ -40,13 +41,13 @@ export default function PlayerDock({
     return () => unsub();
   }, []);
 
-  const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
+  const progressPercent =
+    duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
 
   const playButtonScale = useSharedValue(1);
-  const likeScale = useSharedValue(1);
 
   const handlePlayPressIn = () => {
-    playButtonScale.value = withSpring(0.88, { damping: 15, stiffness: 300 });
+    playButtonScale.value = withSpring(0.9, { damping: 15, stiffness: 300 });
   };
 
   const handlePlayPressOut = () => {
@@ -57,120 +58,103 @@ export default function PlayerDock({
     transform: [{ scale: playButtonScale.value }],
   }));
 
-  const animatedLikeStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: likeScale.value }],
-  }));
-
-  const handleLikePress = () => {
-    likeScale.value = withSequence(
-      withSpring(1.35, { damping: 10, stiffness: 300 }),
-      withSpring(1, { damping: 12, stiffness: 200 })
-    );
-    onToggleLike?.(currentSong);
-  };
-
-  const glowStyle = settings.ambientGlow
-    ? {
-        shadowColor: accentColor || '#ffffff',
-        shadowOpacity: 0.35,
-        shadowRadius: 16,
-      }
-    : null;
+  const thumbnailUri = currentSong?.thumbnail || currentSong?.cover;
+  const title = currentSong?.title || 'Nothing playing';
+  const subtitle =
+    currentSong?.artist ||
+    currentSong?.artists?.[0]?.name ||
+    'Search for a song';
 
   return (
-    <Animated.View
-      entering={SlideInDown.springify().damping(18).stiffness(160)}
-      exiting={SlideOutDown.duration(220)}
-      style={[styles.dockWrapper, glowStyle]}
+    <View
+      style={[
+        styles.dockWrapper,
+        {
+          backgroundColor: isOled ? '#121214' : '#1c1c20',
+          borderColor: isOled ? '#242428' : 'rgba(255, 255, 255, 0.08)',
+        },
+      ]}
     >
-      {/* Realtime audio progress line at top border */}
-      <View style={styles.progressBarBackground}>
-        <View style={[styles.progressBarFill, { width: `${progressPercent}%`, backgroundColor: accentColor || '#FFFFFF' }]} />
-      </View>
+      {/* Hairline subtle progress line at top */}
+      {currentSong && (
+        <View style={styles.progressBarBackground}>
+          <View
+            style={[
+              styles.progressBarFill,
+              { width: `${progressPercent}%`, backgroundColor: '#FFFFFF' },
+            ]}
+          />
+        </View>
+      )}
 
       <TouchableOpacity
-        activeOpacity={0.94}
+        activeOpacity={0.92}
         onPress={onPress}
         style={styles.dockContent}
       >
-        {/* Thumbnail + Metadata */}
+        {/* Left: Circular Artwork or Disc Icon */}
         <View style={styles.trackInfo}>
-          <View style={[styles.thumbnailWrapper, isPlaying && styles.thumbnailPlaying]}>
-            {currentSong.thumbnail || currentSong.cover ? (
+          <View style={styles.thumbnailWrapper}>
+            {thumbnailUri ? (
               <Image
-                source={{ uri: currentSong.thumbnail || currentSong.cover }}
-                style={[
-                  styles.thumbnail,
-                  settings.monochromeMode && { tintColor: undefined },
-                ]}
+                source={{ uri: thumbnailUri }}
+                style={styles.thumbnail}
                 contentFit="cover"
-                transition={200}
+                cachePolicy="disk"
+                transition={150}
               />
             ) : (
-              <Music size={18} color="#737373" />
+              <View style={styles.discPlaceholder}>
+                <Disc size={20} color="#71717A" />
+              </View>
             )}
 
             {isLoading && (
               <View style={styles.loadingOverlay}>
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color="#FFFFFF" />
               </View>
             )}
           </View>
 
+          {/* Center: Title & Subtitle */}
           <View style={styles.textContainer}>
             <Text numberOfLines={1} style={styles.trackTitle}>
-              {currentSong.title || 'Nothing playing'}
+              {title}
             </Text>
             <Text numberOfLines={1} style={styles.trackArtist}>
-              {currentSong.artist || currentSong.artists?.[0]?.name || 'Unknown Artist'}
+              {subtitle}
             </Text>
           </View>
         </View>
 
-        {/* Action Controls */}
+        {/* Right: Media Controls matching PWA */}
         <View style={styles.controlsRow}>
-          {/* Like Button */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={handleLikePress}
-            style={styles.iconButton}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Animated.View style={animatedLikeStyle}>
-              <Heart
-                size={18}
-                color={isLiked ? (accentColor || '#FFFFFF') : '#737373'}
-                fill={isLiked ? (accentColor || '#FFFFFF') : 'none'}
-              />
-            </Animated.View>
-          </TouchableOpacity>
-
           {/* Skip Previous */}
           {onSkipPrev && (
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={onSkipPrev}
-              style={styles.iconButton}
+              style={styles.navButton}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <SkipBack size={18} color="#A3A3A3" />
+              <SkipBack size={16} color="#A1A1AA" fill="#A1A1AA" />
             </TouchableOpacity>
           )}
 
-          {/* Interactive Bouncy Play/Pause */}
+          {/* Play/Pause Button - Sleek circle */}
           <Pressable
             onPress={onTogglePlay}
             onPressIn={handlePlayPressIn}
             onPressOut={handlePlayPressOut}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Animated.View style={[styles.playButton, animatedPlayStyle, { backgroundColor: accentColor || '#ffffff' }]}>
+            <Animated.View style={[styles.playButton, animatedPlayStyle]}>
               {isLoading ? (
-                <ActivityIndicator size="small" color="#000000" />
+                <ActivityIndicator size="small" color="#18181B" />
               ) : isPlaying ? (
-                <Pause size={17} color="#000000" fill="#000000" />
+                <Pause size={18} color="#18181B" fill="#18181B" />
               ) : (
-                <Play size={17} color="#000000" fill="#000000" style={{ marginLeft: 2 }} />
+                <Play size={18} color="#18181B" fill="#18181B" style={{ marginLeft: 2 }} />
               )}
             </Animated.View>
           </Pressable>
@@ -179,47 +163,45 @@ export default function PlayerDock({
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={onSkipNext}
-            style={styles.iconButton}
+            style={styles.navButton}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <SkipForward size={18} color="#A3A3A3" />
+            <SkipForward size={16} color="#A1A1AA" fill="#A1A1AA" />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
-    </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   dockWrapper: {
-    marginHorizontal: 10,
-    marginBottom: 8,
-    borderRadius: 20,
-    backgroundColor: '#161618',
+    marginHorizontal: 12,
+    marginBottom: 6,
+    borderRadius: 28, // Pill shape matching PWA Screenshot 1
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
     overflow: 'hidden',
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.6,
-    shadowRadius: 24,
-    elevation: 20,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
   },
   progressBarBackground: {
-    height: 2.5,
+    height: 2,
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 1,
   },
   dockContent: {
-    paddingVertical: 8,
+    paddingVertical: 7,
     paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: 56,
   },
   trackInfo: {
     flexDirection: 'row',
@@ -230,23 +212,27 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   thumbnailWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 11,
+    width: 42,
+    height: 42,
+    borderRadius: 21, // Circular artwork matching Screenshot 1
     overflow: 'hidden',
-    backgroundColor: '#262626',
+    backgroundColor: '#27272a',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
-  thumbnailPlaying: {
-    borderColor: 'rgba(255, 255, 255, 0.4)',
-  },
   thumbnail: {
     width: '100%',
     height: '100%',
+  },
+  discPlaceholder: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#27272a',
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -263,36 +249,32 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     fontFamily: 'Inter',
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#F4F4F5',
     letterSpacing: -0.2,
   },
   trackArtist: {
     fontSize: 11.5,
     fontFamily: 'Inter',
-    color: '#a1a1aa',
+    color: '#A1A1AA',
     marginTop: 2,
     letterSpacing: -0.1,
   },
   controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
-  iconButton: {
-    padding: 7,
+  navButton: {
+    padding: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
   playButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#D4D4D8', // Chill soft light grey matching PWA
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#ffffff',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 4,
   },
 });

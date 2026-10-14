@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { usePlayerStore, playerActions, resolveDirectAudioStream } from '@cassette/core';
 import { googleAuthSyncService } from '../services/googleAuthSyncService.js';
 import { playTrack, pauseTrack, resumeTrack } from '../services/trackPlayerService.js';
+import { getThemeColors } from '../theme/tokens.js';
 
 // ── 1. Error Boundary (eliminates white-screen crashes on boot) ───────────────
 export class SafeErrorBoundary extends Component {
@@ -49,6 +50,7 @@ export const SETTINGS_STORAGE_KEY = 'pulse_app_settings_v2';
 
 export const DEFAULT_SETTINGS = {
   // Themes & Aesthetics
+  themeStyle: 'charcoal', // 'charcoal' (PWA dark) | 'oled' (pure black)
   monochromeMode: false,
   dynamicGlow: true,
   ambientGlow: true,
@@ -219,6 +221,9 @@ export function NativeAppProviders({ children }) {
   };
 
   const themeValue = {
+    theme: getThemeColors(settings.themeStyle || 'charcoal'),
+    themeStyle: settings.themeStyle || 'charcoal',
+    setThemeStyle: (style) => updateSetting('themeStyle', style),
     themeMode: settings.monochromeMode ? 'monochrome' : settings.dynamicGlow ? 'dynamic' : 'custom',
     accentColor: settings.customAccentColor || '#ffffff',
     monochromeMode: settings.monochromeMode,
@@ -243,12 +248,43 @@ export function NativeAppProviders({ children }) {
     volume: playerState.volume ?? 0.8,
     queue: playerState.queue || [],
     isLiked: false,
-    playSong: (s) => playerActions?.setCurrentSong?.(s),
-    togglePlay: () => playerActions?.setIsPlaying?.(!playerState.isPlaying),
+    playSong: (s) => {
+      playerActions?.setCurrentSong?.(s);
+      playTrack(s).catch((err) => console.warn('[PlayerContext] playSong notice:', err.message));
+    },
+    togglePlay: () => {
+      if (playerState.isPlaying) {
+        pauseTrack();
+      } else {
+        resumeTrack();
+      }
+    },
     toggleLike: () => {},
-    skipNext: () => {},
-    skipPrev: () => {},
-    seek: (t) => playerActions?.setProgress?.(t, playerState.duration || 210),
+    skipNext: () => {
+      const q = playerState.queue || [];
+      const cur = playerState.currentSong;
+      if (q.length > 0 && cur) {
+        const idx = q.findIndex((s) => s.id === cur.id || s.videoId === cur.videoId);
+        if (idx >= 0 && idx < q.length - 1) {
+          const next = q[idx + 1];
+          playerActions?.setCurrentSong?.(next);
+          playTrack(next);
+        }
+      }
+    },
+    skipPrev: () => {
+      const q = playerState.queue || [];
+      const cur = playerState.currentSong;
+      if (q.length > 0 && cur) {
+        const idx = q.findIndex((s) => s.id === cur.id || s.videoId === cur.videoId);
+        if (idx > 0) {
+          const prev = q[idx - 1];
+          playerActions?.setCurrentSong?.(prev);
+          playTrack(prev);
+        }
+      }
+    },
+    seek: (t) => seekTrack(t),
   };
 
   return (

@@ -1,31 +1,51 @@
-import { Innertube, UniversalCache, ClientType, Platform } from 'youtubei.js';
+import { Innertube, ClientType, Platform } from 'youtubei.js';
 
-// Setup custom JavaScript function evaluator for signature/nsig deciphering
-Platform.shim.eval = (data, env) => {
-  const fn = new Function(...Object.keys(env), data.output);
-  return fn(...Object.values(env));
-};
+class MemoryCache {
+  constructor() {
+    this.map = new Map();
+  }
+  async get(key) {
+    return this.map.get(key);
+  }
+  async set(key, value) {
+    this.map.set(key, value);
+  }
+  async remove(key) {
+    this.map.delete(key);
+  }
+}
+
+// Setup custom JavaScript function evaluator for signature/nsig deciphering and polyfill Cache
+if (Platform?.shim) {
+  Platform.shim.eval = (data, env) => {
+    const fn = new Function(...Object.keys(env), data.output);
+    return fn(...Object.values(env));
+  };
+  if (!Platform.shim.Cache) {
+    Platform.shim.Cache = MemoryCache;
+  }
+}
 
 let innertubeInstance = null;
 let initPromise = null;
 
 /**
  * Get or initialize the singleton Innertube client.
- * UniversalCache enabled, session generated locally.
+ * MemoryCache enabled, session generated locally.
  */
 export async function getInnertube() {
   if (innertubeInstance) return innertubeInstance;
 
   if (!initPromise) {
     initPromise = Innertube.create({
-      cache: new UniversalCache(false),
+      cache: new MemoryCache(),
       client_type: ClientType.MUSIC, // WEB_REMIX YouTube Music client
     }).then((yt) => {
       innertubeInstance = yt;
       return yt;
     }).catch((err) => {
       initPromise = null;
-      console.error('[Innertube] Init error:', err);
+      console.error('[Innertube] Init error:', err?.message || err);
       throw err;
     });
   }
@@ -863,6 +883,11 @@ export async function resolveAudioStream(videoId, quality = 'max', codecPreferen
     itag: selectedAudio.itag,
     qualityLabel: quality === 'max' ? `Max Opus (${kbps}kbps)` : quality === 'datasaver' ? `Data Saver (${kbps}kbps)` : `Standard (${kbps}kbps)`,
     quality,
+    headers: {
+      Range: 'bytes=0-',
+      'User-Agent':
+        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+    },
   };
 }
 
@@ -1898,6 +1923,7 @@ export async function testYouTubeMusicAuth({ cookie = '', visitorData = '', sapi
     };
   }
 }
+
 
 
 

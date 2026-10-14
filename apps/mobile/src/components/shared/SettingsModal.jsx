@@ -529,6 +529,39 @@ export default function SettingsModal({ isOpen, onClose, onOpenAuth }) {
             <View>
               <Text style={styles.subpageSectionTitle}>THEMES & AESTHETICS</Text>
               <View style={styles.sectionCard}>
+                {/* PWA Dark Mode vs OLED Switcher */}
+                <Text style={styles.toggleTitle}>Theme Mode</Text>
+                <Text style={styles.toggleDesc}>
+                  Toggle between soft chill Charcoal (PWA style) and pure OLED Black
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10, marginBottom: 12 }}>
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => updateSetting('themeStyle', 'charcoal')}
+                    style={[
+                      styles.themeCardOption,
+                      (settings.themeStyle || 'charcoal') === 'charcoal' && styles.themeCardOptionSelected,
+                    ]}
+                  >
+                    <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#18181b', borderWidth: 1, borderColor: '#3f3f46' }} />
+                    <Text style={styles.themeCardText}>Chill Charcoal (PWA)</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => updateSetting('themeStyle', 'oled')}
+                    style={[
+                      styles.themeCardOption,
+                      settings.themeStyle === 'oled' && styles.themeCardOptionSelected,
+                    ]}
+                  >
+                    <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#000000', borderWidth: 1, borderColor: '#27272a' }} />
+                    <Text style={styles.themeCardText}>Pure OLED</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.divider} />
+
                 <View style={styles.toggleRow}>
                   <View style={styles.toggleMeta}>
                     <Text style={styles.toggleTitle}>Monochrome B&W Mode</Text>
@@ -1577,5 +1610,27 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     color: '#10b981',
     fontWeight: '600',
+  },
+  themeCardOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#18181b',
+    borderWidth: 1,
+    borderColor: '#27272a',
+  },
+  themeCardOptionSelected: {
+    borderColor: '#FFFFFF',
+    backgroundColor: '#222226',
+  },
+  themeCardText: {
+    fontSize: 12.5,
+    fontFamily: 'Inter',
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });

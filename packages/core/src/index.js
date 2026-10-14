@@ -37,3 +37,4 @@ export * from './utils/imageUtils.js';
 export * from './utils/timeFormat.js';
 export * from './utils/apiConfig.js';
 export * from './utils/storage.js';
+export * from './utils/searchNormalizer.js';

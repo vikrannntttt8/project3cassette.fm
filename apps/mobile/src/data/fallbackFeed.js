@@ -1,23 +1,295 @@
 /**
- * Dynamic Home Feed Schema
- * All mock data has been purged. Feeds are loaded dynamically
- * via the live YouTube Music API pipeline and user history.
+ * cassette.fm Seed / Stale-While-Revalidate Home Feed
+ * PRD Section 6.2 (HOME-01) & Section 9.2 (Shared Types)
+ * Provides instant OLED-ready items on launch while live InnerTube refreshes in background.
  */
 
-export const EMPTY_FEED = {
-  listenAgain: [],
-  quickPicks: [],
-  dailyMixes: [],
-  trendingAlbums: [],
-  throwbacks: [],
-  playlists: [],
+export const INITIAL_QUICK_PICKS = [
+  // Page 1 (Column 1)
+  {
+    id: 'fJ9rUzIMcZQ',
+    videoId: 'fJ9rUzIMcZQ',
+    title: 'Bohemian Rhapsody',
+    artist: 'Queen',
+    album: 'A Night at the Opera',
+    duration: 354,
+    thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
+    type: 'song',
+  },
+  {
+    id: '4NRXx6U8ABQ',
+    videoId: '4NRXx6U8ABQ',
+    title: 'Blinding Lights',
+    artist: 'The Weeknd',
+    album: 'After Hours',
+    duration: 200,
+    thumbnail: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
+    type: 'song',
+  },
+  {
+    id: 'JGwWNGJdvx8',
+    videoId: 'JGwWNGJdvx8',
+    title: 'Shape of You',
+    artist: 'Ed Sheeran',
+    album: '÷ (Divide)',
+    duration: 233,
+    thumbnail: 'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg',
+    type: 'song',
+  },
+  {
+    id: 'kXYiU_JCYtU',
+    videoId: 'kXYiU_JCYtU',
+    title: 'Numb',
+    artist: 'Linkin Park',
+    album: 'Meteora',
+    duration: 187,
+    thumbnail: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
+    type: 'song',
+  },
+
+  // Page 2 (Column 2)
+  {
+    id: '09R8_2nJtjg',
+    videoId: '09R8_2nJtjg',
+    title: 'Sugar',
+    artist: 'Maroon 5',
+    album: 'V',
+    duration: 235,
+    thumbnail: 'https://i.ytimg.com/vi/09R8_2nJtjg/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/09R8_2nJtjg/hqdefault.jpg',
+    type: 'song',
+  },
+  {
+    id: 'L3wKzyIN1yk',
+    videoId: 'L3wKzyIN1yk',
+    title: 'Feel Good Inc.',
+    artist: 'Gorillaz',
+    album: 'Demon Days',
+    duration: 223,
+    thumbnail: 'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg',
+    type: 'song',
+  },
+  {
+    id: 'hT_nvWreIhg',
+    videoId: 'hT_nvWreIhg',
+    title: 'Counting Stars',
+    artist: 'OneRepublic',
+    album: 'Native',
+    duration: 257,
+    thumbnail: 'https://i.ytimg.com/vi/hT_nvWreIhg/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/hT_nvWreIhg/hqdefault.jpg',
+    type: 'song',
+  },
+  {
+    id: 'YQHsXMglC9A',
+    videoId: 'YQHsXMglC9A',
+    title: 'Hello',
+    artist: 'Adele',
+    album: '25',
+    duration: 295,
+    thumbnail: 'https://i.ytimg.com/vi/YQHsXMglC9A/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/YQHsXMglC9A/hqdefault.jpg',
+    type: 'song',
+  },
+
+  // Page 3 (Column 3)
+  {
+    id: 'nfWlot6h_JM',
+    videoId: 'nfWlot6h_JM',
+    title: 'Shake It Off',
+    artist: 'Taylor Swift',
+    album: '1989',
+    duration: 219,
+    thumbnail: 'https://i.ytimg.com/vi/nfWlot6h_JM/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/nfWlot6h_JM/hqdefault.jpg',
+    type: 'song',
+  },
+  {
+    id: 'OPf0YbXqDm0',
+    videoId: 'OPf0YbXqDm0',
+    title: 'Uptown Funk',
+    artist: 'Mark Ronson ft. Bruno Mars',
+    album: 'Uptown Special',
+    duration: 270,
+    thumbnail: 'https://i.ytimg.com/vi/OPf0YbXqDm0/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/OPf0YbXqDm0/hqdefault.jpg',
+    type: 'song',
+  },
+  {
+    id: 'CevxZvSJLk8',
+    videoId: 'CevxZvSJLk8',
+    title: 'Roar',
+    artist: 'Katy Perry',
+    album: 'PRISM',
+    duration: 223,
+    thumbnail: 'https://i.ytimg.com/vi/CevxZvSJLk8/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/CevxZvSJLk8/hqdefault.jpg',
+    type: 'song',
+  },
+  {
+    id: 'kJQP7kiw5Fk',
+    videoId: 'kJQP7kiw5Fk',
+    title: 'Despacito',
+    artist: 'Luis Fonsi ft. Daddy Yankee',
+    album: 'VIDA',
+    duration: 228,
+    thumbnail: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/hqdefault.jpg',
+    type: 'song',
+  },
+
+  // Page 4 (Column 4)
+  {
+    id: 'uelHwf8o7_U',
+    videoId: 'uelHwf8o7_U',
+    title: 'Love the Way You Lie',
+    artist: 'Eminem ft. Rihanna',
+    album: 'Recovery',
+    duration: 263,
+    thumbnail: 'https://i.ytimg.com/vi/uelHwf8o7_U/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/uelHwf8o7_U/hqdefault.jpg',
+    type: 'song',
+  },
+  {
+    id: 'rtOvBOTyX00',
+    videoId: 'rtOvBOTyX00',
+    title: 'Thinking Out Loud',
+    artist: 'Ed Sheeran',
+    album: 'x',
+    duration: 281,
+    thumbnail: 'https://i.ytimg.com/vi/rtOvBOTyX00/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/rtOvBOTyX00/hqdefault.jpg',
+    type: 'song',
+  },
+  {
+    id: 'fLexgOxsZu0',
+    videoId: 'fLexgOxsZu0',
+    title: 'Locked Out of Heaven',
+    artist: 'Bruno Mars',
+    album: 'Unorthodox Jukebox',
+    duration: 233,
+    thumbnail: 'https://i.ytimg.com/vi/fLexgOxsZu0/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/fLexgOxsZu0/hqdefault.jpg',
+    type: 'song',
+  },
+  {
+    id: 'SlPhMPnQ58k',
+    videoId: 'SlPhMPnQ58k',
+    title: 'Memories',
+    artist: 'Maroon 5',
+    album: 'JORDI',
+    duration: 189,
+    thumbnail: 'https://i.ytimg.com/vi/SlPhMPnQ58k/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/SlPhMPnQ58k/hqdefault.jpg',
+    type: 'song',
+  },
+];
+
+export const INITIAL_DAILY_MIXES = [
+  {
+    id: 'RDTMAK5uy_kix',
+    title: 'My Supermix',
+    artist: 'Endless personalized mix of your favorite tracks',
+    thumbnail: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80',
+    cover: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80',
+    type: 'mix',
+    tracksCount: 50,
+  },
+  {
+    id: 'RDTMAK5uy_lfi',
+    title: 'Chill Lo-Fi Radio',
+    artist: 'Beats to relax, study, and code to',
+    thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&q=80',
+    cover: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&q=80',
+    type: 'mix',
+    tracksCount: 40,
+  },
+  {
+    id: 'RDTMAK5uy_pop',
+    title: 'Pop High Energy',
+    artist: 'Upbeat chart hits and radio bangers',
+    thumbnail: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80',
+    cover: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&q=80',
+    type: 'mix',
+    tracksCount: 50,
+  },
+  {
+    id: 'RDTMAK5uy_rck',
+    title: 'Modern Rock & Indie',
+    artist: 'Alternative rock, guitar riffs, and indie anthems',
+    thumbnail: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=400&q=80',
+    cover: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=400&q=80',
+    type: 'mix',
+    tracksCount: 45,
+  },
+  {
+    id: 'RDTMAK5uy_elec',
+    title: 'Electronic Focus',
+    artist: 'Deep house, synthwave, and ambient techno',
+    thumbnail: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&q=80',
+    cover: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&q=80',
+    type: 'mix',
+    tracksCount: 40,
+  },
+];
+
+export const INITIAL_TRENDING_ALBUMS = [
+  {
+    id: 'MPREb_afterhours',
+    title: 'After Hours',
+    artist: 'The Weeknd',
+    year: '2020',
+    thumbnail: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
+    type: 'album',
+  },
+  {
+    id: 'MPREb_divide',
+    title: '÷ (Divide)',
+    artist: 'Ed Sheeran',
+    year: '2017',
+    thumbnail: 'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg',
+    type: 'album',
+  },
+  {
+    id: 'MPREb_meteora',
+    title: 'Meteora',
+    artist: 'Linkin Park',
+    year: '2003',
+    thumbnail: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
+    type: 'album',
+  },
+  {
+    id: 'MPREb_anightattheopera',
+    title: 'A Night at the Opera',
+    artist: 'Queen',
+    year: '1975',
+    thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
+    type: 'album',
+  },
+  {
+    id: 'MPREb_demondays',
+    title: 'Demon Days',
+    artist: 'Gorillaz',
+    year: '2005',
+    thumbnail: 'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg',
+    cover: 'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg',
+    type: 'album',
+  },
+];
+
+export const INITIAL_HOME_FEED = {
+  listenAgain: INITIAL_QUICK_PICKS.slice(0, 6),
+  quickPicks: INITIAL_QUICK_PICKS,
+  dailyMixes: INITIAL_DAILY_MIXES,
+  trendingAlbums: INITIAL_TRENDING_ALBUMS,
+  throwbacks: INITIAL_DAILY_MIXES.slice(2, 5),
 };
-
-export const FALLBACK_LISTEN_AGAIN = [];
-export const FALLBACK_QUICK_PICKS = [];
-export const FALLBACK_DAILY_MIXES = [];
-export const FALLBACK_TRENDING_ALBUMS = [];
-export const FALLBACK_THROWBACKS = [];
-export const FALLBACK_USER_PLAYLISTS = [];
-
-export const FALLBACK_HOME_FEED = EMPTY_FEED;

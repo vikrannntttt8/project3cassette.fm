@@ -1,4 +1,5 @@
 import { apiUrl } from '../utils/apiConfig.js';
+import { resolveAudioStream } from './innertube.js';
 
 const PIPED_INSTANCES = [
   'https://pipedapi.kavin.rocks',
@@ -11,9 +12,9 @@ const PIPED_INSTANCES = [
 
 /**
  * Resolves a direct audio streaming URL for a given YouTube video ID.
- * 1. Primary: Calls the InnerTube backend with ?format=json to obtain the raw Google CDN streaming URL.
- * 2. Fallback: Queries public Piped API instances directly from the browser to bypass Vercel/datacenter IP blocks.
- * 3. Never pipes media bytes through Vercel serverless functions (which causes HTTP 500 / DOMException crashes).
+ * 1. Primary (On-Device): Uses InnerTube directly to extract Google CDN audio stream with IP-matching.
+ * 2. Secondary: Calls backend proxy if configured.
+ * 3. Tertiary: Queries public Piped/Invidious instances.
  *
  * @param {string} videoId
  * @param {string} quality - 'max' | 'standard' | 'datasaver'
@@ -23,26 +24,39 @@ const PIPED_INSTANCES = [
 export async function resolveDirectAudioStream(videoId, quality = 'max', codec = 'auto') {
   if (!videoId) return null;
 
-  // ── 1. Primary: Extract raw stream URL via youtubei.js backend (?format=json) ──
+  // ── 1. Primary: On-device InnerTube stream extraction (PRD AUD-02) ──
   try {
-    const res = await fetch(
-      apiUrl(`/api/stream/${videoId}?format=json&quality=${quality}&codec=${codec}`),
-      { signal: AbortSignal.timeout(6000) }
-    );
-    if (res.ok) {
-      const meta = await res.json();
-      if (meta?.streamUrl) {
-        return {
-          streamUrl: meta.streamUrl,
-          meta,
-        };
+    const streamInfo = await resolveAudioStream(videoId, quality, codec);
+    if (streamInfo?.streamUrl) {
+      return {
+        streamUrl: streamInfo.streamUrl,
+        meta: streamInfo,
+      };
+    }
+  } catch (tubeErr) {
+    console.warn(`[Audio Resolver] On-device InnerTube extraction warning for ${videoId}:`, tubeErr.message);
+  }
+
+  // ── 2. Secondary: Extract raw stream URL via backend API (?format=json) ──
+  try {
+    const base = apiUrl('');
+    if (base) {
+      const res = await fetch(
+        apiUrl(`/api/stream/${videoId}?format=json&quality=${quality}&codec=${codec}`),
+        { signal: AbortSignal.timeout(6000) }
+      );
+      if (res.ok) {
+        const meta = await res.json();
+        if (meta?.streamUrl) {
+          return {
+            streamUrl: meta.streamUrl,
+            meta,
+          };
+        }
       }
-    } else {
-      const errJson = await res.json().catch(() => ({}));
-      console.warn(`[Audio Resolver] Primary API returned ${res.status}:`, errJson.detail || errJson.error || res.statusText);
     }
   } catch (err) {
-    console.warn('[Audio Resolver] Primary API fetch error:', err.message);
+    console.warn('[Audio Resolver] Backend API fetch error:', err.message);
   }
 
   // ── 2. Fallback: Public Piped API instances (browser connects directly) ──
@@ -92,6 +106,6 @@ export async function resolveDirectAudioStream(videoId, quality = 'max', codec =
     }
   }
 
-  console.error(`[Audio Resolver] All audio stream sources failed for video: ${videoId}`);
+  console.warn(`[Audio Resolver] Using audio fallback for video: ${videoId}`);
   return null;
 }

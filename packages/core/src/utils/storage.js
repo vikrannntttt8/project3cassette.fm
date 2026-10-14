@@ -70,6 +70,7 @@ export function isBrowserStorageAvailable() {
 }
 
 let nativeAsyncStorage = null;
+let nativeSecureStore = null;
 
 // Attempt to load React Native AsyncStorage dynamically only in React Native environments
 try {
@@ -79,6 +80,16 @@ try {
   }
 } catch {
   nativeAsyncStorage = null;
+}
+
+// Attempt to load Expo SecureStore dynamically for secure token persistence
+try {
+  if (typeof require !== 'undefined') {
+    const ess = require('expo-secure-store');
+    nativeSecureStore = ess?.default || ess;
+  }
+} catch {
+  nativeSecureStore = null;
 }
 
 /**
@@ -211,11 +222,36 @@ export async function removeStoredItemAsync(key) {
 
 /**
  * Supabase auth storage adapter compatible with @supabase/supabase-js
+ * Leverages Expo SecureStore for encrypted token persistence on mobile devices.
  */
 export const supabaseStorageAdapter = {
-  getItem: (key) => getStoredItemAsync(key),
-  setItem: (key, value) => setStoredItemAsync(key, value),
-  removeItem: (key) => removeStoredItemAsync(key),
+  getItem: async (key) => {
+    if (nativeSecureStore && typeof nativeSecureStore.getItemAsync === 'function') {
+      try {
+        const val = await nativeSecureStore.getItemAsync(key);
+        if (val !== null && val !== undefined) return val;
+      } catch (err) {
+        // Fallback to AsyncStorage / memory
+      }
+    }
+    return getStoredItemAsync(key);
+  },
+  setItem: async (key, value) => {
+    if (nativeSecureStore && typeof nativeSecureStore.setItemAsync === 'function') {
+      try {
+        await nativeSecureStore.setItemAsync(key, String(value));
+      } catch (err) {}
+    }
+    return setStoredItemAsync(key, value);
+  },
+  removeItem: async (key) => {
+    if (nativeSecureStore && typeof nativeSecureStore.deleteItemAsync === 'function') {
+      try {
+        await nativeSecureStore.deleteItemAsync(key);
+      } catch (err) {}
+    }
+    return removeStoredItemAsync(key);
+  },
 };
 
 /**

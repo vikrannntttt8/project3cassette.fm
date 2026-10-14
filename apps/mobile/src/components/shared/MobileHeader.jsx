@@ -134,10 +134,10 @@ const styles = StyleSheet.create({
   },
   brandText: {
     fontFamily: 'Shrikhand',
-    fontSize: 22,
+    fontSize: 20.5,
     color: '#FFFFFF',
-    paddingRight: 8,
-    includeFontPadding: false,
+    paddingRight: 12,
+    includeFontPadding: true,
   },
   brandDot: {
     width: 6,

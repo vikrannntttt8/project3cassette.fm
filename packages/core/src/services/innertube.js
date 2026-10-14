@@ -772,13 +772,42 @@ export async function resolveAudioStream(videoId, quality = 'max', codecPreferen
 
   let selectedAudio = null;
 
+  // ── Platform-Aware Codec Selection ──────────────────────────────────────
+  // iOS AVPlayer requires itag 140 (AAC mp4a.40.2)
+  // Android ExoPlayer natively prefers itag 251 (Opus audio/webm)
+  let isIOS = false;
+  try {
+    if (typeof navigator !== 'undefined' && /iPhone|iPad|iPod|Macintosh/i.test(navigator.userAgent)) {
+      isIOS = true;
+    } else if (typeof globalThis !== 'undefined' && (globalThis.__fbBatchedBridge || globalThis.HermesInternal)) {
+      const rn = require('react-native');
+      isIOS = rn?.Platform?.OS === 'ios';
+    }
+  } catch {}
+
+  const effectiveCodec = codecPreference !== 'auto'
+    ? codecPreference
+    : (isIOS ? 'aac' : 'opus');
+
   if (audioFormats.length > 0) {
-    if (codecPreference === 'mp4' || codecPreference === 'aac' || quality === 'high_aac') {
+    if (effectiveCodec === 'mp4' || effectiveCodec === 'aac' || quality === 'high_aac') {
       const aac = audioFormats.find((f) => f.itag === 140 || (f.mime_type && f.mime_type.includes('mp4a.40.2')));
       if (aac) selectedAudio = aac;
-    } else if (codecPreference === 'opus' || codecPreference === 'webm') {
+    } else if (effectiveCodec === 'opus' || effectiveCodec === 'webm') {
       const opus = audioFormats.find((f) => f.itag === 251 || (f.mime_type && f.mime_type.includes('opus')));
       if (opus) selectedAudio = opus;
+    }
+
+    if (!selectedAudio) {
+      if (isIOS) {
+        // Enforce itag 140 for iOS stability
+        const aac = audioFormats.find((f) => f.itag === 140 || (f.mime_type && f.mime_type.includes('mp4a.40.2')));
+        if (aac) selectedAudio = aac;
+      } else {
+        // Enforce itag 251 for Android fidelity
+        const opus = audioFormats.find((f) => f.itag === 251 || (f.mime_type && f.mime_type.includes('opus')));
+        if (opus) selectedAudio = opus;
+      }
     }
 
     if (!selectedAudio) {
@@ -793,12 +822,12 @@ export async function resolveAudioStream(videoId, quality = 'max', codecPreferen
           selectedAudio = sorted[0];
         }
       } else if (quality === 'standard' || quality === 'medium') {
-        // Mid-tier ~160kbps ceiling (prefer AAC itag 140 or mid-tier Opus)
+        // Mid-tier ~160kbps ceiling (prefer AAC itag 140 on iOS or mid-tier Opus)
         const mid = audioFormats.filter((f) => (f.bitrate || 0) <= 165000);
         if (mid.length > 0) {
-          const aac = mid.find((f) => f.itag === 140);
-          if (aac) {
-            selectedAudio = aac;
+          const preferred = isIOS ? mid.find((f) => f.itag === 140) : (mid.find((f) => f.itag === 251) || mid.find((f) => f.itag === 140));
+          if (preferred) {
+            selectedAudio = preferred;
           } else {
             mid.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
             selectedAudio = mid[0];
@@ -807,10 +836,12 @@ export async function resolveAudioStream(videoId, quality = 'max', codecPreferen
           selectedAudio = audioFormats[0];
         }
       } else {
-        // 'max' / 'high' -> Prefer Opus itag 251 or highest bitrate available
-        const opus251 = audioFormats.find((f) => f.itag === 251);
-        if (opus251) {
-          selectedAudio = opus251;
+        // 'max' / 'high' -> Prefer itag 140 on iOS, itag 251 on Android
+        const preferred = isIOS
+          ? (audioFormats.find((f) => f.itag === 140) || audioFormats.find((f) => f.itag === 251))
+          : (audioFormats.find((f) => f.itag === 251) || audioFormats.find((f) => f.itag === 140));
+        if (preferred) {
+          selectedAudio = preferred;
         } else {
           const sorted = [...audioFormats].sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
           selectedAudio = sorted[0];
@@ -885,8 +916,10 @@ export async function resolveAudioStream(videoId, quality = 'max', codecPreferen
     quality,
     headers: {
       Range: 'bytes=0-',
-      'User-Agent':
-        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+      'Accept-Encoding': 'identity',
+      'User-Agent': isIOS
+        ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+        : 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
     },
   };
 }

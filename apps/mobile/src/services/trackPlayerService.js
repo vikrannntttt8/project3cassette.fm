@@ -108,14 +108,19 @@ export async function playTrack(track, streamUrl = null) {
   playerActions.setProgress(0, trackDuration);
 
   let activeUrl = streamUrl;
+  const isIOS = Platform.OS === 'ios';
   let activeHeaders = {
-    'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+    'User-Agent': isIOS
+      ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+      : 'Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
     Range: 'bytes=0-',
+    'Accept-Encoding': 'identity',
   };
   if (!activeUrl && (track.videoId || track.id)) {
     try {
       const { resolveDirectAudioStream } = require('@cassette/core');
-      const res = await resolveDirectAudioStream(track.videoId || track.id);
+      const targetCodec = isIOS ? 'aac' : 'opus';
+      const res = await resolveDirectAudioStream(track.videoId || track.id, 'max', targetCodec);
       if (res?.streamUrl) {
         activeUrl = res.streamUrl;
         if (res.meta?.headers) {

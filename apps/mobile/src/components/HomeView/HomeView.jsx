@@ -381,8 +381,8 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 13,
     fontFamily: 'Inter',
-    includeFontPadding: false,
-    paddingRight: 4,
+    includeFontPadding: true,
+    paddingRight: 6,
   },
   chipTextActive: {
     color: '#000000',

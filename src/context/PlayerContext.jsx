@@ -533,11 +533,11 @@ export function PlayerProvider({ children }) {
 
       // 3. Resolve stream URL
       const codec = settings.audioCodec || 'auto';
-      const streamRes = await fetch(apiUrl(`/api/stream/${targetVid}?format=json&quality=${audioQuality}&codec=${codec}`));
-      if (streamRes.ok) {
-        const meta = await streamRes.json();
-        prefetchedStreamMetaRef.current = meta;
-        const streamUrl = meta.streamUrl || apiUrl(`/api/stream/${targetVid}?quality=${audioQuality}&codec=${codec}`);
+      fetch(apiUrl(`/api/stream/${targetVid}?format=json&quality=${audioQuality}&codec=${codec}`))
+        .then((r) => (r.ok ? r.json() : null))
+        .then((meta) => { if (meta) prefetchedStreamMetaRef.current = meta; })
+        .catch(() => {});
+      const streamUrl = apiUrl(`/api/stream/${targetVid}?quality=${audioQuality}&codec=${codec}`);
 
         // 4. Pre-buffer secondary HTML5 Audio element with 2-second decoding watchdog
         const nextAudio = nextAudioElementRef.current;
@@ -610,22 +610,11 @@ export function PlayerProvider({ children }) {
 
       if (!streamUrl && targetVideoId) {
         const codec = settings.audioCodec || 'auto';
-        try {
-          const res = await fetch(apiUrl(`/api/stream/${targetVideoId}?format=json&quality=${audioQuality}&codec=${codec}`));
-          if (res.ok) {
-            const meta = await res.json();
-            if (meta?.streamUrl) {
-              streamUrl = meta.streamUrl;
-              setActiveStreamMeta(meta);
-            }
-          }
-        } catch (err) {
-          console.warn('[Audio Engine] format=json stream fetch error:', err);
-        }
-
-        if (!streamUrl) {
-          streamUrl = apiUrl(`/api/stream/${targetVideoId}?quality=${audioQuality}&codec=${codec}`);
-        }
+        fetch(apiUrl(`/api/stream/${targetVideoId}?format=json&quality=${audioQuality}&codec=${codec}`))
+          .then((r) => (r.ok ? r.json() : null))
+          .then((meta) => { if (meta) setActiveStreamMeta(meta); })
+          .catch(() => {});
+        streamUrl = apiUrl(`/api/stream/${targetVideoId}?quality=${audioQuality}&codec=${codec}`);
       }
 
       if (streamUrl) {
@@ -1150,9 +1139,9 @@ export function PlayerProvider({ children }) {
   playNextRef.current = skipToNext;
 
   const skipToPrev = useCallback(() => {
-    const p = ytPlayerRef.current;
-    if (p && typeof p.getCurrentTime === 'function' && p.getCurrentTime() > 3) {
-      p.seekTo(0, true);
+    const a = audioElementRef.current;
+    if (a && a.currentTime > 3) {
+      a.currentTime = 0;
       setCurrentTime(0);
       return;
     }
@@ -1165,7 +1154,9 @@ export function PlayerProvider({ children }) {
       setQueueIndex(prevIndex);
       loadSong(currentQ[prevIndex], null, prevIndex);
     } else {
-      p?.seekTo?.(0, true);
+      if (a) {
+        a.currentTime = 0;
+      }
       setCurrentTime(0);
     }
   }, [loadSong]);
@@ -1392,7 +1383,6 @@ export function PlayerProvider({ children }) {
         ref={audioElementRef}
         playsInline
         preload="auto"
-        crossOrigin="anonymous"
         onPlay={() => {
           setIsPlaying(true);
           setIsLoading(false);
@@ -1505,7 +1495,6 @@ export function PlayerProvider({ children }) {
         playsInline
         preload="auto"
         muted
-        crossOrigin="anonymous"
         onCanPlay={() => {
           if (prefetchTimeoutRef.current) {
             clearTimeout(prefetchTimeoutRef.current);

@@ -18,7 +18,7 @@ export async function getInnertube() {
 
   if (!initPromise) {
     initPromise = Innertube.create({
-      cache: new UniversalCache(false),
+      cache: new UniversalCache(true), // In-memory cache to prevent stale player decipher errors
       client_type: ClientType.MUSIC, // WEB_REMIX YouTube Music client
     }).then((yt) => {
       innertubeInstance = yt;

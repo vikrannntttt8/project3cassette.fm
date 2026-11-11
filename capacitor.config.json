@@ -1,0 +1,14 @@
+{
+  "appId": "fm.cassette.app",
+  "appName": "cassette.fm",
+  "webDir": "dist",
+  "server": {
+    "url": "http://10.0.2.2:5173",
+    "cleartext": true,
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
+

@@ -8,6 +8,7 @@ import ImageWithFallback from '../shared/ImageWithFallback.jsx';
 import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import TrackContextMenu from '../shared/TrackContextMenu.jsx';
 import MarqueeText from '../shared/MarqueeText.jsx';
+import { cleanTrackTitle } from '../../utils/titleCleaner.js';
 
 /**
  * MobilePlayerSheet — ArchiveTune Now Playing Interface Layout & Visual Hierarchy
@@ -249,7 +250,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
                 title="View track release"
               >
                 <h2 className="text-2xl font-bold tracking-tight text-white truncate leading-tight group-hover/title:underline">
-                  {currentSong.title}
+                  {cleanTrackTitle(currentSong.title, currentSong.artist)}
                 </h2>
               </div>
               <div

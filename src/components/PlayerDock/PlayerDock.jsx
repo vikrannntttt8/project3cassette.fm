@@ -6,6 +6,7 @@ import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
 import MobilePlayerSheet from './MobilePlayerSheet.jsx';
 import MarqueeText from '../shared/MarqueeText.jsx';
+import { cleanTrackTitle } from '../../utils/titleCleaner.js';
 
 export default function PlayerDock() {
   const {
@@ -107,7 +108,7 @@ export default function PlayerDock() {
           <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
             {currentSong?.title ? (
               <MarqueeText
-                text={currentSong.title}
+                text={cleanTrackTitle(currentSong.title, currentSong.artist)}
                 className="text-sm font-semibold text-white leading-tight tracking-tight"
               />
             ) : (
@@ -305,7 +306,7 @@ export default function PlayerDock() {
             </div>
             <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
               {currentSong?.title ? (
-                <MarqueeText text={currentSong.title} className="text-[13px] font-semibold text-white leading-tight" />
+                <MarqueeText text={cleanTrackTitle(currentSong.title, currentSong.artist)} className="text-[13px] font-semibold text-white leading-tight" />
               ) : (
                 <span className="text-[13px] font-semibold text-white truncate">Nothing playing</span>
               )}

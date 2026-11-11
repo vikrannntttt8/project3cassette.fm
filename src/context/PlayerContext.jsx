@@ -14,6 +14,7 @@ import {
   recordPlayedSongOffline,
 } from '../services/offlineStorage.js';
 import { getHighResImage } from '../utils/imageUtils.js';
+import { cleanTrackTitle } from '../utils/titleCleaner.js';
 
 const PlayerContext = createContext(null);
 
@@ -583,6 +584,9 @@ export function PlayerProvider({ children }) {
       // Completely decoupled from preview URLs
       const cleanSong = { ...song };
       delete cleanSong.media_preview_url;
+      if (cleanSong.title) {
+        cleanSong.title = cleanTrackTitle(cleanSong.title, cleanSong.artist);
+      }
 
       let targetVideoId = cleanSong.videoId || cleanSong.youtubeId;
       if (!targetVideoId) {

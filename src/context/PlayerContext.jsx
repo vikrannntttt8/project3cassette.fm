@@ -562,7 +562,6 @@ export function PlayerProvider({ children }) {
             }
           }, 2000);
         }
-      }
     } catch (err) {
       console.warn('[Prefetch Engine] Background prefetch note:', err.message);
     }

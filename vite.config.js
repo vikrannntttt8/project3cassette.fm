@@ -1,5 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import dns from 'node:dns';
+
+// Ensure IPv4 first to avoid connect ENETUNREACH / ETIMEDOUT on dual-stack hosts
+dns.setDefaultResultOrder?.('ipv4first');
 
 /**
  * Backend API Gateway Plugin:
@@ -364,16 +368,30 @@ function innertubeApiPlugin() {
               return;
             }
 
-            // Pipe audio stream directly with Range support
+            // Pipe audio stream directly with Range support (clamped to 1MB YouTube CDN limit)
             const headers = {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
               'Referer': 'https://music.youtube.com/',
               'Origin': 'https://music.youtube.com',
             };
 
+            const CHUNK_SIZE = 1024 * 1024; // 1MB YouTube CDN limit per chunk
+            const totalLength = Number(streamInfo.contentLength) || 0;
+            let start = 0;
+            let end = totalLength > 0 ? Math.min(start + CHUNK_SIZE - 1, totalLength - 1) : CHUNK_SIZE - 1;
+
             if (req.headers.range) {
-              headers['Range'] = req.headers.range;
+              const parts = req.headers.range.replace(/bytes=/, '').split('-');
+              start = parseInt(parts[0], 10) || 0;
+              if (parts[1]) {
+                const requestedEnd = parseInt(parts[1], 10);
+                end = Math.min(requestedEnd, start + CHUNK_SIZE - 1);
+              } else {
+                end = totalLength > 0 ? Math.min(start + CHUNK_SIZE - 1, totalLength - 1) : start + CHUNK_SIZE - 1;
+              }
             }
+
+            headers['Range'] = `bytes=${start}-${end}`;
 
             const streamRes = await fetch(streamInfo.streamUrl, { headers });
 

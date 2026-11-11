@@ -83,61 +83,20 @@ export function useMusicSearch() {
         return;
       }
 
-      // If empty results from server, check local fallback catalog
-      throw new Error('No direct search results');
+      // If empty results from server, return clean empty results
+      if (tab === 'all') {
+        setResults({ songs: [], albums: [], artists: [], playlists: [] });
+      } else {
+        setResults([]);
+      }
+      return;
     } catch (err) {
       if (err.name === 'AbortError') return;
-      console.warn('[useMusicSearch] Server search note:', err.message);
-
-      // Clean local catalog filter fallback (Zero external network proxy calls)
-      try {
-        const cleanQ = trimmed.toLowerCase();
-        const allTracks = FALLBACK_HOME_FEED.featuredTracks || [];
-        const allAlbums = FALLBACK_HOME_FEED.trendingAlbums || [];
-
-        const matchedSongs = allTracks.filter(t => 
-          t.title?.toLowerCase().includes(cleanQ) || 
-          t.artist?.toLowerCase().includes(cleanQ) ||
-          t.album?.toLowerCase().includes(cleanQ)
-        );
-
-        const matchedAlbums = allAlbums.filter(a =>
-          a.title?.toLowerCase().includes(cleanQ) ||
-          a.artist?.toLowerCase().includes(cleanQ)
-        );
-
-        const matchedArtists = [];
-        const artistSet = new Set();
-        allTracks.forEach(t => {
-          if (t.artist && t.artist.toLowerCase().includes(cleanQ) && !artistSet.has(t.artist)) {
-            artistSet.add(t.artist);
-            matchedArtists.push({
-              id: t.artistId || `art_${t.id}`,
-              name: t.artist,
-              title: t.artist,
-              thumbnail: t.thumbnail || t.cover,
-              type: 'artist'
-            });
-          }
-        });
-
-        if (tab === 'songs') {
-          setResults(matchedSongs.length ? matchedSongs : []);
-        } else if (tab === 'albums') {
-          setResults(matchedAlbums.length ? matchedAlbums : []);
-        } else if (tab === 'artists') {
-          setResults(matchedArtists);
-        } else {
-          setResults({
-            songs: matchedSongs,
-            albums: matchedAlbums,
-            artists: matchedArtists,
-            playlists: [],
-          });
-        }
-      } catch {
-        setError('No results found. Try another query.');
-        setResults(null);
+      console.warn('[useMusicSearch] Server search error:', err.message);
+      if (tab === 'all') {
+        setResults({ songs: [], albums: [], artists: [], playlists: [] });
+      } else {
+        setResults([]);
       }
     } finally {
       setLoading(false);

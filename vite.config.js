@@ -310,19 +310,21 @@ function innertubeApiPlugin() {
           }
         }
 
-        // ── 1b. GET /api/album/:id ────────────────────────────────────────
-        if (pathname.startsWith('/api/album/') && req.method === 'GET') {
-          const browseId = pathname.replace('/api/album/', '').split('?')[0];
+        // ── 1b. GET /api/album/:id & /api/playlist/:id ───────────────────
+        if ((pathname.startsWith('/api/album/') || pathname.startsWith('/api/playlist/')) && req.method === 'GET') {
+          const rawId = pathname.startsWith('/api/album/')
+            ? pathname.replace('/api/album/', '').split('?')[0]
+            : pathname.replace('/api/playlist/', '').split('?')[0];
           try {
             const { getAlbumDetails } = await import('./src/services/innertube.js');
-            const albumData = await getAlbumDetails(browseId);
+            const data = await getAlbumDetails(rawId);
             res.setHeader('Content-Type', 'application/json; charset=utf-8');
             res.setHeader('Access-Control-Allow-Origin', '*');
             res.statusCode = 200;
-            res.end(JSON.stringify(albumData));
+            res.end(JSON.stringify(data));
             return;
           } catch (err) {
-            console.error('[API /api/album] Error:', err);
+            console.error(`[API ${pathname}] Error:`, err);
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ error: err.message }));

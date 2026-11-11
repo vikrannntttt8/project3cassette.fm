@@ -9,6 +9,8 @@ import AddToPlaylistMenu from '../shared/AddToPlaylistMenu.jsx';
 import TrackContextMenu from '../shared/TrackContextMenu.jsx';
 import MarqueeText from '../shared/MarqueeText.jsx';
 import { cleanTrackTitle } from '../../utils/titleCleaner.js';
+import CassetteTape from '../shared/CassetteTape.jsx';
+import AnalogVUMeter from '../shared/AnalogVUMeter.jsx';
 
 /**
  * MobilePlayerSheet — ArchiveTune Now Playing Interface Layout & Visual Hierarchy
@@ -56,6 +58,7 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
 
   const [addMenuSong, setAddMenuSong] = useState(null);
   const [devicePillOpen, setDevicePillOpen] = useState(false);
+  const [isCassetteMode, setIsCassetteMode] = useState(false);
   const lyricsContainerRef = useRef(null);
   const touchStartYRef = useRef(0);
   const touchStartXRef = useRef(0);
@@ -218,24 +221,64 @@ export default function MobilePlayerSheet({ isOpen, onClose }) {
       {activeSheet === 'player' && (
         <div className="flex-1 flex flex-col justify-between px-6 pt-2 pb-[calc(1.25rem+var(--safe-bottom,12px))] min-h-0 overflow-y-auto no-scrollbar relative z-10 max-w-md mx-auto w-full">
           
-          {/* ── High-Res Cover Artwork Card ── */}
-          <div className="my-auto pt-2 pb-3 flex flex-col items-center justify-center">
-            <div
-              onClick={handleCoverClick}
-              className="relative aspect-square w-full max-w-[310px] sm:max-w-[340px] mx-auto rounded-3xl overflow-hidden bg-neutral-900 border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.9)] ring-1 ring-white/10 cursor-pointer group transition-transform duration-300 active:scale-[0.98]"
-              title={`Click to ${coverClickAction.toLowerCase()}`}
-            >
-              <ImageWithFallback
-                src={highResCover}
-                alt={currentSong.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-              />
-              {isLoading && (
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center">
-                  <div className="w-12 h-12 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
+          {/* ── High-Res Cover Artwork / Vintage Cassette Card ── */}
+          <div className="my-auto pt-1 pb-2 flex flex-col items-center justify-center w-full">
+            {/* View Mode Toggle Pill (Album Art vs Cassette Mode) */}
+            <div className="flex items-center justify-center gap-1.5 mb-2.5 bg-white/5 p-1 rounded-full border border-white/10">
+              <button
+                type="button"
+                onClick={() => setIsCassetteMode(false)}
+                className={`px-3 py-1 rounded-full text-[11.5px] font-semibold transition-all cursor-pointer ${
+                  !isCassetteMode
+                    ? 'bg-white text-black shadow-sm font-bold'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Album Art
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsCassetteMode(true)}
+                className={`px-3 py-1 rounded-full text-[11.5px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isCassetteMode
+                    ? 'bg-accent text-black shadow-sm font-bold'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[13px]">album</span>
+                Cassette Mode
+              </button>
             </div>
+
+            {isCassetteMode ? (
+              <div className="w-full flex flex-col items-center gap-3 animate-fade-in">
+                <CassetteTape
+                  song={currentSong}
+                  isPlaying={isPlaying}
+                  currentTime={currentTime}
+                  duration={duration}
+                  onClick={togglePlay}
+                />
+                <AnalogVUMeter isPlaying={isPlaying} />
+              </div>
+            ) : (
+              <div
+                onClick={handleCoverClick}
+                className="relative aspect-square w-full max-w-[310px] sm:max-w-[340px] mx-auto rounded-3xl overflow-hidden bg-neutral-900 border border-white/10 shadow-[0_24px_60px_rgba(0,0,0,0.9)] ring-1 ring-white/10 cursor-pointer group transition-transform duration-300 active:scale-[0.98] animate-fade-in"
+                title={`Click to ${coverClickAction.toLowerCase()}`}
+              >
+                <ImageWithFallback
+                  src={highResCover}
+                  alt={currentSong.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+                />
+                {isLoading && (
+                  <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center">
+                    <div className="w-12 h-12 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── 2. TYPOGRAPHY & TRACK METADATA ROW ── */}

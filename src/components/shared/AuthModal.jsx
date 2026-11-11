@@ -84,12 +84,18 @@ export default function AuthModal() {
         {user ? (
           /* ── LOGGED IN PROFILE VIEW ────────────────────────── */
           <div className="flex flex-col items-center text-center pt-2 pb-1">
-            <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-white/20 shadow-lg mb-4 bg-neutral-800">
-              <img
-                src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'}
-                alt={user.name}
-                className="w-full h-full object-cover"
-              />
+            <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-white/20 shadow-lg mb-4 bg-neutral-800 flex items-center justify-center">
+              {user.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center text-white font-bold text-xl">
+                  {(user.name || 'CF').slice(0, 2).toUpperCase()}
+                </div>
+              )}
               <div className="absolute bottom-0 right-0 w-5 h-5 bg-emerald-500 rounded-full border-2 border-[#141416]" />
             </div>
 

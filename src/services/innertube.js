@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { Innertube, UniversalCache, ClientType, Platform } from 'youtubei.js';
 import { cleanTrackTitle } from '../utils/titleCleaner.js';
 
@@ -7,18 +8,48 @@ Platform.shim.eval = (data, env) => {
   return fn(...Object.values(env));
 };
 
+const SESSION_FILE = '.yt_session.json';
+
+function getPersistedCookie() {
+  try {
+    if (fs.existsSync(SESSION_FILE)) {
+      const data = JSON.parse(fs.readFileSync(SESSION_FILE, 'utf8'));
+      return data.cookie || null;
+    }
+  } catch (e) {
+    console.warn('[Innertube] Could not read persisted session:', e.message);
+  }
+  return null;
+}
+
+function savePersistedCookie(cookie) {
+  try {
+    if (cookie) {
+      fs.writeFileSync(SESSION_FILE, JSON.stringify({ cookie, savedAt: new Date().toISOString() }, null, 2));
+      console.log('[Innertube] Persisted YouTube session cookie to', SESSION_FILE);
+    } else if (fs.existsSync(SESSION_FILE)) {
+      fs.unlinkSync(SESSION_FILE);
+      console.log('[Innertube] Removed persisted session from', SESSION_FILE);
+    }
+  } catch (e) {
+    console.warn('[Innertube] Could not save persisted session:', e.message);
+  }
+}
+
 let innertubeInstance = null;
 let initPromise = null;
-let currentSessionCookie = null;
+let currentSessionCookie = getPersistedCookie();
 
 export function setSessionCookie(cookie) {
   currentSessionCookie = cookie || null;
+  savePersistedCookie(cookie);
   innertubeInstance = null;
   initPromise = null;
 }
 
 export function clearSessionCookie() {
   currentSessionCookie = null;
+  savePersistedCookie(null);
   innertubeInstance = null;
   initPromise = null;
 }
@@ -37,21 +68,15 @@ export async function getInnertube(forceRefresh = false) {
   }
 
   if (!initPromise) {
-    const savedCookie = currentSessionCookie || (
-      typeof window !== 'undefined'
-        ? (localStorage.getItem('yt_music_session_cookie') || undefined)
-        : undefined
-    );
+    const savedCookie = currentSessionCookie || getPersistedCookie();
 
     initPromise = Innertube.create({
       cache: new UniversalCache(true), // In-memory cache to prevent stale player decipher errors
       client_type: ClientType.MUSIC, // WEB_REMIX YouTube Music client
-      cookie: savedCookie,
+      cookie: savedCookie || undefined,
     }).then((yt) => {
       innertubeInstance = yt;
-      if (savedCookie) {
-        console.log('[Innertube] Initialized with authenticated YouTube Music session! Logged in:', yt.session.logged_in);
-      }
+      console.log('[Innertube] Initialized YouTube Music client! Logged in:', !!yt.session.logged_in);
       return yt;
     }).catch((err) => {
       initPromise = null;
@@ -64,29 +89,35 @@ export async function getInnertube(forceRefresh = false) {
 }
 
 /**
- * Fetch authenticated YouTube Music User Profile
+ * Fetch authenticated YouTube Music User Profile from official Google Account Menu
  */
 export async function getYouTubeUserProfile() {
   const yt = await getInnertube();
   let userProfile = {
-    id: 'yt_user_' + Date.now(),
+    id: 'yt_user',
     name: 'YouTube Music Listener',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+    avatar: null,
     handle: '@youtubemusic',
     isYouTubeAccount: true,
     isLoggedIn: !!yt.session.logged_in,
   };
 
   try {
-    const library = await yt.music.getLibrary().catch(() => null);
-    if (library?.header?.title?.text) {
-      userProfile.name = library.header.title.text;
-    }
-    if (library?.header?.thumbnails?.[0]?.url) {
-      userProfile.avatar = library.header.thumbnails[0].url;
+    const menu = await yt.actions.execute('/account/account_menu').catch(() => null);
+    const header = menu?.data?.actions?.[0]?.openPopupAction?.popup?.multiPageMenuRenderer?.header?.activeAccountHeaderRenderer;
+    if (header) {
+      if (header.accountName?.runs?.[0]?.text) {
+        userProfile.name = header.accountName.runs[0].text;
+      }
+      if (header.channelHandle?.runs?.[0]?.text) {
+        userProfile.handle = header.channelHandle.runs[0].text;
+      }
+      if (header.accountPhoto?.thumbnails?.[0]?.url) {
+        userProfile.avatar = header.accountPhoto.thumbnails[0].url;
+      }
     }
   } catch (err) {
-    console.warn('[Innertube] Could not extract profile header:', err);
+    console.warn('[Innertube] Account menu profile extraction error:', err);
   }
 
   return userProfile;
@@ -1374,11 +1405,56 @@ export async function getArtistDetails(rawBrowseId) {
 }
 
 /**
- * 4. getAlbumDetails(browseId: string)
+ * 4. getPlaylistDetails(playlistId: string)
+ * Fetches the full playlist release and tracklist using yt.music.getPlaylist(playlistId).
+ */
+export async function getPlaylistDetails(playlistId) {
+  if (!playlistId) throw new Error('playlistId is required');
+
+  const yt = await getInnertube();
+  const pl = await yt.music.getPlaylist(playlistId).catch(() => null)
+          || await yt.getPlaylist(playlistId).catch(() => null);
+
+  if (!pl) throw new Error(`Playlist ${playlistId} not found`);
+
+  const title = pl.header?.title?.text || pl.title?.text || (typeof pl.title === 'string' ? pl.title : '') || 'Playlist';
+  const artist = pl.header?.author?.name || pl.author?.name || 'YouTube Music';
+  const description = pl.header?.description?.text || '';
+  const thumbnail = resolveThumbnail(pl.header) || resolveThumbnail(pl);
+  const rawItems = pl.items || pl.contents || [];
+
+  const tracks = rawItems.map((item, idx) => {
+    const parsed = parseSongItem(item);
+    return {
+      ...parsed,
+      trackNumber: idx + 1,
+    };
+  }).filter((t) => t.id);
+
+  return {
+    id: playlistId,
+    browseId: playlistId,
+    title,
+    artist,
+    year: '',
+    thumbnail,
+    cover: thumbnail,
+    description,
+    tracks,
+    songs: tracks,
+  };
+}
+
+/**
+ * 4b. getAlbumDetails(browseId: string)
  * Fetches the full album release and tracklist using yt.music.getAlbum(browseId).
  */
 export async function getAlbumDetails(browseId) {
   if (!browseId) throw new Error('browseId is required');
+
+  if (browseId.startsWith('VL') || browseId.startsWith('PL') || browseId.startsWith('RD')) {
+    return await getPlaylistDetails(browseId);
+  }
 
   const yt = await getInnertube();
   const album = await yt.music.getAlbum(browseId);
@@ -1535,227 +1611,123 @@ export async function getHomeFeedData() {
 
     // Parse sections from YouTube Music live home feed
     const rawFeed = feedRes.status === 'fulfilled' ? feedRes.value : null;
-    const dynamicSections = [];
+    let allFeedSections = Array.isArray(rawFeed?.sections) ? [...rawFeed.sections] : [];
 
-    if (rawFeed?.sections && Array.isArray(rawFeed.sections)) {
-      for (const sec of rawFeed.sections) {
-        const title = sec.header?.title?.text || sec.title?.text || (typeof sec.title === 'string' ? sec.title : '') || '';
-        if (!title || !sec.contents?.length) continue;
-
-        const items = sec.contents.map((item) => {
-          const id = item.id || item.video_id || '';
-          const itemTitle = item.title?.text || (typeof item.title === 'string' ? item.title : '') || 'Untitled';
-          const subtitle = item.subtitle?.text || (typeof item.subtitle === 'string' ? item.subtitle : '') || '';
-          const thumb = resolveThumbnail(item, id);
-          const type = item.item_type || (item.endpoint?.name?.includes('browse') ? 'playlist' : 'song');
-
-          return {
-            id,
-            browseId: id,
-            videoId: id,
-            title: itemTitle,
-            subtitle,
-            thumbnail: thumb,
-            cover: thumb,
-            type,
-          };
-        }).filter((it) => it.id);
-
-        if (items.length > 0) {
-          dynamicSections.push({
-            id: title.toLowerCase().replace(/[^\w]/g, '-'),
-            title,
-            items,
-          });
+    // YouTube Music returns Quick Picks and deeper shelves in the continuation of the home feed
+    if (rawFeed?.has_continuation) {
+      try {
+        const continuation = await rawFeed.getContinuation();
+        if (continuation?.sections && Array.isArray(continuation.sections)) {
+          allFeedSections = [...allFeedSections, ...continuation.sections];
         }
+      } catch (contErr) {
+        console.warn('[Innertube] Home feed continuation warning:', contErr.message);
       }
     }
 
-    // Quick Picks: Top playable tracks
-    const quickPicks = (quickPicksRes.status === 'fulfilled' ? (quickPicksRes.value.songs?.contents || quickPicksRes.value.contents || []) : [])
-      .map(parseSongItem)
-      .filter((s) => s.id && s.id.length >= 10)
-      .slice(0, 16);
+    // Dynamic YouTube Music sections
+    const dynamicSections = [];
+    let extractedQuickPicks = [];
+    let extractedAlbums = [];
 
-    // Trending Albums
-    const trendingAlbums = (trendingAlbumsRes.status === 'fulfilled' ? (trendingAlbumsRes.value.albums?.contents || trendingAlbumsRes.value.contents || []) : [])
-      .map((a) => {
-        const thumb = resolveThumbnail(a);
+    for (const sec of allFeedSections) {
+      const title = sec.header?.title?.text || sec.title?.text || (typeof sec.title === 'string' ? sec.title : '') || '';
+      if (!title || !sec.contents?.length) continue;
+
+      const lowerTitle = title.toLowerCase();
+
+      // Check if this shelf represents Quick Picks / Start instant radio
+      if (lowerTitle.includes('quick picks') || lowerTitle.includes('start radio')) {
+        extractedQuickPicks = sec.contents
+          .map(parseSongItem)
+          .filter((s) => s.id && s.id.length >= 10);
+      }
+
+      // Check if this shelf is albums
+      if (lowerTitle.includes('albums') && !extractedAlbums.length) {
+        extractedAlbums = sec.contents.map((a) => {
+          const thumb = resolveThumbnail(a, a.id);
+          return {
+            id: a.id || a.browseId || '',
+            browseId: a.id || a.browseId || '',
+            title: a.title?.text || a.title || 'Album',
+            artist: a.artists?.map((x) => x.name).filter(Boolean).join(', ') || a.author?.name || 'Artist',
+            year: a.year || '',
+            thumbnail: thumb,
+            cover: thumb,
+            type: 'album',
+          };
+        }).filter((a) => a.id);
+      }
+
+      const items = sec.contents.map((item) => {
+        const id = item.id || item.video_id || '';
+        const itemTitle = item.title?.text || (typeof item.title === 'string' ? item.title : '') || 'Untitled';
+        const subtitle = item.subtitle?.text || (typeof item.subtitle === 'string' ? item.subtitle : '') || '';
+        const thumb = resolveThumbnail(item, id);
+        const type = item.item_type || (item.endpoint?.name?.includes('browse') ? 'playlist' : 'song');
+
         return {
-          id: a.id || '',
-          browseId: a.id || '',
-          title: a.title || 'Unknown Album',
-          artist: a.artists?.map((x) => x.name).filter(Boolean).join(', ') || a.author?.name || 'Artist',
-          year: a.year || '',
+          id,
+          browseId: id,
+          videoId: id,
+          title: itemTitle,
+          subtitle,
           thumbnail: thumb,
           cover: thumb,
-          type: 'album',
+          type,
         };
-      })
-      .filter((a) => a.id)
-      .slice(0, 10);
+      }).filter((it) => it.id);
 
-    // Curated resilient fallback tracks if API is rate-limited or cold-starting
-    const fallbackQuickPicks = [
-      {
-        id: 'fJ9rUzIMcZQ',
-        videoId: 'fJ9rUzIMcZQ',
-        title: 'Bohemian Rhapsody',
-        artist: 'Queen',
-        duration: 354,
-        thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
-        cover: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
-        isOfficial: true,
-        type: 'song',
-      },
-      {
-        id: '4NRXx6U8ABQ',
-        videoId: '4NRXx6U8ABQ',
-        title: 'Blinding Lights',
-        artist: 'The Weeknd',
-        duration: 200,
-        thumbnail: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
-        cover: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
-        isOfficial: true,
-        type: 'song',
-      },
-      {
-        id: 'JGwWNGJdvx8',
-        videoId: 'JGwWNGJdvx8',
-        title: 'Shape of You',
-        artist: 'Ed Sheeran',
-        duration: 233,
-        thumbnail: 'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg',
-        cover: 'https://i.ytimg.com/vi/JGwWNGJdvx8/hqdefault.jpg',
-        isOfficial: true,
-        type: 'song',
-      },
-      {
-        id: 'kXYiU_JCYtU',
-        videoId: 'kXYiU_JCYtU',
-        title: 'Numb',
-        artist: 'Linkin Park',
-        duration: 187,
-        thumbnail: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
-        cover: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
-        isOfficial: true,
-        type: 'song',
-      },
-      {
-        id: '09R8_2nJtjg',
-        videoId: '09R8_2nJtjg',
-        title: 'Sugar',
-        artist: 'Maroon 5',
-        duration: 235,
-        thumbnail: 'https://i.ytimg.com/vi/09R8_2nJtjg/hqdefault.jpg',
-        cover: 'https://i.ytimg.com/vi/09R8_2nJtjg/hqdefault.jpg',
-        isOfficial: true,
-        type: 'song',
-      },
-      {
-        id: 'L3wKzyIN1yk',
-        videoId: 'L3wKzyIN1yk',
-        title: 'Feel Good Inc.',
-        artist: 'Gorillaz',
-        duration: 221,
-        thumbnail: 'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg',
-        cover: 'https://i.ytimg.com/vi/L3wKzyIN1yk/hqdefault.jpg',
-        isOfficial: true,
-        type: 'song',
-      },
-      {
-        id: 'hT_nvWreIhg',
-        videoId: 'hT_nvWreIhg',
-        title: 'Counting Stars',
-        artist: 'OneRepublic',
-        duration: 257,
-        thumbnail: 'https://i.ytimg.com/vi/hT_nvWreIhg/hqdefault.jpg',
-        cover: 'https://i.ytimg.com/vi/hT_nvWreIhg/hqdefault.jpg',
-        isOfficial: true,
-        type: 'song',
-      },
-      {
-        id: '3JZ_D3ELwOQ',
-        videoId: '3JZ_D3ELwOQ',
-        title: 'Radioactive',
-        artist: 'Imagine Dragons',
-        duration: 186,
-        thumbnail: 'https://i.ytimg.com/vi/3JZ_D3ELwOQ/hqdefault.jpg',
-        cover: 'https://i.ytimg.com/vi/3JZ_D3ELwOQ/hqdefault.jpg',
-        isOfficial: true,
-        type: 'song',
+      if (items.length > 0) {
+        dynamicSections.push({
+          id: title.toLowerCase().replace(/[^\w]/g, '-'),
+          title,
+          items,
+        });
       }
-    ];
+    }
 
-    const fallbackTrendingAlbums = [
-      {
-        id: 'MPREb_V2m2H7oVw9b',
-        browseId: 'MPREb_V2m2H7oVw9b',
-        title: 'After Hours',
-        artist: 'The Weeknd',
-        year: '2020',
-        thumbnail: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
-        cover: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
-        type: 'album',
-      },
-      {
-        id: 'MPREb_kZ3yR3q7sXp',
-        browseId: 'MPREb_kZ3yR3q7sXp',
-        title: 'A Night at the Opera',
-        artist: 'Queen',
-        year: '1975',
-        thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
-        cover: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
-        type: 'album',
-      },
-      {
-        id: 'MPREb_tZ2hF9yLmPq',
-        browseId: 'MPREb_tZ2hF9yLmPq',
-        title: 'Meteora',
-        artist: 'Linkin Park',
-        year: '2003',
-        thumbnail: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
-        cover: 'https://i.ytimg.com/vi/kXYiU_JCYtU/hqdefault.jpg',
-        type: 'album',
-      }
-    ];
+    // Quick Picks: Prefer real personalized quick picks, fallback to search hits
+    let quickPicks = extractedQuickPicks;
+    if (!quickPicks.length) {
+      quickPicks = (quickPicksRes.status === 'fulfilled' ? (quickPicksRes.value.songs?.contents || quickPicksRes.value.contents || []) : [])
+        .map(parseSongItem)
+        .filter((s) => s.id && s.id.length >= 10)
+        .slice(0, 20);
+    }
 
-    const finalQuickPicks = quickPicks.length > 0 ? quickPicks : fallbackQuickPicks;
-    const finalTrendingAlbums = trendingAlbums.length > 0 ? trendingAlbums : fallbackTrendingAlbums;
+    // Trending Albums: Prefer feed albums, fallback to search
+    let trendingAlbums = extractedAlbums;
+    if (!trendingAlbums.length) {
+      trendingAlbums = (trendingAlbumsRes.status === 'fulfilled' ? (trendingAlbumsRes.value.albums?.contents || trendingAlbumsRes.value.contents || []) : [])
+        .map((a) => {
+          const thumb = resolveThumbnail(a);
+          return {
+            id: a.id || '',
+            browseId: a.id || '',
+            title: a.title || 'Album',
+            artist: a.artists?.map((x) => x.name).filter(Boolean).join(', ') || a.author?.name || 'Artist',
+            year: a.year || '',
+            thumbnail: thumb,
+            cover: thumb,
+            type: 'album',
+          };
+        })
+        .filter((a) => a.id)
+        .slice(0, 10);
+    }
 
     return {
-      quickPicks: finalQuickPicks,
-      trendingAlbums: finalTrendingAlbums,
-      dailyMixes: dynamicSections[0]?.items?.length ? dynamicSections[0].items : finalQuickPicks.slice(0, 6),
+      quickPicks,
+      trendingAlbums,
+      dailyMixes: dynamicSections[0]?.items?.length ? dynamicSections[0].items : quickPicks.slice(0, 6),
       dynamicSections,
     };
   } catch (err) {
     console.error('[Innertube] getHomeFeedData error:', err);
     return {
-      quickPicks: [
-        {
-          id: '4NRXx6U8ABQ',
-          videoId: '4NRXx6U8ABQ',
-          title: 'Blinding Lights',
-          artist: 'The Weeknd',
-          duration: 200,
-          thumbnail: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
-          cover: 'https://i.ytimg.com/vi/4NRXx6U8ABQ/hqdefault.jpg',
-          isOfficial: true,
-          type: 'song',
-        },
-        {
-          id: 'fJ9rUzIMcZQ',
-          videoId: 'fJ9rUzIMcZQ',
-          title: 'Bohemian Rhapsody',
-          artist: 'Queen',
-          duration: 354,
-          thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
-          cover: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/hqdefault.jpg',
-          isOfficial: true,
-          type: 'song',
-        }
-      ],
+      quickPicks: [],
       trendingAlbums: [],
       dailyMixes: [],
       dynamicSections: [],
@@ -1770,38 +1742,25 @@ export async function getHomeFeedData() {
  * - User Playlists (via getLibraryPlaylists or FEmusic_library_playlists)
  */
 export async function getYouTubeMusicLibrary({ cookie = '', visitorData = '', sapisid = '' } = {}) {
-  let cookieHeader = '';
-  if (cookie && typeof cookie === 'string' && cookie.trim()) {
-    cookieHeader = cookie.trim();
-  } else if (sapisid && typeof sapisid === 'string' && sapisid.trim()) {
-    const clean = sapisid.trim();
-    cookieHeader = `SAPISID=${clean}; __Secure-3PAPISID=${clean};`;
-  }
-
   let yt;
-  try {
-    yt = await Innertube.create({
-      cache: new UniversalCache(false),
-      client_type: ClientType.MUSIC,
-      cookie: cookieHeader || undefined,
-      visitor_data: visitorData || undefined,
-    });
-  } catch (err) {
-    console.error('[Innertube] Authenticated client init failed:', err);
-    throw new Error(`Failed to initialize InnerTube session: ${err.message}`);
+  if (cookie || sapisid) {
+    const cleanCookie = cookie ? cookie.trim() : `SAPISID=${sapisid.trim()}; __Secure-3PAPISID=${sapisid.trim()};`;
+    setSessionCookie(cleanCookie);
+    yt = await getInnertube(true);
+  } else {
+    yt = await getInnertube();
   }
 
   const likedSongs = [];
   const playlists = [];
 
-  // ── 1. Fetch Liked Tracks ────────────────────────────────────────────────
+  // ── 1. Fetch Liked Tracks from 'LM' ──────────────────────────────────────
   try {
     const lmPlaylist = await yt.music.getPlaylist('LM').catch(() => null)
                     || await yt.getPlaylist('LM').catch(() => null);
 
-    if (lmPlaylist) {
-      const items = lmPlaylist.items || lmPlaylist.videos || lmPlaylist.contents || [];
-      for (const item of items) {
+    if (lmPlaylist?.items?.length) {
+      for (const item of lmPlaylist.items) {
         const parsed = parseSongItem(item);
         if (parsed.id && !likedSongs.some((s) => s.id === parsed.id)) {
           likedSongs.push({
@@ -1812,106 +1771,58 @@ export async function getYouTubeMusicLibrary({ cookie = '', visitorData = '', sa
       }
     }
   } catch (err) {
-    console.warn('[Innertube] Liked tracks direct fetch warning:', err.message);
+    console.warn('[Innertube] Liked tracks fetch warning:', err.message);
   }
 
-  // Fallback: browse FEmusic_liked
-  if (likedSongs.length === 0) {
-    try {
-      const browseRes = await yt.actions.execute('/browse', { browseId: 'FEmusic_liked' }).catch(() => null);
-      if (browseRes?.data?.contents) {
-        const traverseAndExtractSongs = (node) => {
-          if (!node || typeof node !== 'object') return;
-          if (node.type === 'MusicResponsiveListItem' || node.type === 'MusicTwoRowItem' || node.videoId) {
-            const parsed = parseSongItem(node);
-            if (parsed.id && !likedSongs.some((s) => s.id === parsed.id)) {
-              likedSongs.push({ ...parsed, likedAt: new Date().toISOString() });
-            }
-          }
-          for (const key of Object.keys(node)) {
-            if (Array.isArray(node[key])) {
-              node[key].forEach(traverseAndExtractSongs);
-            } else if (typeof node[key] === 'object') {
-              traverseAndExtractSongs(node[key]);
-            }
-          }
-        };
-        traverseAndExtractSongs(browseRes.data.contents);
-      }
-    } catch (e) {
-      console.warn('[Innertube] Liked browse fallback warning:', e.message);
-    }
-  }
-
-  // ── 2. Fetch User Library Playlists ─────────────────────────────────────
+  // ── 2. Fetch User Library Playlists & Albums via FEmusic_library_landing ─
   try {
-    let rawPlaylists = [];
-    const libraryPlaylists = await yt.music.getLibraryPlaylists().catch(() => null);
-    if (libraryPlaylists?.items || libraryPlaylists?.contents) {
-      rawPlaylists = libraryPlaylists.items || libraryPlaylists.contents || [];
-    } else {
-      const browsePlaylists = await yt.actions.execute('/browse', { browseId: 'FEmusic_liked_playlists' }).catch(() => null)
-                           || await yt.actions.execute('/browse', { browseId: 'FEmusic_library_playlists' }).catch(() => null);
-      if (browsePlaylists?.data) {
-        const traverseAndExtractPlaylists = (node) => {
-          if (!node || typeof node !== 'object') return;
-          if ((node.id || node.playlistId || node.browseId) && (node.title || node.headline)) {
-            const plId = node.id || node.playlistId || node.browseId?.replace(/^VL/, '');
-            if (plId && plId !== 'LM' && !rawPlaylists.some((p) => (p.id || p.playlistId) === plId)) {
-              rawPlaylists.push(node);
-            }
-          }
-          for (const key of Object.keys(node)) {
-            if (Array.isArray(node[key])) {
-              node[key].forEach(traverseAndExtractPlaylists);
-            } else if (typeof node[key] === 'object') {
-              traverseAndExtractPlaylists(node[key]);
-            }
-          }
-        };
-        traverseAndExtractPlaylists(browsePlaylists.data);
-      }
-    }
+    const browseRes = await yt.actions.execute('/browse', { browseId: 'FEmusic_library_landing' }).catch(() => null);
+    const tabs = browseRes?.data?.contents?.singleColumnBrowseResultsRenderer?.tabs;
+    const sectionList = tabs?.[0]?.tabRenderer?.content?.sectionListRenderer?.contents;
+    const gridItems = sectionList?.[0]?.gridRenderer?.items || [];
 
-    // Process up to 25 user playlists
-    for (const rawPl of rawPlaylists.slice(0, 25)) {
-      const plId = rawPl.id || rawPl.playlistId || rawPl.browseId?.replace(/^VL/, '');
-      if (!plId || plId === 'LM') continue;
+    for (const item of gridItems) {
+      const r = item.musicTwoRowItemRenderer;
+      if (!r) continue;
 
-      const title = rawPl.title?.text || (typeof rawPl.title === 'string' ? rawPl.title : 'YouTube Music Playlist');
-      const thumb = resolveThumbnail(rawPl);
+      const title = r.title?.runs?.[0]?.text || 'Untitled Playlist';
+      const subtitle = r.subtitle?.runs?.map((x) => x.text).join('') || '';
+      const browseId = r.navigationEndpoint?.browseEndpoint?.browseId || '';
 
-      let plTracks = [];
-      try {
-        const plData = await yt.music.getPlaylist(plId).catch(() => null)
-                    || await yt.getPlaylist(plId).catch(() => null);
-        if (plData?.items || plData?.videos || plData?.contents) {
-          const items = plData.items || plData.videos || plData.contents || [];
-          plTracks = items.map(parseSongItem).filter((t) => t.id);
-        }
-      } catch (err) {
-        console.warn(`[Innertube] Playlist tracks for ${plId} warning:`, err.message);
-      }
+      // Skip Liked Music auto-playlist here since it's returned in likedSongs
+      if (!browseId || browseId === 'VLLM' || browseId === 'LM') continue;
+
+      const thumbnails = r.thumbnailRenderer?.musicThumbnailRenderer?.thumbnail?.thumbnails || [];
+      const thumbnail = thumbnails[thumbnails.length - 1]?.url || '';
+
+      const isPlaylist = browseId.startsWith('VL') || browseId.startsWith('PL');
+      const isAlbum = browseId.startsWith('MPRE');
+      const playlistId = browseId.replace(/^VL/, '');
 
       playlists.push({
-        id: `ytm_${plId}`,
-        playlistId: plId,
+        id: browseId,
+        browseId,
+        playlistId,
         title,
-        description: `Imported from YouTube Music (${plTracks.length} tracks)`,
-        thumbnail: thumb,
-        cover: thumb,
-        songs: plTracks,
+        subtitle,
+        author: subtitle.split('•')[1]?.trim() || subtitle,
+        thumbnail,
+        cover: thumbnail,
+        type: isPlaylist ? 'playlist' : isAlbum ? 'album' : 'library_item',
+        songs: [],
         source: 'youtube_music',
         updatedAt: new Date().toISOString(),
       });
     }
   } catch (err) {
-    console.warn('[Innertube] Library playlists fetch warning:', err.message);
+    console.warn('[Innertube] Library landing browse warning:', err.message);
   }
+
+  const profile = await getYouTubeUserProfile().catch(() => null);
 
   return {
     success: true,
-    accountName: 'YouTube Music Account',
+    accountName: profile?.name || 'YouTube Music Account',
     liked: likedSongs,
     playlists,
     stats: {

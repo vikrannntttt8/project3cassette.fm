@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 
 .vercel
+.yt_session.json
+*.session.json

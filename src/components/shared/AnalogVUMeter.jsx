@@ -50,3 +50,4 @@ export default function AnalogVUMeter({ isPlaying = false, className = '' }) {
     </div>
   );
 }
+

@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
         setUser(savedProfile || {
           id: 'yt_user',
           name: 'YouTube Music Listener',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+          avatar: null,
           isYouTubeAccount: true,
         });
         setSession({ loggedIn: true, provider: 'youtube' });

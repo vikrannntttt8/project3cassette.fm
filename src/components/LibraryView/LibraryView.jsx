@@ -13,6 +13,7 @@ export default function LibraryView({ initialSection = 'playlists' }) {
     createAlbum, deleteAlbum, renameAlbum, removeFromAlbum,
     loadSong, playCollection, currentSong, isPlaying,
     offlineTracks = [], last70Tracks = [], isOnline = true,
+    navigateTo,
   } = usePlayer();
 
   const { compactAlbums } = useSettings();
@@ -305,32 +306,50 @@ export default function LibraryView({ initialSection = 'playlists' }) {
             )}
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {playlists.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => setActivePlaylist(p.id)}
-                  className="group flex flex-col gap-2 rounded-xl p-3 bg-[#0e0e0e] border border-[#222222] hover:border-white/30 transition-all text-left"
-                >
-                  <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-white/5">
-                    {p.thumbnail ? (
-                      <img src={p.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="material-symbols-outlined text-white/15 text-[40px]">queue_music</span>
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg">
-                        <span className="material-symbols-outlined text-black text-[20px]" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
+              {playlists.map(p => {
+                const isYt = p.source === 'youtube_music' || p.browseId || p.id?.startsWith('VL') || p.id?.startsWith('PL') || p.id?.startsWith('MPRE');
+                const trackCountText = p.songs?.length 
+                  ? `${p.songs.length} tracks` 
+                  : (p.subtitle?.match(/\d+\s+tracks/)?.[0] || (p.type === 'album' ? 'Album' : 'Playlist'));
+
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      if (isYt) {
+                        navigateTo('album', p.browseId || p.playlistId || p.id, {
+                          title: p.title,
+                          artist: p.author || p.subtitle,
+                          thumbnail: p.thumbnail,
+                          cover: p.thumbnail,
+                        });
+                      } else {
+                        setActivePlaylist(p.id);
+                      }
+                    }}
+                    className="group flex flex-col gap-2 rounded-xl p-3 bg-[#0e0e0e] border border-[#222222] hover:border-white/30 transition-all text-left cursor-pointer"
+                  >
+                    <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-white/5">
+                      {p.thumbnail ? (
+                        <img src={p.thumbnail} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="material-symbols-outlined text-white/15 text-[40px]">queue_music</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-lg">
+                          <span className="material-symbols-outlined text-black text-[20px]" style={{fontVariationSettings:"'FILL' 1"}}>play_arrow</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div>
-                    <p className="text-label-lg font-semibold text-white truncate group-hover:text-neutral-300 transition-colors">{p.title}</p>
-                    <p className="text-body-sm text-on-surface-variant">{p.songs.length} tracks</p>
-                  </div>
-                </button>
-              ))}
+                    <div>
+                      <p className="text-label-lg font-semibold text-white truncate group-hover:text-neutral-300 transition-colors">{p.title}</p>
+                      <p className="text-body-sm text-on-surface-variant">{trackCountText}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

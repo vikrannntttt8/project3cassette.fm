@@ -84,7 +84,7 @@ export async function signInWithYouTube(manualCookie = null) {
   const userProfile = data.user || {
     id: 'yt_user_' + Date.now(),
     name: 'YouTube Music Listener',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+    avatar: null,
     handle: '@youtubemusic',
     isYouTubeAccount: true,
   };

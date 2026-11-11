@@ -1,4 +1,5 @@
 import { Innertube, UniversalCache, ClientType, Platform } from 'youtubei.js';
+import { cleanTrackTitle } from '../utils/titleCleaner.js';
 
 // Setup custom JavaScript function evaluator for signature/nsig deciphering
 Platform.shim.eval = (data, env) => {
@@ -135,7 +136,7 @@ export function resolveThumbnail(itemOrThumbnail, fallbackVideoId = null) {
  */
 function parseSongItem(item) {
   const id = item.id || '';
-  const title = item.title || 'Unknown Title';
+  const rawTitle = typeof item.title === 'string' ? item.title : (item.title?.text || item.title || 'Unknown Title');
   
   const firstArtist = Array.isArray(item.artists) && item.artists.length > 0 ? item.artists[0] : null;
   const artist = item.artists?.map((a) => a.name).filter(Boolean).join(', ') || item.author?.name || 'Unknown Artist';
@@ -143,6 +144,9 @@ function parseSongItem(item) {
 
   const album = item.album?.name || (typeof item.album === 'string' ? item.album : undefined);
   const albumId = item.album?.id || item.album?.browse_id || item.album?.browseId || item.album_id || undefined;
+
+  // Clean raw YouTube clutter into clean Spotify/Apple-grade typography
+  const title = cleanTrackTitle(rawTitle, artist);
 
   let duration = 0;
   if (typeof item.duration?.seconds === 'number') {
@@ -155,9 +159,18 @@ function parseSongItem(item) {
 
   const thumbnail = resolveThumbnail(item, id);
 
+  // Extract musicVideoType & detect pure studio Art Tracks (ATV)
+  const musicVideoType = item.overlay?.content?.endpoint?.payload?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig?.musicVideoType
+    || item.endpoint?.payload?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig?.musicVideoType
+    || item.video_type
+    || (item.album?.name ? 'MUSIC_VIDEO_TYPE_ATV' : undefined);
+
+  const isAudioTrack = musicVideoType === 'MUSIC_VIDEO_TYPE_ATV' || Boolean(item.album?.name && item.artists?.length);
+
   // Check if official release (official artist channel, topic, or verified badge)
   const isOfficial = Boolean(
-    item.badges?.some?.((b) => b.label?.toLowerCase().includes('official') || b.style?.includes('OFFICIAL'))
+    isAudioTrack
+    || item.badges?.some?.((b) => b.label?.toLowerCase().includes('official') || b.style?.includes('OFFICIAL'))
     || item.is_explicit === false
     || (item.album?.name && item.artists?.length)
   );
@@ -174,6 +187,7 @@ function parseSongItem(item) {
     videoId: id,
     youtubeId: id,
     title,
+    rawTitle,
     artist,
     artists: artistsList,
     artistId,
@@ -184,23 +198,71 @@ function parseSongItem(item) {
     cover: thumbnail,
     thumbnailUrl: thumbnail,
     isOfficial,
+    isAudioTrack,
+    musicVideoType,
     type: 'song',
   };
 }
 
 /**
  * 1a. getSearchSuggestions(query: string)
- * Fetches real-time debounced autocomplete search predictions from YouTube Music.
+ * Fetches real-time debounced autocomplete search predictions from YouTube Music with rich entity detection.
  */
 export async function getSearchSuggestions(query) {
   if (!query || !query.trim()) return [];
+  const trimmed = query.trim();
   try {
     const yt = await getInnertube();
-    const sug = await yt.getSearchSuggestions(query.trim());
+
+    // 1. First attempt rich YouTube Music suggestions
+    try {
+      const musicSug = await yt.music.getSearchSuggestions(trimmed);
+      if (Array.isArray(musicSug) && musicSug.length > 0) {
+        const parsed = [];
+        for (const section of musicSug) {
+          const contents = section.contents || [];
+          for (const item of contents) {
+            if (item.type === 'SearchSuggestion') {
+              const text = item.suggestion?.text || item.endpoint?.payload?.query || '';
+              if (text && !parsed.some((p) => p.text?.toLowerCase() === text.toLowerCase())) {
+                parsed.push({
+                  text,
+                  type: 'query',
+                });
+              }
+            } else if (item.id && item.title) {
+              const artist = item.artists?.map((a) => a.name).join(', ') || item.author?.name || '';
+              const album = item.album?.name || '';
+              const thumb = resolveThumbnail(item, item.id);
+              parsed.push({
+                id: item.id,
+                videoId: item.id,
+                text: cleanTrackTitle(item.title, artist),
+                title: cleanTrackTitle(item.title, artist),
+                artist,
+                album,
+                thumbnail: thumb,
+                type: 'song',
+              });
+            }
+          }
+        }
+        if (parsed.length > 0) return parsed.slice(0, 8);
+      }
+    } catch (musicErr) {
+      console.warn('[Innertube] Music suggestions note:', musicErr.message);
+    }
+
+    // 2. Fallback to standard InnerTube suggestions
+    const sug = await yt.getSearchSuggestions(trimmed);
     if (Array.isArray(sug) && sug.length > 0) {
       return sug
-        .map((s) => (typeof s === 'string' ? s : (s?.text || s?.query || '')))
-        .filter((s) => Boolean(s && s.trim()));
+        .map((s) => {
+          const text = typeof s === 'string' ? s : (s?.text || s?.query || '');
+          return text ? { text, type: 'query' } : null;
+        })
+        .filter(Boolean)
+        .slice(0, 8);
     }
   } catch (err) {
     console.warn('[Innertube] Suggestions warning:', err.message);
@@ -569,14 +631,17 @@ export async function searchMusic(query, type = 'all', continuationToken = null)
           || cardShelf.buttons?.[0]?.endpoint?.payload?.videoId
           || undefined;
 
+        const cleanedTitle = cleanTrackTitle(title, subtitle);
+
         topResult = {
           id: videoId || browseId || 'top-result',
           videoId: videoId || undefined,
           browseId: browseId || undefined,
-          title,
+          title: cleanedTitle,
+          rawTitle: title,
           subtitle,
           artist: subtitle,
-          name: title,
+          name: cleanedTitle,
           thumbnail: thumb,
           cover: thumb,
           type: cardType,
@@ -599,6 +664,13 @@ export async function searchMusic(query, type = 'all', continuationToken = null)
     let songs = (songRes.status === 'fulfilled' ? (songRes.value.songs?.contents || songRes.value.contents || []) : [])
       .map(parseSongItem)
       .filter((t) => t.id && t.id.length >= 10);
+
+    // Prioritize pure studio Art Tracks (ATV) over video companion cuts
+    songs.sort((a, b) => {
+      if (a.isAudioTrack && !b.isAudioTrack) return -1;
+      if (!a.isAudioTrack && b.isAudioTrack) return 1;
+      return 0;
+    });
 
     if (songs.length === 0) {
       songs = await searchGeneralVideos(15);
@@ -663,7 +735,8 @@ export async function searchMusic(query, type = 'all', continuationToken = null)
       if (directArtist) {
         topResult = { ...directArtist, subtitle: 'Artist' };
       } else if (songs.length > 0) {
-        topResult = { ...songs[0], subtitle: `Song • ${songs[0].artist || 'Artist'}` };
+        const bestSong = songs.find((s) => s.isAudioTrack) || songs[0];
+        topResult = { ...bestSong, subtitle: `Song • ${bestSong.artist || 'Artist'}` };
       } else if (albums.length > 0) {
         topResult = { ...albums[0], subtitle: `Album • ${albums[0].artist || 'Artist'}` };
       }

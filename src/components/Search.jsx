@@ -7,6 +7,7 @@ import AddToPlaylistMenu from './shared/AddToPlaylistMenu.jsx';
 import ImageWithFallback from './shared/ImageWithFallback.jsx';
 import TrackContextMenu from './shared/TrackContextMenu.jsx';
 import ArtistLinks from './shared/ArtistLinks.jsx';
+import { cleanTrackTitle } from '../utils/titleCleaner.js';
 
 const TABS = [
   { id: 'all',                 label: 'All',                 icon: 'explore' },
@@ -243,7 +244,13 @@ export default function Search({ onSelectTrack, onArtistClick }) {
     searchInputRef.current?.focus();
   };
 
-  const handleSelectSuggestion = (sugText) => {
+  const handleSelectSuggestion = (sug) => {
+    if (typeof sug === 'object' && sug?.id) {
+      handleEntityAction(sug);
+      setShowSuggestions(false);
+      return;
+    }
+    const sugText = typeof sug === 'string' ? sug : (sug?.text || sug?.title || '');
     setSearchTerm(sugText);
     setShowSuggestions(false);
     fetchResults(sugText, activeTab);
@@ -381,24 +388,57 @@ export default function Search({ onSelectTrack, onArtistClick }) {
           <div className="absolute top-full left-0 right-0 mt-1.5 py-1.5 rounded-2xl bg-[#121215] border border-white/10 shadow-2xl z-50 overflow-hidden backdrop-blur-xl animate-fade-in">
             {suggestions.map((sug, idx) => {
               const isSelected = idx === selectedSuggestionIndex;
+              const isEntity = typeof sug === 'object' && sug?.type === 'song';
+              const sugText = typeof sug === 'string' ? sug : (sug?.text || sug?.title || '');
+              const key = sug?.id || sugText || idx;
+
               return (
                 <div
-                  key={sug}
+                  key={key}
                   onMouseDown={() => handleSelectSuggestion(sug)}
                   onMouseEnter={() => setSelectedSuggestionIndex(idx)}
-                  className={`flex items-center justify-between px-3.5 py-2 text-sm cursor-pointer transition-colors ${
+                  className={`flex items-center justify-between px-3.5 py-2.5 text-sm cursor-pointer transition-colors ${
                     isSelected ? 'bg-white/15 text-white' : 'text-neutral-300 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <span className="material-symbols-outlined text-neutral-400 text-[18px] flex-shrink-0">
-                      search
-                    </span>
-                    <span className="truncate font-medium">{sug}</span>
+                    {isEntity ? (
+                      sug.thumbnail ? (
+                        <img
+                          src={sug.thumbnail}
+                          alt={sug.title}
+                          className="w-8 h-8 rounded-lg object-cover flex-shrink-0 bg-neutral-900 border border-white/10"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                          <span className="material-symbols-outlined text-white text-[18px]">music_note</span>
+                        </div>
+                      )
+                    ) : (
+                      <span className="material-symbols-outlined text-neutral-400 text-[18px] flex-shrink-0">
+                        search
+                      </span>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium text-white">
+                        {isEntity ? (sug.title || sugText) : sugText}
+                      </div>
+                      {isEntity && sug.artist && (
+                        <div className="text-[11px] text-neutral-400 truncate">
+                          Song • {sug.artist}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <span className="material-symbols-outlined text-neutral-400 text-[16px] opacity-60">
-                    north_west
-                  </span>
+                  {isEntity ? (
+                    <span className="material-symbols-outlined text-white/70 text-[18px] opacity-80 group-hover:scale-110 transition-transform">
+                      play_circle
+                    </span>
+                  ) : (
+                    <span className="material-symbols-outlined text-neutral-400 text-[16px] opacity-60">
+                      north_west
+                    </span>
+                  )}
                 </div>
               );
             })}
@@ -879,9 +919,10 @@ function SongResultRow({
                 <span className="material-symbols-outlined text-[11px]">smart_display</span>
                 <span>Video</span>
               </span>
-            ) : track?.isOfficial ? (
-              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[9.5px] font-semibold bg-white/10 text-neutral-300 border border-white/10 flex-shrink-0">
-                Official
+            ) : track?.isAudioTrack || track?.isOfficial ? (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9.5px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 flex-shrink-0">
+                <span className="material-symbols-outlined text-[11px]">graphic_eq</span>
+                <span>Studio Audio</span>
               </span>
             ) : null}
           </div>

@@ -9,6 +9,19 @@ Platform.shim.eval = (data, env) => {
 
 let innertubeInstance = null;
 let initPromise = null;
+let currentSessionCookie = null;
+
+export function setSessionCookie(cookie) {
+  currentSessionCookie = cookie || null;
+  innertubeInstance = null;
+  initPromise = null;
+}
+
+export function clearSessionCookie() {
+  currentSessionCookie = null;
+  innertubeInstance = null;
+  initPromise = null;
+}
 
 /**
  * Get or initialize the singleton Innertube client.
@@ -24,9 +37,11 @@ export async function getInnertube(forceRefresh = false) {
   }
 
   if (!initPromise) {
-    const savedCookie = typeof window !== 'undefined'
-      ? (localStorage.getItem('yt_music_session_cookie') || undefined)
-      : undefined;
+    const savedCookie = currentSessionCookie || (
+      typeof window !== 'undefined'
+        ? (localStorage.getItem('yt_music_session_cookie') || undefined)
+        : undefined
+    );
 
     initPromise = Innertube.create({
       cache: new UniversalCache(true), // In-memory cache to prevent stale player decipher errors
@@ -46,6 +61,83 @@ export async function getInnertube(forceRefresh = false) {
   }
 
   return initPromise;
+}
+
+/**
+ * Fetch authenticated YouTube Music User Profile
+ */
+export async function getYouTubeUserProfile() {
+  const yt = await getInnertube();
+  let userProfile = {
+    id: 'yt_user_' + Date.now(),
+    name: 'YouTube Music Listener',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+    handle: '@youtubemusic',
+    isYouTubeAccount: true,
+    isLoggedIn: !!yt.session.logged_in,
+  };
+
+  try {
+    const library = await yt.music.getLibrary().catch(() => null);
+    if (library?.header?.title?.text) {
+      userProfile.name = library.header.title.text;
+    }
+    if (library?.header?.thumbnails?.[0]?.url) {
+      userProfile.avatar = library.header.thumbnails[0].url;
+    }
+  } catch (err) {
+    console.warn('[Innertube] Could not extract profile header:', err);
+  }
+
+  return userProfile;
+}
+
+/**
+ * Like a track directly on YouTube Music (2-way sync)
+ */
+export async function likeYouTubeTrack(videoId) {
+  if (!videoId) throw new Error('Missing videoId');
+  const yt = await getInnertube();
+  await yt.session.actions.execute('/like/like', {
+    target: { videoId },
+  });
+  return { success: true, videoId };
+}
+
+/**
+ * Unlike a track directly on YouTube Music (2-way sync)
+ */
+export async function unlikeYouTubeTrack(videoId) {
+  if (!videoId) throw new Error('Missing videoId');
+  const yt = await getInnertube();
+  await yt.session.actions.execute('/like/removelike', {
+    target: { videoId },
+  });
+  return { success: true, videoId };
+}
+
+/**
+ * Subscribe to an artist on YouTube Music (2-way sync)
+ */
+export async function subscribeYouTubeChannel(channelId) {
+  if (!channelId) throw new Error('Missing channelId');
+  const yt = await getInnertube();
+  await yt.session.actions.execute('/subscription/subscribe', {
+    channelIds: [channelId],
+  });
+  return { success: true, channelId };
+}
+
+/**
+ * Unsubscribe from an artist on YouTube Music (2-way sync)
+ */
+export async function unsubscribeYouTubeChannel(channelId) {
+  if (!channelId) throw new Error('Missing channelId');
+  const yt = await getInnertube();
+  await yt.session.actions.execute('/subscription/unsubscribe', {
+    channelIds: [channelId],
+  });
+  return { success: true, channelId };
 }
 
 /**

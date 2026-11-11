@@ -28,6 +28,101 @@ function innertubeApiPlugin() {
           });
         });
 
+        // ── 0-auth. POST/GET /api/auth/session ────────────────────────────
+        if (pathname === '/api/auth/session') {
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+          res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+          if (req.method === 'OPTIONS') {
+            res.statusCode = 204;
+            res.end();
+            return;
+          }
+
+          try {
+            const { setSessionCookie, getYouTubeUserProfile } = await import('./src/services/innertube.js');
+            if (req.method === 'POST') {
+              const body = await readJson();
+              const cookie = body.cookie || '';
+              if (cookie) {
+                setSessionCookie(cookie);
+              }
+            }
+            const profile = await getYouTubeUserProfile();
+            res.statusCode = 200;
+            res.end(JSON.stringify({ success: true, user: profile }));
+            return;
+          } catch (err) {
+            console.error('[API /api/auth/session] Error:', err);
+            res.statusCode = 500;
+            res.end(JSON.stringify({ success: false, error: err.message }));
+            return;
+          }
+        }
+
+        // ── 0-logout. POST /api/auth/logout ──────────────────────────────
+        if (pathname === '/api/auth/logout' && req.method === 'POST') {
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          try {
+            const { clearSessionCookie } = await import('./src/services/innertube.js');
+            clearSessionCookie();
+            res.statusCode = 200;
+            res.end(JSON.stringify({ success: true }));
+            return;
+          } catch (err) {
+            res.statusCode = 500;
+            res.end(JSON.stringify({ success: false, error: err.message }));
+            return;
+          }
+        }
+
+        // ── 0-like. POST /api/like & /api/unlike ─────────────────────────
+        if ((pathname === '/api/like' || pathname === '/api/unlike') && req.method === 'POST') {
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          try {
+            const body = await readJson();
+            const videoId = body.videoId || parsedUrl.searchParams.get('videoId') || '';
+            const { likeYouTubeTrack, unlikeYouTubeTrack } = await import('./src/services/innertube.js');
+            const result = pathname === '/api/like'
+              ? await likeYouTubeTrack(videoId)
+              : await unlikeYouTubeTrack(videoId);
+            res.statusCode = 200;
+            res.end(JSON.stringify(result));
+            return;
+          } catch (err) {
+            console.error(`[API ${pathname}] Error:`, err);
+            res.statusCode = 500;
+            res.end(JSON.stringify({ success: false, error: err.message }));
+            return;
+          }
+        }
+
+        // ── 0-sub. POST /api/subscribe & /api/unsubscribe ────────────────
+        if ((pathname === '/api/subscribe' || pathname === '/api/unsubscribe') && req.method === 'POST') {
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          try {
+            const body = await readJson();
+            const channelId = body.channelId || parsedUrl.searchParams.get('channelId') || '';
+            const { subscribeYouTubeChannel, unsubscribeYouTubeChannel } = await import('./src/services/innertube.js');
+            const result = pathname === '/api/subscribe'
+              ? await subscribeYouTubeChannel(channelId)
+              : await unsubscribeYouTubeChannel(channelId);
+            res.statusCode = 200;
+            res.end(JSON.stringify(result));
+            return;
+          } catch (err) {
+            console.error(`[API ${pathname}] Error:`, err);
+            res.statusCode = 500;
+            res.end(JSON.stringify({ success: false, error: err.message }));
+            return;
+          }
+        }
+
         // ── 0. POST/GET /api/playlist/import ─────────────────────────────
         if (pathname === '/api/playlist/import') {
           try {

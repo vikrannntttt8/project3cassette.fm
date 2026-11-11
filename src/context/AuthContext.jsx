@@ -96,6 +96,22 @@ export function AuthProvider({ children }) {
     return await fetchYouTubeLibrary();
   }, [user]);
 
+  const fetchLikedSongs = useCallback(async () => {
+    const lib = await fetchLibrary();
+    return lib?.liked || [];
+  }, [fetchLibrary]);
+
+  const fetchPlaylists = useCallback(async () => {
+    const lib = await fetchLibrary();
+    return lib?.playlists || [];
+  }, [fetchLibrary]);
+
+  const syncLikedSongs = useCallback(async () => {}, []);
+  const syncPlaylists = useCallback(async () => {}, []);
+  const recordHistory = useCallback(async () => {}, []);
+  const fetchHistory = useCallback(async () => [], []);
+  const performFullSync = useCallback(async () => ({ success: true }), []);
+
   // Legacy compatibility fallbacks for smooth transition
   const signInWithEmail = useCallback(async () => {
     throw new Error('Please sign in with Google for 2-way YouTube Music sync.');
@@ -123,6 +139,13 @@ export function AuthProvider({ children }) {
     signOut,
     syncLikeSong,
     fetchLibrary,
+    fetchLikedSongs,
+    fetchPlaylists,
+    syncLikedSongs,
+    syncPlaylists,
+    recordHistory,
+    fetchHistory,
+    performFullSync,
     authSequence,
     isAuthModalOpen,
     setIsAuthModalOpen,

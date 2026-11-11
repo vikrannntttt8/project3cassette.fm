@@ -1,5 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { getInnertube } from './innertube.js';
+import { apiUrl } from '../utils/apiConfig.js';
 
 // Native YouTubeAuth Capacitor plugin interface
 const NativeYouTubeAuth = registerPlugin('YouTubeAuth');
@@ -47,7 +47,7 @@ export function isUserLoggedIn() {
 /**
  * Login with Google / YouTube Music.
  * On native Android, opens an in-app WebView directly to Google sign-in.
- * On web desktop, provides cookie injection / developer prompt.
+ * Once cookies are captured, sends them to the backend Node proxy to initialize InnerTube without CORS.
  */
 export async function signInWithYouTube(manualCookie = null) {
   let cookieString = manualCookie;
@@ -65,34 +65,29 @@ export async function signInWithYouTube(manualCookie = null) {
     }
   }
 
-  // Persist session cookie
+  // Persist session cookie locally
   localStorage.setItem(COOKIE_STORAGE_KEY, cookieString);
 
-  // Initialize / refresh InnerTube with the authenticated session
-  const yt = await getInnertube(true);
+  // Sync session with backend Node proxy (runs with ZERO CORS)
+  console.log('[YouTubeAuth] Initializing authenticated YouTube session on backend...');
+  const res = await fetch(apiUrl('/api/auth/session'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cookie: cookieString }),
+  });
 
-  // Fetch user profile from YouTube
-  let userProfile = {
+  if (!res.ok) {
+    throw new Error(`Failed to activate YouTube session: HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  const userProfile = data.user || {
     id: 'yt_user_' + Date.now(),
     name: 'YouTube Music Listener',
-    email: '',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
     handle: '@youtubemusic',
     isYouTubeAccount: true,
   };
-
-  try {
-    // Attempt to extract real channel/account details via getLibrary
-    const library = await yt.music.getLibrary().catch(() => null);
-    if (library?.header?.title?.text) {
-      userProfile.name = library.header.title.text;
-    }
-    if (library?.header?.thumbnails?.[0]?.url) {
-      userProfile.avatar = library.header.thumbnails[0].url;
-    }
-  } catch (err) {
-    console.warn('[YouTubeAuth] Could not extract profile header, using defaults:', err);
-  }
 
   localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userProfile));
 
@@ -115,11 +110,14 @@ export async function signOutYouTube() {
     console.warn('[YouTubeAuth] Native logout warning:', err);
   }
 
+  try {
+    await fetch(apiUrl('/api/auth/logout'), { method: 'POST' }).catch(() => {});
+  } catch (err) {
+    console.warn('[YouTubeAuth] Backend logout warning:', err);
+  }
+
   localStorage.removeItem(COOKIE_STORAGE_KEY);
   localStorage.removeItem(USER_STORAGE_KEY);
-
-  // Reinitialize Innertube as guest
-  await getInnertube(true).catch(() => {});
 
   return { success: true };
 }
@@ -130,11 +128,13 @@ export async function signOutYouTube() {
 export async function likeSongOnYouTube(videoId) {
   if (!isUserLoggedIn() || !videoId) return false;
   try {
-    const yt = await getInnertube();
-    await yt.session.actions.execute('/like/like', {
-      target: { videoId },
+    const res = await fetch(apiUrl('/api/like'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ videoId }),
     });
-    console.log(`[YouTubeSync] Track ${videoId} liked on YouTube Music!`);
+    const result = await res.json();
+    console.log(`[YouTubeSync] Track ${videoId} liked on YouTube Music!`, result);
     return true;
   } catch (err) {
     console.error(`[YouTubeSync] Failed to like ${videoId} on YouTube:`, err);
@@ -148,31 +148,16 @@ export async function likeSongOnYouTube(videoId) {
 export async function removeLikeOnYouTube(videoId) {
   if (!isUserLoggedIn() || !videoId) return false;
   try {
-    const yt = await getInnertube();
-    await yt.session.actions.execute('/like/removelike', {
-      target: { videoId },
+    const res = await fetch(apiUrl('/api/unlike'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ videoId }),
     });
-    console.log(`[YouTubeSync] Track ${videoId} unliked on YouTube Music!`);
+    const result = await res.json();
+    console.log(`[YouTubeSync] Track ${videoId} unliked on YouTube Music!`, result);
     return true;
   } catch (err) {
     console.error(`[YouTubeSync] Failed to remove like for ${videoId} on YouTube:`, err);
-    return false;
-  }
-}
-
-/**
- * 2-Way Sync: Dislike a song on YouTube Music
- */
-export async function dislikeSongOnYouTube(videoId) {
-  if (!isUserLoggedIn() || !videoId) return false;
-  try {
-    const yt = await getInnertube();
-    await yt.session.actions.execute('/like/dislike', {
-      target: { videoId },
-    });
-    return true;
-  } catch (err) {
-    console.error(`[YouTubeSync] Failed to dislike ${videoId} on YouTube:`, err);
     return false;
   }
 }
@@ -183,12 +168,12 @@ export async function dislikeSongOnYouTube(videoId) {
 export async function subscribeArtistOnYouTube(channelId) {
   if (!isUserLoggedIn() || !channelId) return false;
   try {
-    const yt = await getInnertube();
-    await yt.session.actions.execute('/subscription/subscribe', {
-      channelIds: [channelId],
+    const res = await fetch(apiUrl('/api/subscribe'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channelId }),
     });
-    console.log(`[YouTubeSync] Subscribed to artist ${channelId} on YouTube Music!`);
-    return true;
+    return res.ok;
   } catch (err) {
     console.error(`[YouTubeSync] Failed to subscribe to ${channelId}:`, err);
     return false;
@@ -201,12 +186,12 @@ export async function subscribeArtistOnYouTube(channelId) {
 export async function unsubscribeArtistOnYouTube(channelId) {
   if (!isUserLoggedIn() || !channelId) return false;
   try {
-    const yt = await getInnertube();
-    await yt.session.actions.execute('/subscription/unsubscribe', {
-      channelIds: [channelId],
+    const res = await fetch(apiUrl('/api/unsubscribe'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channelId }),
     });
-    console.log(`[YouTubeSync] Unsubscribed from artist ${channelId} on YouTube Music!`);
-    return true;
+    return res.ok;
   } catch (err) {
     console.error(`[YouTubeSync] Failed to unsubscribe from ${channelId}:`, err);
     return false;
@@ -219,9 +204,9 @@ export async function unsubscribeArtistOnYouTube(channelId) {
 export async function fetchYouTubeLibrary() {
   if (!isUserLoggedIn()) return null;
   try {
-    const yt = await getInnertube();
-    const library = await yt.music.getLibrary();
-    return library;
+    const res = await fetch(apiUrl('/api/ytmusic/library'));
+    if (!res.ok) return null;
+    return await res.json();
   } catch (err) {
     console.error('[YouTubeSync] Failed to fetch YouTube library:', err);
     return null;

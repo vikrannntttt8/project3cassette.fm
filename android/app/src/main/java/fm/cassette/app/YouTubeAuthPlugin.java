@@ -158,3 +158,4 @@ public class YouTubeAuthPlugin extends Plugin {
         });
     }
 }
+

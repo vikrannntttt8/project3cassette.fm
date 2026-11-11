@@ -533,7 +533,8 @@ export function PlayerProvider({ children }) {
       }
 
       // 3. Resolve stream URL
-      const codec = settings.audioCodec || 'auto';
+      const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
+      const codec = settings.audioCodec && settings.audioCodec !== 'auto' ? settings.audioCodec : (isAndroid ? 'mp4' : 'auto');
       fetch(apiUrl(`/api/stream/${targetVid}?format=json&quality=${audioQuality}&codec=${codec}`))
         .then((r) => (r.ok ? r.json() : null))
         .then((meta) => { if (meta) prefetchedStreamMetaRef.current = meta; })
@@ -612,7 +613,8 @@ export function PlayerProvider({ children }) {
       }
 
       if (!streamUrl && targetVideoId) {
-        const codec = settings.audioCodec || 'auto';
+        const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent);
+        const codec = settings.audioCodec && settings.audioCodec !== 'auto' ? settings.audioCodec : (isAndroid ? 'mp4' : 'auto');
         fetch(apiUrl(`/api/stream/${targetVideoId}?format=json&quality=${audioQuality}&codec=${codec}`))
           .then((r) => (r.ok ? r.json() : null))
           .then((meta) => { if (meta) setActiveStreamMeta(meta); })

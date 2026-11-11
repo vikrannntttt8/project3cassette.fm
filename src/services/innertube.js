@@ -13,16 +13,30 @@ let initPromise = null;
 /**
  * Get or initialize the singleton Innertube client.
  * UniversalCache enabled, session generated locally.
+ * If user has authenticated via YouTube/Google, session cookies are injected.
  */
-export async function getInnertube() {
-  if (innertubeInstance) return innertubeInstance;
+export async function getInnertube(forceRefresh = false) {
+  if (innertubeInstance && !forceRefresh) return innertubeInstance;
+
+  if (forceRefresh) {
+    innertubeInstance = null;
+    initPromise = null;
+  }
 
   if (!initPromise) {
+    const savedCookie = typeof window !== 'undefined'
+      ? (localStorage.getItem('yt_music_session_cookie') || undefined)
+      : undefined;
+
     initPromise = Innertube.create({
       cache: new UniversalCache(true), // In-memory cache to prevent stale player decipher errors
       client_type: ClientType.MUSIC, // WEB_REMIX YouTube Music client
+      cookie: savedCookie,
     }).then((yt) => {
       innertubeInstance = yt;
+      if (savedCookie) {
+        console.log('[Innertube] Initialized with authenticated YouTube Music session! Logged in:', yt.session.logged_in);
+      }
       return yt;
     }).catch((err) => {
       initPromise = null;

@@ -16,6 +16,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { getAuthConfig, fetchYouTubeMusicLibraryDirect } from '../utils/authSync.js';
+import { likeSongOnYouTube, removeLikeOnYouTube } from '../services/youtubeAuth.js';
 
 const STORAGE_KEYS = {
   liked:         'likedSongs',
@@ -490,11 +491,13 @@ export function useLibrary() {
       });
       let next;
       if (exists) {
+        removeLikeOnYouTube(songId).catch((err) => console.warn('[YouTubeSync] unlike failed:', err));
         next = prev.filter((s) => {
           const id = String(s.id || s.videoId || s.browseId || '');
           return id !== songId;
         });
       } else {
+        likeSongOnYouTube(songId).catch((err) => console.warn('[YouTubeSync] like failed:', err));
         const cleanItem = {
           ...song,
           id: song.id || song.videoId || songId,

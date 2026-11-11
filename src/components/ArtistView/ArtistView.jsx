@@ -7,6 +7,7 @@ import ImageWithFallback from '../shared/ImageWithFallback.jsx';
 import BackButton from '../shared/BackButton.jsx';
 import ArtistLinks from '../shared/ArtistLinks.jsx';
 import { apiUrl } from '../../utils/apiConfig.js';
+import { subscribeArtistOnYouTube, unsubscribeArtistOnYouTube, isUserLoggedIn } from '../../services/youtubeAuth.js';
 
 export default function ArtistView({ browseId, artistName }) {
   const {
@@ -31,6 +32,27 @@ export default function ArtistView({ browseId, artistName }) {
   const [expandedTopSongs, setExpandedTopSongs] = useState(false);
   const [addMenuSong, setAddMenuSong] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+
+  const handleToggleSubscribe = async () => {
+    const channelId = browseId || data?.channelId || data?.id;
+    if (!channelId) return;
+    setSubscribing(true);
+    try {
+      if (isSubscribed) {
+        await unsubscribeArtistOnYouTube(channelId);
+        setIsSubscribed(false);
+      } else {
+        await subscribeArtistOnYouTube(channelId);
+        setIsSubscribed(true);
+      }
+    } catch (err) {
+      console.error('[ArtistView] Subscribe error:', err);
+    } finally {
+      setSubscribing(false);
+    }
+  };
 
   useEffect(() => {
     if (!browseId && !artistName) {
@@ -273,20 +295,36 @@ export default function ArtistView({ browseId, artistName }) {
                     </p>
                   )}
 
-                  {topSongsList.length > 0 && (
-                    <div className="pt-1.5 flex items-center justify-center sm:justify-start gap-3">
+                    <div className="pt-1.5 flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                      {topSongsList.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handlePlaySong(topSongsList[0], 0)}
+                          className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-black font-bold text-label-md shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                            play_arrow
+                          </span>
+                          Play Top Songs
+                        </button>
+                      )}
+
                       <button
                         type="button"
-                        onClick={() => handlePlaySong(topSongsList[0], 0)}
-                        className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white hover:bg-neutral-200 text-black font-bold text-label-md shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                        onClick={handleToggleSubscribe}
+                        disabled={subscribing}
+                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-label-md font-semibold transition-all cursor-pointer border ${
+                          isSubscribed
+                            ? 'bg-white/10 hover:bg-white/15 text-white border-white/20'
+                            : 'bg-red-600/90 hover:bg-red-600 text-white border-red-500 shadow-md hover:scale-105 active:scale-95'
+                        }`}
                       >
-                        <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                          play_arrow
+                        <span className="material-symbols-outlined text-[18px]">
+                          {isSubscribed ? 'notifications_active' : 'notifications'}
                         </span>
-                        Play Top Songs
+                        {subscribing ? 'Updating...' : (isSubscribed ? 'Subscribed' : 'Subscribe')}
                       </button>
                     </div>
-                  )}
                 </div>
               </div>
             </div>

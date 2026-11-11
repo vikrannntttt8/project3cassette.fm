@@ -1,48 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext.jsx';
-import { usePlayer } from '../../context/PlayerContext.jsx';
 
 export default function AuthModal() {
   const {
     user,
     isAuthModalOpen,
     setIsAuthModalOpen,
-    authModalMode,
-    setAuthModalMode,
     signInWithGoogle,
-    signInWithEmail,
-    signUpWithEmail,
-    resetPassword,
     signOut,
+    isNative,
   } = useAuth();
 
-  const { liked, playlists, history, syncAllWithCloud } = usePlayer();
-
-  const [tab, setTab] = useState(authModalMode || 'signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [successMsg, setSuccessMsg] = useState(null);
-  const [syncLoading, setSyncLoading] = useState(false);
-
-  useEffect(() => {
-    if (authModalMode) {
-      setTab(authModalMode);
-    }
-  }, [authModalMode]);
+  const [manualCookie, setManualCookie] = useState('');
+  const [showManualInput, setShowManualInput] = useState(false);
 
   useEffect(() => {
     if (isAuthModalOpen) {
       setErrorMsg(null);
-      setSuccessMsg(null);
-      setPassword('');
     }
   }, [isAuthModalOpen]);
 
-  // Escape key listener
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') setIsAuthModalOpen(false);
@@ -55,402 +34,214 @@ export default function AuthModal() {
 
   if (!isAuthModalOpen) return null;
 
-  const handleGoogleAuth = async () => {
+  const handleSignIn = async () => {
+    setLoading(true);
+    setErrorMsg(null);
     try {
-      setLoading(true);
-      setErrorMsg(null);
-      await signInWithGoogle();
-      // Supabase OAuth redirects the browser
+      if (!isNative && !manualCookie.trim()) {
+        setShowManualInput(true);
+        setLoading(false);
+        return;
+      }
+      await signInWithGoogle(manualCookie.trim() || null);
     } catch (err) {
-      console.error('[OAuth Error]:', err);
-      setErrorMsg(err.message || 'Google sign-in could not be initiated. Please verify Supabase config.');
+      console.error('[YouTube Auth Error]:', err);
+      setErrorMsg(err.message || 'Failed to complete Google sign-in.');
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleEmailSubmit = async (e) => {
-    e.preventDefault();
-    if (!email.trim()) {
-      setErrorMsg('Please enter your email address');
-      return;
-    }
-
-    if (tab === 'forgot') {
-      try {
-        setLoading(true);
-        setErrorMsg(null);
-        await resetPassword(email.trim());
-        setSuccessMsg('Password reset link sent! Check your email inbox.');
-      } catch (err) {
-        setErrorMsg(err.message || 'Failed to send reset link.');
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    if (!password) {
-      setErrorMsg('Please enter your password');
-      return;
-    }
-
-    if (tab === 'signup') {
-      if (password.length < 6) {
-        setErrorMsg('Password must be at least 6 characters');
-        return;
-      }
-      try {
-        setLoading(true);
-        setErrorMsg(null);
-        const data = await signUpWithEmail(email, password, fullName);
-        if (data?.session) {
-          setSuccessMsg('Account created and logged in!');
-          setTimeout(() => setIsAuthModalOpen(false), 1200);
-        } else {
-          setSuccessMsg('Account created! Please check your email to confirm your account, or sign in.');
-          setTab('signin');
-        }
-      } catch (err) {
-        setErrorMsg(err.message || 'Failed to create account.');
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      // Sign In
-      try {
-        setLoading(true);
-        setErrorMsg(null);
-        await signInWithEmail(email, password);
-        setSuccessMsg('Signed in successfully! Syncing cloud library...');
-        setTimeout(() => setIsAuthModalOpen(false), 1000);
-      } catch (err) {
-        setErrorMsg(err.message || 'Invalid email or password. Please check your credentials.');
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  const handleManualSync = async () => {
-    if (!user) return;
-    setSyncLoading(true);
-    setErrorMsg(null);
+  const handleSignOut = async () => {
+    setLoading(true);
     try {
-      await syncAllWithCloud();
-      setSuccessMsg('Cloud library synced successfully!');
-      setTimeout(() => setSuccessMsg(null), 3000);
+      await signOut();
+      setIsAuthModalOpen(false);
     } catch (err) {
-      setErrorMsg('Sync failed: ' + (err.message || 'Unknown error'));
+      setErrorMsg('Failed to sign out.');
     } finally {
-      setSyncLoading(false);
+      setLoading(false);
     }
-  };
-
-  const getInitials = (name, mail) => {
-    if (name) {
-      const parts = name.split(' ').filter(Boolean);
-      if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-      return name.slice(0, 2).toUpperCase();
-    }
-    if (mail) return mail.slice(0, 2).toUpperCase();
-    return 'CF';
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in select-none"
-      onClick={() => setIsAuthModalOpen(false)}
-    >
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
       <div
-        className="w-full max-w-md bg-[#141416] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col text-white"
-        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md rounded-3xl bg-[#141416] border border-white/10 p-6 sm:p-8 shadow-2xl overflow-hidden"
+        style={{
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 40px rgba(255, 255, 255, 0.05)',
+        }}
       >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-white/5 bg-[#18181a]">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-accent/20 border border-accent/30 flex items-center justify-center text-accent">
-              <span className="material-symbols-outlined text-[20px]">
-                {user ? 'account_circle' : 'lock'}
-              </span>
+        {/* Close button */}
+        <button
+          type="button"
+          onClick={() => setIsAuthModalOpen(false)}
+          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white transition-colors cursor-pointer"
+        >
+          <span className="material-symbols-outlined text-[20px]">close</span>
+        </button>
+
+        {user ? (
+          /* ── LOGGED IN PROFILE VIEW ────────────────────────── */
+          <div className="flex flex-col items-center text-center pt-2 pb-1">
+            <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-white/20 shadow-lg mb-4 bg-neutral-800">
+              <img
+                src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80'}
+                alt={user.name}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute bottom-0 right-0 w-5 h-5 bg-emerald-500 rounded-full border-2 border-[#141416]" />
             </div>
-            <div>
-              <h3 className="text-label-lg font-bold text-white tracking-tight">
-                {user ? 'Account Profile' : 'cassette.fm Account'}
-              </h3>
-              <p className="text-body-xs text-neutral-400">
-                {user ? 'Manage cloud sync and preferences' : 'Sync your liked tracks and playlists'}
-              </p>
+
+            <h3 className="text-xl font-bold text-white mb-1">{user.name}</h3>
+            <p className="text-xs text-neutral-400 mb-4">{user.handle || 'Connected to YouTube Music'}</p>
+
+            <div className="w-full rounded-2xl bg-white/5 border border-white/10 p-4 mb-6 flex items-center gap-3 text-left">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center flex-shrink-0">
+                <span className="material-symbols-outlined text-[20px]">sync</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-white">2-Way Sync Active</p>
+                <p className="text-[11px] text-neutral-400">Likes and library sync directly with your YouTube account.</p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={loading}
+              className="w-full py-3 px-4 rounded-xl bg-white/10 hover:bg-red-500/20 text-neutral-300 hover:text-red-400 border border-white/10 hover:border-red-500/30 transition-all font-medium text-sm cursor-pointer disabled:opacity-50"
+            >
+              {loading ? 'Signing out...' : 'Disconnect YouTube Account'}
+            </button>
           </div>
-          <button
-            onClick={() => setIsAuthModalOpen(false)}
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 text-neutral-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer border border-white/10"
-            aria-label="Close"
-          >
-            <span className="material-symbols-outlined text-[18px]">close</span>
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <div className="p-6">
-          {/* If user is already logged in -> Profile & Sync Hub */}
-          {user ? (
-            <div className="space-y-5">
-              {/* Profile Card */}
-              <div className="p-4 rounded-2xl bg-[#1c1c1f] border border-white/10 flex items-center gap-3.5">
-                {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
-                  <img
-                    src={user.user_metadata.avatar_url || user.user_metadata.picture}
-                    alt=""
-                    className="w-13 h-13 rounded-full object-cover border-2 border-accent/40 flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-13 h-13 rounded-full bg-accent text-black font-extrabold flex items-center justify-center text-lg flex-shrink-0 shadow-md">
-                    {getInitials(user.user_metadata?.full_name || user.user_metadata?.name, user.email)}
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <h4 className="text-label-md font-bold text-white truncate">
-                    {user.user_metadata?.full_name || user.user_metadata?.name || 'cassette Listener'}
-                  </h4>
-                  <p className="text-body-xs text-neutral-400 font-mono truncate">{user.email}</p>
-                  <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Cloud Sync Active
-                  </span>
-                </div>
+        ) : (
+          /* ── SIGN IN VIEW ──────────────────────────────────── */
+          <div className="flex flex-col text-left">
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-10 h-10 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-white">
+                <span className="material-symbols-outlined text-[22px]">play_circle</span>
               </div>
-
-              {/* Sync Stats */}
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="p-3 rounded-xl bg-[#18181a] border border-white/5">
-                  <span className="text-[10px] font-mono text-neutral-400 uppercase block">Liked</span>
-                  <span className="text-label-lg font-bold text-accent">{liked?.length || 0}</span>
-                </div>
-                <div className="p-3 rounded-xl bg-[#18181a] border border-white/5">
-                  <span className="text-[10px] font-mono text-neutral-400 uppercase block">Playlists</span>
-                  <span className="text-label-lg font-bold text-white">{playlists?.length || 0}</span>
-                </div>
-                <div className="p-3 rounded-xl bg-[#18181a] border border-white/5">
-                  <span className="text-[10px] font-mono text-neutral-400 uppercase block">History</span>
-                  <span className="text-label-lg font-bold text-accent">{history?.length || 0}</span>
-                </div>
-              </div>
-
-              {/* Feedback messages */}
-              {successMsg && (
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-body-xs flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                  {successMsg}
-                </div>
-              )}
-              {errorMsg && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-body-xs flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px]">error</span>
-                  {errorMsg}
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="flex flex-col gap-2.5 pt-2">
-                <button
-                  onClick={handleManualSync}
-                  disabled={syncLoading}
-                  className="w-full py-2.5 px-4 rounded-xl bg-accent hover:opacity-90 text-black font-bold text-label-md flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-accent/20 disabled:opacity-50"
-                >
-                  <span className={`material-symbols-outlined text-[18px] ${syncLoading ? 'animate-spin' : ''}`}>
-                    sync
-                  </span>
-                  {syncLoading ? 'Synchronizing Cloud...' : 'Sync Cloud Library Now'}
-                </button>
-
-                <button
-                  onClick={async () => {
-                    await signOut();
-                    setSuccessMsg('Signed out successfully.');
-                    setTimeout(() => setIsAuthModalOpen(false), 800);
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl border border-white/10 hover:bg-white/5 text-neutral-400 hover:text-white text-label-sm font-semibold transition-all cursor-pointer"
-                >
-                  Sign Out of cassette.fm
-                </button>
+              <div>
+                <h3 className="text-lg font-bold text-white leading-tight">YouTube Music Sync</h3>
+                <p className="text-xs text-neutral-400">Two-way Google account connection</p>
               </div>
             </div>
-          ) : (
-            /* Logged Out -> Login / Sign Up Forms */
-            <div className="space-y-4">
-              {/* One-Click Google OAuth */}
-              <button
-                type="button"
-                onClick={handleGoogleAuth}
-                disabled={loading}
-                className="w-full py-3 px-4 rounded-2xl bg-white text-black hover:bg-neutral-100 font-bold text-label-md flex items-center justify-center gap-3 transition-all cursor-pointer shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-50"
-              >
-                <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"/>
-                  <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                </svg>
-                Continue with Google
-              </button>
 
-              <div className="flex items-center gap-3 my-2">
-                <div className="h-px bg-white/10 flex-1" />
-                <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-wider">or with email</span>
-                <div className="h-px bg-white/10 flex-1" />
-              </div>
+            <p className="text-sm text-neutral-300 mb-5 leading-relaxed">
+              Sign in with your Google account to unlock full two-way synchronization with YouTube Music.
+            </p>
 
-              {/* Tab Selector: Sign In vs Create Account */}
-              {tab !== 'forgot' ? (
-                <div className="grid grid-cols-2 p-1 rounded-xl bg-[#1c1c1f] border border-white/5 text-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTab('signin');
-                      setErrorMsg(null);
-                    }}
-                    className={`py-2 rounded-lg text-label-sm font-bold transition-all cursor-pointer ${
-                      tab === 'signin'
-                        ? 'bg-accent text-black shadow-md'
-                        : 'text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTab('signup');
-                      setErrorMsg(null);
-                    }}
-                    className={`py-2 rounded-lg text-label-sm font-bold transition-all cursor-pointer ${
-                      tab === 'signup'
-                        ? 'bg-accent text-black shadow-md'
-                        : 'text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    Create Account
-                  </button>
+            {/* Feature List */}
+            <div className="space-y-3 mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 text-white mt-0.5">
+                  <span className="material-symbols-outlined text-[16px]">favorite</span>
                 </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <span className="text-label-md font-bold text-white">Reset Password</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTab('signin');
-                      setErrorMsg(null);
-                    }}
-                    className="text-body-xs text-accent hover:underline cursor-pointer"
-                  >
-                    Back to Sign In
-                  </button>
-                </div>
-              )}
-
-              {/* Feedback messages */}
-              {successMsg && (
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-body-xs flex items-center gap-2 animate-fade-in">
-                  <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                  {successMsg}
-                </div>
-              )}
-              {errorMsg && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-body-xs flex items-center gap-2 animate-fade-in">
-                  <span className="material-symbols-outlined text-[16px]">error</span>
-                  {errorMsg}
-                </div>
-              )}
-
-              {/* Auth Form */}
-              <form onSubmit={handleEmailSubmit} className="space-y-3.5">
-                {tab === 'signup' && (
-                  <div>
-                    <label className="block text-[11px] font-mono uppercase text-neutral-400 mb-1">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Maya Lin"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#1c1c1f] border border-white/10 text-white text-body-sm focus:border-accent focus:outline-none transition-colors"
-                    />
-                  </div>
-                )}
-
                 <div>
-                  <label className="block text-[11px] font-mono uppercase text-neutral-400 mb-1">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="you@domain.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#1c1c1f] border border-white/10 text-white text-body-sm focus:border-accent focus:outline-none transition-colors"
-                  />
+                  <h4 className="text-xs font-semibold text-white">Two-Way Likes</h4>
+                  <p className="text-[11px] text-neutral-400">Tracks liked here automatically sync to your YouTube &quot;Liked Music&quot;.</p>
                 </div>
+              </div>
 
-                {tab !== 'forgot' && (
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-[11px] font-mono uppercase text-neutral-400">
-                        Password
-                      </label>
-                      {tab === 'signin' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setTab('forgot');
-                            setErrorMsg(null);
-                          }}
-                          className="text-[11px] text-neutral-400 hover:text-accent transition-colors cursor-pointer"
-                        >
-                          Forgot?
-                        </button>
-                      )}
-                    </div>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        required
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-3.5 py-2.5 pr-10 rounded-xl bg-[#1c1c1f] border border-white/10 text-white text-body-sm focus:border-accent focus:outline-none transition-colors"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-white cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">
-                          {showPassword ? 'visibility_off' : 'visibility'}
-                        </span>
-                      </button>
-                    </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 text-white mt-0.5">
+                  <span className="material-symbols-outlined text-[16px]">auto_awesome</span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-white">Personalized Algorithms</h4>
+                  <p className="text-[11px] text-neutral-400">Loads your real &quot;Listen Again&quot;, &quot;Quick Picks&quot;, and mixes.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0 text-white mt-0.5">
+                  <span className="material-symbols-outlined text-[16px]">queue_music</span>
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-white">Cloud Playlists & Library</h4>
+                  <p className="text-[11px] text-neutral-400">Access and edit your official YouTube playlists seamlessly.</p>
+                </div>
+              </div>
+            </div>
+
+            {errorMsg && (
+              <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+                {errorMsg}
+              </div>
+            )}
+
+            {/* Google Sign In Button */}
+            <button
+              type="button"
+              onClick={handleSignIn}
+              disabled={loading}
+              className="w-full py-3.5 px-4 rounded-2xl bg-white text-black font-semibold text-sm flex items-center justify-center gap-3 hover:bg-neutral-200 active:scale-[0.98] transition-all cursor-pointer shadow-lg disabled:opacity-50"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                  <span>Sign in with Google</span>
+                </>
+              )}
+            </button>
+
+            {/* Desktop Web Dev Session Injection */}
+            {!isNative && (
+              <div className="mt-4 pt-3 border-t border-white/5 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowManualInput(!showManualInput)}
+                  className="text-[11px] text-neutral-500 hover:text-neutral-400 underline cursor-pointer"
+                >
+                  {showManualInput ? 'Hide manual cookie injection' : 'Web Dev: Paste YouTube Session Cookie'}
+                </button>
+
+                {showManualInput && (
+                  <div className="mt-3 text-left">
+                    <p className="text-[11px] text-neutral-400 mb-1.5">
+                      On Android, login is automated via In-App WebView. For desktop browser testing, paste your YouTube cookie string:
+                    </p>
+                    <textarea
+                      rows={3}
+                      value={manualCookie}
+                      onChange={(e) => setManualCookie(e.target.value)}
+                      placeholder="SAPISID=...; __Secure-3PAPISID=...;"
+                      className="w-full p-2.5 rounded-xl bg-black/40 border border-white/10 text-xs text-white placeholder-neutral-600 focus:outline-none focus:border-white/30"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSignIn}
+                      disabled={loading || !manualCookie.trim()}
+                      className="mt-2 w-full py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs text-white font-medium transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      Save & Sync YouTube Session
+                    </button>
                   </div>
                 )}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full mt-2 py-3 rounded-xl bg-accent hover:opacity-90 text-black font-bold text-label-md flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-accent/20 disabled:opacity-50"
-                >
-                  {loading && (
-                    <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                  )}
-                  {tab === 'signin' && 'Sign In'}
-                  {tab === 'signup' && 'Create Free Account'}
-                  {tab === 'forgot' && 'Send Reset Link'}
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

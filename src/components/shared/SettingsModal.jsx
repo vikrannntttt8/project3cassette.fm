@@ -990,49 +990,46 @@ export default function SettingsModal({ isOpen, onClose }) {
                 {user ? (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-[#101012] border border-white/5">
                     <div className="flex items-center gap-3 min-w-0">
-                      {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
+                      {user.avatar ? (
                         <img
-                          src={user.user_metadata.avatar_url || user.user_metadata?.picture}
+                          src={user.avatar}
                           alt="Avatar"
                           className="w-10 h-10 rounded-full border border-white/20 object-cover flex-shrink-0"
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-white text-black font-bold flex items-center justify-center text-sm flex-shrink-0">
-                          {(user.email || 'U')[0].toUpperCase()}
+                          {(user.name || 'U')[0].toUpperCase()}
                         </div>
                       )}
                       <div className="min-w-0">
                         <p className="text-sm font-bold text-white truncate">
-                          {user.user_metadata?.full_name || user.user_metadata?.name || 'cassette Listener'}
+                          {user.name || 'YouTube Music Listener'}
                         </p>
-                        <p className="text-xs font-mono text-neutral-400 truncate">{user.email}</p>
+                        <p className="text-xs font-mono text-emerald-400 truncate flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                          2-Way YouTube Sync Active
+                        </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => openAuthModal('profile')}
-                        className="px-3.5 py-1.5 rounded-lg border border-white/10 hover:border-white/30 text-white text-xs font-semibold transition-colors cursor-pointer"
-                      >
-                        Profile
-                      </button>
-                      <button
                         onClick={signOut}
                         className="px-3.5 py-1.5 rounded-lg border border-white/10 hover:border-red-500/40 text-neutral-400 hover:text-red-400 text-xs transition-colors cursor-pointer"
                       >
-                        Sign Out
+                        Disconnect
                       </button>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     <p className="text-xs text-neutral-400">
-                      Sign in with your Google or email account to sync your playlists and liked tracks across all desktop and mobile devices.
+                      Connect your Google / YouTube Music account to enable real two-way sync: likes, playlists, and algorithmic recommendations.
                     </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div className="max-w-xs">
                       <button
                         onClick={handleGoogleSignIn}
-                        className="py-2.5 px-4 rounded-xl bg-white text-black hover:bg-neutral-200 font-bold text-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-md"
+                        className="w-full py-2.5 px-4 rounded-xl bg-white text-black hover:bg-neutral-200 font-bold text-xs flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-md"
                       >
                         <svg className="w-4 h-4" viewBox="0 0 24 24">
                           <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
@@ -1042,64 +1039,14 @@ export default function SettingsModal({ isOpen, onClose }) {
                         </svg>
                         Sign in with Google
                       </button>
-
-                      <button
-                        onClick={() => openAuthModal('signin')}
-                        className="py-2.5 px-4 rounded-xl bg-[#1a1a1d] border border-white/10 hover:border-white/30 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[17px]">mail</span>
-                        Sign in with Email
-                      </button>
                     </div>
                   </div>
                 )}
 
                 <div className="pt-2 border-t border-white/5">
-                  <button
-                    type="button"
-                    onClick={() => setShowConfigDetails(!showConfigDetails)}
-                    className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[15px]">
-                      {showConfigDetails ? 'expand_less' : 'settings'}
-                    </span>
-                    {showConfigDetails ? 'Hide Custom Backend Credentials' : 'Configure Custom Supabase Project'}
-                  </button>
-
-                  {showConfigDetails && (
-                    <form onSubmit={handleSaveSupabaseConfig} className="mt-3 space-y-3 p-3.5 rounded-xl bg-[#101012] border border-white/10">
-                      <div>
-                        <label className="block text-[10.5px] font-mono uppercase text-neutral-400 mb-1">
-                          Supabase Project URL
-                        </label>
-                        <input
-                          type="url"
-                          placeholder="https://xyzcompany.supabase.co"
-                          value={supabaseUrl}
-                          onChange={(e) => setSupabaseUrl(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-[#18181a] border border-white/10 text-white text-xs focus:border-white focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10.5px] font-mono uppercase text-neutral-400 mb-1">
-                          Supabase Anon Key
-                        </label>
-                        <input
-                          type="password"
-                          placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                          value={supabaseKey}
-                          onChange={(e) => setSupabaseKey(e.target.value)}
-                          className="w-full px-3 py-2 rounded-lg bg-[#18181a] border border-white/10 text-white text-xs focus:border-white focus:outline-none"
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 rounded-xl bg-white text-black text-xs font-bold hover:bg-neutral-200 transition-all cursor-pointer shadow-sm"
-                      >
-                        Save Custom Backend
-                      </button>
-                    </form>
-                  )}
+                  <p className="text-[11px] text-neutral-400">
+                    All audio metadata, personalized discovery feeds, and two-way likes communicate directly with Google's YouTube Music InnerTube servers.
+                  </p>
                 </div>
               </div>
             </MonochromeCard>

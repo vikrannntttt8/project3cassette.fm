@@ -1,180 +1,128 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
-  getSupabaseClient,
-  isSupabaseConfigured,
-  getSupabaseCredentials,
-  saveSupabaseCredentials,
-  signInWithGoogle as supaSignInGoogle,
-  signInWithEmail as supaSignInEmail,
-  signUpWithEmail as supaSignUpEmail,
-  resetPasswordForEmail as supaResetPassword,
-  signOut as supaSignOut,
-  syncLikedSongsCloud,
-  fetchLikedSongsCloud,
-  syncPlaylistsCloud,
-  fetchPlaylistsCloud,
-  saveHistoryItemCloud,
-  fetchHistoryCloud,
-  syncHistoryCloud,
-  performFullCloudSync,
-} from '../services/supabase.js';
+  signInWithYouTube,
+  signOutYouTube,
+  getSavedUserProfile,
+  isUserLoggedIn,
+  likeSongOnYouTube,
+  removeLikeOnYouTube,
+  fetchYouTubeLibrary,
+  isNativeApp,
+} from '../services/youtubeAuth.js';
 
 const AuthContext = createContext(null);
-
-// Safely cleans OAuth hash fragments without throwing SecurityError on replaceState
-function cleanAuthUrlFragments() {
-  if (typeof window === 'undefined') return;
-  try {
-    const { hash, pathname, search } = window.location;
-    if (hash && (hash.includes('access_token=') || hash.includes('refresh_token=') || hash.includes('error='))) {
-      const cleanUrl = (pathname || '/') + (search || '');
-      if (window.history && typeof window.history.replaceState === 'function') {
-        window.history.replaceState(window.history.state || null, document.title, cleanUrl);
-      }
-    }
-  } catch (err) {
-    console.warn('[Auth] Ignored replaceState error during hash cleanup:', err);
-  }
-}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [configured, setConfigured] = useState(isSupabaseConfigured);
   const [authSequence, setAuthSequence] = useState(0);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState('signin'); // 'signin' | 'signup' | 'forgot' | 'profile'
+  const [authModalMode, setAuthModalMode] = useState('signin');
 
   const openAuthModal = useCallback((mode = 'signin') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
   }, []);
 
-  // Initialize session and auth state listener
+  // Initialize saved session on boot
   useEffect(() => {
-    const client = getSupabaseClient();
-    if (!client) {
-      setLoading(false);
-      return;
-    }
-
-    client.auth.getSession()
-      .then(({ data: { session: currentSession }, error }) => {
-        if (error) {
-          console.warn('[Auth] getSession message:', error.message);
-        }
-        setSession(currentSession);
-        setUser(currentSession?.user || null);
-        setLoading(false);
-        if (currentSession?.user) {
-          setAuthSequence((s) => s + 1);
-        }
-        cleanAuthUrlFragments();
-      })
-      .catch((err) => {
-        console.error('[Auth] getSession failed:', err);
-        setLoading(false);
-      });
-
-    const { data: { subscription } } = client.auth.onAuthStateChange((event, newSession) => {
-      console.log(`[Auth] onAuthStateChange event: ${event}`, newSession?.user?.email);
-      setSession(newSession);
-      setUser(newSession?.user || null);
-      setLoading(false);
-      if (newSession?.user) {
-        setAuthSequence((s) => s + 1);
+    try {
+      if (isUserLoggedIn()) {
+        const savedProfile = getSavedUserProfile();
+        setUser(savedProfile || {
+          id: 'yt_user',
+          name: 'YouTube Music Listener',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+          isYouTubeAccount: true,
+        });
+        setSession({ loggedIn: true, provider: 'youtube' });
+      } else {
+        setUser(null);
+        setSession(null);
       }
-      cleanAuthUrlFragments();
-    });
-
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, [configured]);
-
-  const signInWithGoogle = useCallback(async () => {
-    return await supaSignInGoogle();
+    } catch (err) {
+      console.error('[Auth] Failed to restore YouTube session:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const signInWithEmail = useCallback(async (email, password) => {
-    return await supaSignInEmail(email, password);
+  // Sign In with Google / YouTube
+  const signInWithGoogle = useCallback(async (manualCookie = null) => {
+    setLoading(true);
+    try {
+      const result = await signInWithYouTube(manualCookie);
+      setUser(result.user);
+      setSession({ loggedIn: true, provider: 'youtube' });
+      setAuthSequence((s) => s + 1);
+      setIsAuthModalOpen(false);
+      return result;
+    } catch (err) {
+      console.error('[Auth] YouTube Sign-in error:', err);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const signUpWithEmail = useCallback(async (email, password, fullName) => {
-    return await supaSignUpEmail(email, password, fullName);
-  }, []);
-
-  const resetPassword = useCallback(async (email) => {
-    return await supaResetPassword(email);
-  }, []);
-
+  // Sign out
   const signOut = useCallback(async () => {
-    await supaSignOut();
-    setUser(null);
-    setSession(null);
+    setLoading(true);
+    try {
+      await signOutYouTube();
+      setUser(null);
+      setSession(null);
+      setAuthSequence((s) => s + 1);
+    } catch (err) {
+      console.error('[Auth] Sign-out error:', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const updateCredentials = useCallback((url, anonKey) => {
-    saveSupabaseCredentials(url, anonKey);
-    setConfigured(isSupabaseConfigured());
+  // 2-Way Sync Methods with YouTube Music
+  const syncLikeSong = useCallback(async (videoId, isLiked) => {
+    if (!user) return;
+    if (isLiked) {
+      await likeSongOnYouTube(videoId);
+    } else {
+      await removeLikeOnYouTube(videoId);
+    }
+  }, [user]);
+
+  const fetchLibrary = useCallback(async () => {
+    if (!user) return null;
+    return await fetchYouTubeLibrary();
+  }, [user]);
+
+  // Legacy compatibility fallbacks for smooth transition
+  const signInWithEmail = useCallback(async () => {
+    throw new Error('Please sign in with Google for 2-way YouTube Music sync.');
   }, []);
-
-  // Cloud sync helpers
-  const syncLikedSongs = useCallback(async (likedSongs) => {
-    if (!user?.id) return;
-    await syncLikedSongsCloud(user.id, likedSongs);
-  }, [user]);
-
-  const fetchLikedSongs = useCallback(async () => {
-    if (!user?.id) return [];
-    return await fetchLikedSongsCloud(user.id);
-  }, [user]);
-
-  const syncPlaylists = useCallback(async (playlists) => {
-    if (!user?.id) return;
-    await syncPlaylistsCloud(user.id, playlists);
-  }, [user]);
-
-  const fetchPlaylists = useCallback(async () => {
-    if (!user?.id) return [];
-    return await fetchPlaylistsCloud(user.id);
-  }, [user]);
-
-  const recordHistory = useCallback(async (song) => {
-    if (!user?.id) return;
-    await saveHistoryItemCloud(user.id, song);
-  }, [user]);
-
-  const fetchHistory = useCallback(async () => {
-    if (!user?.id) return [];
-    return await fetchHistoryCloud(user.id);
-  }, [user]);
-
-  const performFullSync = useCallback(async (localData) => {
-    if (!user?.id) throw new Error('User not logged in');
-    return await performFullCloudSync(user.id, localData);
-  }, [user]);
+  const signUpWithEmail = useCallback(async () => {
+    throw new Error('Please sign in with Google for 2-way YouTube Music sync.');
+  }, []);
+  const resetPassword = useCallback(async () => {
+    throw new Error('Please sign in with Google for 2-way YouTube Music sync.');
+  }, []);
+  const updateCredentials = useCallback(() => {}, []);
 
   const value = {
     user,
     session,
     loading,
-    isConfigured: configured,
-    credentials: getSupabaseCredentials(),
+    isConfigured: true,
+    isNative: isNativeApp(),
+    credentials: { url: '', anonKey: '' },
     updateCredentials,
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,
     resetPassword,
     signOut,
-    syncLikedSongs,
-    fetchLikedSongs,
-    syncPlaylists,
-    fetchPlaylists,
-    recordHistory,
-    fetchHistory,
-    performFullSync,
+    syncLikeSong,
+    fetchLibrary,
     authSequence,
     isAuthModalOpen,
     setIsAuthModalOpen,

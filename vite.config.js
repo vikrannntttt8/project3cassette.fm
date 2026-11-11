@@ -354,7 +354,12 @@ function innertubeApiPlugin() {
         if (pathname.startsWith('/api/stream/') && req.method === 'GET') {
           const videoId = pathname.replace('/api/stream/', '').split('?')[0];
           const quality = parsedUrl.searchParams.get('quality') || 'max';
-          const codec = parsedUrl.searchParams.get('codec') || 'auto';
+          let codec = parsedUrl.searchParams.get('codec') || 'auto';
+          const userAgent = req.headers['user-agent'] || '';
+          // Android WebView requires MP4/AAC (itag 140) to prevent PIPELINE_ERROR_READ demuxing errors
+          if (codec === 'auto' && /android/i.test(userAgent)) {
+            codec = 'mp4';
+          }
           try {
             const { resolveAudioStream } = await import('./src/services/innertube.js');
             const streamInfo = await resolveAudioStream(videoId, quality, codec);
